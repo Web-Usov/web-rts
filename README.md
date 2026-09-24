@@ -2,7 +2,7 @@
 
 Браузерная multiplayer RTS до 4 игроков с режимами Solo, Coop и PvP/PvPvE.
 
-Проект находится на стадии foundation scaffold: monorepo tooling уже есть, gameplay/renderer/multiplayer появятся в следующих foundation-задачах.
+Проект находится на стадии foundation: monorepo tooling и примитивный Babylon-клиент уже есть. Gameplay и multiplayer появятся в следующих foundation-задачах.
 
 Разработка идёт через spec-first и agent-driven workflow: требования → спецификация → реализация → автоматические тесты → review → playable build.
 
@@ -21,11 +21,13 @@ pnpm lint
 
 `pnpm test:simulation` runs headless simulation scenario tests via `tools/scenario-runner` (independent of the generic unit-test suite in CI).
 
-Локальная разработка (после появления реальных app entrypoints):
+Локальная разработка:
 
 ```bash
 pnpm dev
 ```
+
+`pnpm dev` поднимает web-клиент на `http://localhost:5173` (Vite) и placeholder game-server. Клиент показывает примитивную карту, юниты и objective без сетевого протокола и без gameplay rules.
 
 Корневые команды оркестрируются Turborepo (`pnpm build` → `turbo run build` и т.д.).
 
@@ -33,7 +35,7 @@ pnpm dev
 
 ```text
 apps/
-  web/              # browser client (placeholder in F0)
+  web/              # Vite + React shell and Babylon presentation
   game-server/      # multiplayer server (placeholder in F0)
 packages/
   simulation/       # framework-agnostic game rules
