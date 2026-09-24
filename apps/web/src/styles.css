@@ -1,0 +1,83 @@
+:root {
+  color-scheme: dark;
+  font-family: "Segoe UI", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #10141a;
+  color: #e7ece8;
+}
+
+.shell {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.viewport {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+
+.hud {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  width: min(280px, calc(100% - 32px));
+  padding: 14px 16px;
+  border: 1px solid rgb(255 255 255 / 12%);
+  background: rgb(10 14 18 / 78%);
+  pointer-events: none;
+}
+
+.hud-title {
+  margin: 0 0 8px;
+  font-size: 18px;
+  letter-spacing: 0.04em;
+}
+
+.hud p,
+.hud li {
+  margin: 0;
+  color: #c5d0c8;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.hud dl {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0;
+}
+
+.hud dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.hud dt {
+  color: #8ea094;
+}
+
+.hud dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.hud ul {
+  margin: 0;
+  padding-left: 18px;
+}
