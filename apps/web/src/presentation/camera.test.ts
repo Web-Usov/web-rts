@@ -35,10 +35,25 @@ describe("RTS camera", () => {
     });
   });
 
-  it("converts a screen drag into a ground-plane offset", () => {
-    const offset = screenDragToGround(10, 0, 28, RTS_CAMERA_ALPHA);
+  it("maps horizontal screen drag to the camera-right ground basis", () => {
+    const offset = screenDragToGround(10, 0, 28, 0);
 
-    expect(offset.x).not.toBe(0);
-    expect(offset.z).not.toBe(0);
+    expect(offset.x).toBeCloseTo(0, 10);
+    expect(offset.z).toBeGreaterThan(0);
+  });
+
+  it("maps vertical screen drag to the camera-depth ground basis", () => {
+    const offset = screenDragToGround(0, 10, 28, 0);
+
+    expect(offset.x).toBeGreaterThan(0);
+    expect(offset.z).toBeCloseTo(0, 10);
+  });
+
+  it("keeps horizontal and vertical drag bases perpendicular for the isometric angle", () => {
+    const horizontal = screenDragToGround(10, 0, 28, RTS_CAMERA_ALPHA);
+    const vertical = screenDragToGround(0, 10, 28, RTS_CAMERA_ALPHA);
+    const dot = horizontal.x * vertical.x + horizontal.z * vertical.z;
+
+    expect(dot).toBeCloseTo(0, 10);
   });
 });

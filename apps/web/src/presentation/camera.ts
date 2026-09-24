@@ -30,9 +30,13 @@ export function screenDragToGround(
   const cos = Math.cos(alpha);
   const sin = Math.sin(alpha);
 
+  // ArcRotateCamera's horizontal screen-right basis on the ground plane is
+  // (-sin(alpha), cos(alpha)); its screen-down/depth basis is
+  // (cos(alpha), sin(alpha)). Keep mouse axes aligned to those bases instead
+  // of accidentally swapping horizontal drag with camera depth.
   return {
-    x: (screenDx * cos + screenDy * sin) * scale,
-    z: (screenDx * sin - screenDy * cos) * scale,
+    x: (-screenDx * sin + screenDy * cos) * scale,
+    z: (screenDx * cos + screenDy * sin) * scale,
   };
 }
 
