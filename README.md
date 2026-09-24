@@ -8,7 +8,8 @@
 
 - [Game Vision v0.1](./docs/game-vision.md)
 - [Technical Vision v0.1](./docs/technical-vision.md)
-- [Technical Direction v0.1](./docs/technical-direction.md) — предварительный документ
+- [Technical Direction v0.1](./docs/technical-direction.md)
+- [ADR-000: pnpm workspaces + Turborepo](./docs/adr/000-pnpm-turborepo-monorepo.md)
 - [Индекс документации](./docs/README.md)
 
 Текущий приоритет — технологический foundation и первый multiplayer vertical slice до полноценного gameplay и визуального polish.
