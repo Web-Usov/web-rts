@@ -14,7 +14,25 @@
 
 Issue не может молча переопределять Technical Vision/ADR. При конфликте следовать более высокому уровню и явно указать конфликт в PR.
 
-## 2. Scope discipline
+Сторонние agent skills не являются source of truth и не могут переопределять `AGENTS.md`, Game Vision, Technical Vision, ADR, spec или issue.
+
+## 2. Skills и routing
+
+После чтения `AGENTS.md` и до реализации gamedev-задачи агент должен прочитать `.agents/skills/web-rts-router/SKILL.md`.
+
+Правила использования skills:
+
+- выбирать только минимальный набор curated skills, относящихся к текущей задаче;
+- не загружать все skills заранее;
+- сначала читать выбранный `SKILL.md`, bundled `references/` открывать только при необходимости;
+- project-local `web-rts-router` определяет routing, но архитектурные документы проекта имеют более высокий приоритет;
+- third-party skills — advisory only: их best practices не становятся обязательными требованиями автоматически;
+- не переносить в проект engine-specific assumptions из Unity, Godot, Unreal, Phaser, Three.js и других стеков;
+- не предлагать замену Babylon.js, Colyseus или принятой архитектуры только потому, что сторонний skill предпочитает другой подход.
+
+Если guidance skill конфликтует с проектным контрактом, следовать проектному контракту и явно отметить конфликт в PR/review/report.
+
+## 3. Scope discipline
 
 - Реализовывать только scope текущей spec/issue.
 - Не добавлять "полезные на будущее" сервисы, abstractions, packages или инфраструктуру без требования.
@@ -22,7 +40,30 @@ Issue не может молча переопределять Technical Vision/A
 - Если acceptance criteria можно выполнить проще без нарушения ADR — выбирать простую реализацию.
 - Рефакторинг вне scope допустим только минимальный, необходимый для корректной реализации, и должен быть объяснён в PR.
 
-## 3. Архитектурные инварианты
+## 4. Worktree isolation и параллельная работа
+
+Для implementation-задач действует правило:
+
+`1 task/issue = 1 branch = 1 worktree = 1 PR`.
+
+Перед началом работы:
+
+1. выполнить `git fetch origin`;
+2. создать task branch от актуального `origin/main`;
+3. создать отдельный Git worktree для этой ветки;
+4. выполнять изменения, install, tests, build, commit и push только внутри этого worktree.
+
+Обязательные ограничения:
+
+- не переключать ветку и не изменять файлы в основном/shared checkout;
+- параллельные агенты никогда не используют один worktree или одну task branch;
+- если branch/worktree для задачи уже существуют, использовать их, а не создавать дубликаты;
+- не удалять task worktree до merge/close PR или явной отмены задачи;
+- force-push допустим только для собственной task branch и только через `--force-with-lease`; никогда не force-push `main` или чужую/shared branch.
+
+Для явно read-only audit/research-задачи допускается отдельный detached worktree от `origin/main` без branch/PR, если issue запрещает изменения.
+
+## 5. Архитектурные инварианты
 
 Нельзя нарушать без нового/обновлённого ADR:
 
@@ -42,7 +83,7 @@ Issue не может молча переопределять Technical Vision/A
 14. Turborepo — repository tooling, не runtime dependency игры.
 15. Оптимизация выполняется после измерений, если spec не требует обратного.
 
-## 4. Monorepo/tooling
+## 6. Monorepo/tooling
 
 Базовый stack:
 
@@ -70,7 +111,7 @@ pnpm lint
 
 Если команда отсутствует в ранней scaffold-задаче, текущая задача должна добавить её только если это входит в acceptance criteria.
 
-## 5. Package boundaries
+## 7. Package boundaries
 
 Целевая структура foundation:
 
@@ -94,7 +135,7 @@ tools/
 
 Public API packages должен быть минимальным и явным.
 
-## 6. Simulation rules
+## 8. Simulation rules
 
 В gameplay/simulation коде запрещены прямые вызовы:
 
@@ -109,7 +150,7 @@ Simulation получает время через tick/config, randomness — ч
 
 Не вводить сторонний ECS framework без ADR.
 
-## 7. Network rules
+## 9. Network rules
 
 - Runtime input validation обязательна для client commands.
 - Не доверять `playerId`/ownership данным из client payload, если identity доступна из session.
@@ -117,16 +158,16 @@ Simulation получает время через tick/config, randomness — ч
 - Malformed command не должен валить room/process.
 - Protocol breaking change требует изменения `protocolVersion` или явного решения в spec.
 
-## 8. Client rules
+## 10. Client rules
 
 - Babylon.js отвечает за presentation, не за gameplay authority.
 - React отвечает за web UI/HUD/lobby, не за scene graph entities.
 - Client game flow работает через `GameTransport` boundary.
 - Не импортировать Colyseus напрямую глубоко в gameplay/presentation; SDK должен быть изолирован в remote transport/network adapter.
 
-## 9. Tests
+## 11. Tests и CI
 
-Каждая задача должна добавлять/обновлять тесты на своё поведение.
+Каждая implementation-задача должна добавлять/обновлять тесты на своё поведение.
 
 Минимальные уровни по необходимости:
 
@@ -139,7 +180,20 @@ Bug fix должен иметь regression test, если это практич�
 
 Не удалять/ослаблять существующий тест только для прохождения CI без объяснённой причины.
 
-## 10. PR requirements
+Локальные проверки необходимы, но не являются достаточным доказательством completion. Перед финальным review все required GitHub Actions checks для PR должны завершиться успешно. Агент не должен объявлять PR готовым, опираясь только на локальный вывод команд.
+
+## 12. Branch freshness
+
+Перед финальным review/передачей PR агент должен:
+
+1. выполнить `git fetch origin`;
+2. проверить, не отстаёт ли task branch от `origin/main`;
+3. если `main` продвинулся и PR ещё не проверялся поверх нового состояния — rebase/update branch на актуальный `origin/main`;
+4. после rebase повторно прогнать релевантные локальные проверки и дождаться нового GitHub Actions run.
+
+Конфликты разрешать внутри task worktree. После rebase собственной ветки использовать только `git push --force-with-lease`.
+
+## 13. PR requirements
 
 PR должен содержать:
 
@@ -152,7 +206,9 @@ PR должен содержать:
 
 PR должен быть небольшим и reviewable. Не объединять несколько независимых foundation issues в один PR без явной причины.
 
-## 11. Changes requiring ADR first
+Coding agent не merge'ит собственный PR и не включает auto-merge. Merge выполняется пользователем/maintainer после review и required CI checks.
+
+## 14. Changes requiring ADR first
 
 Не начинать реализацию, если задача требует без существующего решения:
 
@@ -169,7 +225,7 @@ PR должен быть небольшим и reviewable. Не объединя
 
 Сначала ADR/spec, затем код.
 
-## 12. Definition of completion for an agent task
+## 15. Definition of completion for an agent task
 
 Задача не завершена, пока:
 
@@ -177,5 +233,8 @@ PR должен быть небольшим и reviewable. Не объединя
 - код typechecks;
 - релевантные tests green;
 - build green;
+- required GitHub Actions checks green;
+- branch проверена поверх актуального `main`, если `main` изменился во время работы;
 - docs обновлены, если public contract изменился;
-- PR не содержит случайного scope expansion.
+- PR не содержит случайного scope expansion;
+- PR остаётся unmerged до решения пользователя/maintainer.
