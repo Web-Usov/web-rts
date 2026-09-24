@@ -57,6 +57,7 @@
 | Language | TypeScript |
 | Runtime server | Node.js LTS |
 | Package manager | pnpm workspaces |
+| Monorepo task orchestration | Turborepo |
 | Client build | Vite |
 | Web UI | React |
 | 3D renderer | Babylon.js |
@@ -68,6 +69,8 @@
 | Runtime command validation | Zod или эквивалентная schema validation library; первая реализация — Zod |
 | Local containerization | Docker / Docker Compose |
 | CI | GitHub Actions |
+
+`pnpm` отвечает за package/workspace management. `Turborepo` используется поверх него для task graph, orchestration, dependency-aware execution и local task cache. Подробности зафиксированы в [`ADR-000`](./adr/000-pnpm-turborepo-monorepo.md).
 
 Версии зависимостей не фиксируются в этом документе. Они должны быть закреплены lockfile в момент scaffold проекта.
 
@@ -117,7 +120,7 @@ CI не должен зависеть от наличия WebGPU на runner.
 │              Client Game State                                  │
 │                     │                                           │
 │               GameTransport                                     │
-│              /             \                                    │
+│              /             \\                                    │
 │   LocalGameTransport      RemoteGameTransport                   │
 │        │                       │                                 │
 │    WebWorker                Colyseus SDK                        │
@@ -168,17 +171,27 @@ packages/
   game-data/
   testkit/
 
- tools/
+tools/
   bot-client/
   scenario-runner/
 
- docs/
+docs/
   game-vision.md
   technical-direction.md
   technical-vision.md
   specs/
   adr/
 ```
+
+Monorepo использует:
+
+```text
+pnpm workspaces
+      +
+Turborepo
+```
+
+Корневые scripts должны давать человеку, CI и coding agents единый интерфейс (`pnpm dev`, `pnpm build`, `pnpm test`, `pnpm typecheck`, `pnpm lint`), а Turborepo отвечает за task graph и cache. Runtime-код игры не зависит от Turborepo.
 
 ### `apps/web`
 
@@ -914,10 +927,12 @@ pnpm install
 pnpm dev
 ```
 
-Он должен поднять как минимум:
+Корневой `pnpm dev` делегирует запуск workspace-задач Turborepo и должен поднять как минимум:
 
 - web client;
 - game server.
+
+Остальные стандартные root-level команды (`pnpm build`, `pnpm test`, `pnpm typecheck`, `pnpm lint`) также должны делегироваться Turborepo, чтобы человек, CI и coding agents использовали один и тот же интерфейс.
 
 ### LAN / simple multiplayer
 
@@ -1075,19 +1090,24 @@ Headless bot client использует тот же public network protocol, ч
 
 GitHub Actions запускается на каждый PR.
 
+Установка зависимостей выполняется через `pnpm`, а стандартные repository tasks оркестрируются через Turborepo.
+
 Обязательные проверки foundation stage:
 
 ```text
-install with frozen lockfile
-format/lint
-TypeScript typecheck
-unit tests
+pnpm install --frozen-lockfile
+pnpm lint
+pnpm typecheck
+pnpm test
 simulation scenario tests
 server integration tests
-build web
-build server
+pnpm build
 Playwright multiplayer smoke test
 ```
+
+Root-level `lint/typecheck/test/build` должны использовать Turborepo task graph и local cache там, где задача детерминирована и корректно описаны её inputs/outputs.
+
+Turborepo Remote Cache в foundation не обязателен и подключается только при появлении практической пользы для CI/agent workflow.
 
 `main` должен быть green и запускаться.
 
@@ -1154,6 +1174,20 @@ Agent не должен менять продуктовые требования
 
 Agent не должен вводить новое архитектурное решение, противоречащее Technical Vision, без ADR.
 
+### Единый tooling interface
+
+Coding agents должны по умолчанию пользоваться корневыми командами репозитория:
+
+```text
+pnpm dev
+pnpm build
+pnpm test
+pnpm typecheck
+pnpm lint
+```
+
+Эти команды оркестрируются Turborepo. Агент не должен вручную собирать список команд каждого workspace package, если конкретная задача этого не требует.
+
 ### Каждая implementation feature должна иметь
 
 - ссылку на spec;
@@ -1208,7 +1242,7 @@ Agent не должен вводить новое архитектурное р�
 - ownership/control моделируются отдельно;
 - reconnect работает в рамках configured grace period;
 - multiplayer E2E test автоматизирован;
-- `pnpm dev` запускает dev environment;
+- `pnpm dev` запускает dev environment через root-level Turborepo orchestration;
 - `docker compose up` способен поднять LAN-compatible build;
 - CI проверяет build/typecheck/tests;
 - нет database.
@@ -1232,7 +1266,7 @@ Agent не должен вводить новое архитектурное р�
 Рекомендуемый порядок после утверждения Technical Vision:
 
 ```text
-F0  Repository/tooling scaffold
+F0  Repository/tooling scaffold (pnpm workspaces + Turborepo)
 F1  Simulation kernel + fixed tick + scenario tests
 F2  Babylon client shell + camera + primitive map
 F3  Protocol contracts + GameTransport interface
@@ -1254,7 +1288,13 @@ F11 LocalGameTransport/WebWorker skeleton
 
 Technical Vision фиксирует направление. ADR должны зафиксировать rationale и последствия ключевых решений.
 
-Минимальный набор:
+Tooling foundation уже зафиксирован отдельно:
+
+```text
+ADR-000 pnpm-workspaces-and-turborepo
+```
+
+Минимальный набор игровых/системных ADR:
 
 ```text
 ADR-001 authoritative-server-and-shared-simulation
@@ -1317,3 +1357,4 @@ ADR не должны превращаться в огромные докуме�
 13. **Feature implementation начинается со spec и acceptance criteria.**
 14. **Основной gameplay код должен быть тестируем без browser.**
 15. **Сложность добавляется после измерения, а не заранее.**
+16. **pnpm управляет workspace/dependencies, Turborepo — repository task orchestration/cache; runtime от Turbo не зависит.**
