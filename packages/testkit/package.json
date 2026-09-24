@@ -18,6 +18,9 @@
     "test": "vitest run",
     "lint": "eslint ."
   },
+  "dependencies": {
+    "@web-rts/simulation": "workspace:*"
+  },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "^22.20.4",

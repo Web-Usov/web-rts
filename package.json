@@ -10,6 +10,7 @@
     "dev": "turbo run dev",
     "build": "turbo run build",
     "test": "turbo run test",
+    "test:simulation": "turbo run test --filter=@web-rts/scenario-runner",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint && prettier --check .",
     "format": "prettier --write ."

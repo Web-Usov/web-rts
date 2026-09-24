@@ -1,2 +1,5 @@
-/** Placeholder entry for @web-rts/scenario-runner (F0 scaffold). */
-export const packageName = "@web-rts/scenario-runner" as const;
+/**
+ * Headless scenario runner entry for simulation scenario tests.
+ * Scenarios live alongside this module and run via Vitest (`pnpm test:simulation`).
+ */
+export const scenarioRunnerName = "@web-rts/scenario-runner" as const;

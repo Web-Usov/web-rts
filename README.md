@@ -14,9 +14,12 @@
 pnpm install
 pnpm build
 pnpm test
+pnpm test:simulation
 pnpm typecheck
 pnpm lint
 ```
+
+`pnpm test:simulation` runs headless simulation scenario tests via `tools/scenario-runner` (independent of the generic unit-test suite in CI).
 
 Локальная разработка (после появления реальных app entrypoints):
 
