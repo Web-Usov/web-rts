@@ -148,6 +148,10 @@ importers:
         version: 5.0.1(@types/node@22.20.4)(vite@8.3.1(@types/node@22.20.4))
 
   packages/testkit:
+    dependencies:
+      '@web-rts/simulation':
+        specifier: workspace:*
+        version: link:../simulation
     devDependencies:
       '@eslint/js':
         specifier: ^10.0.1
@@ -196,6 +200,13 @@ importers:
         version: 5.0.1(@types/node@22.20.4)(vite@8.3.1(@types/node@22.20.4))
 
   tools/scenario-runner:
+    dependencies:
+      '@web-rts/simulation':
+        specifier: workspace:*
+        version: link:../../packages/simulation
+      '@web-rts/testkit':
+        specifier: workspace:*
+        version: link:../../packages/testkit
     devDependencies:
       '@eslint/js':
         specifier: ^10.0.1
