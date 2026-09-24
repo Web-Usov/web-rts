@@ -8,6 +8,10 @@
 - [`technical-vision.md`](./technical-vision.md) — Technical Vision v0.1: зафиксированный стек, simulation architecture, networking, rendering, testing, CI и agent-driven development rules.
 - [`technical-direction.md`](./technical-direction.md) — Technical Direction v0.1: предварительный документ, на основе которого сформирован Technical Vision. При расхождениях приоритет имеет `technical-vision.md`.
 
+## ADR
+
+- [`adr/008-pnpm-turborepo-monorepo.md`](./adr/008-pnpm-turborepo-monorepo.md) — pnpm workspaces для package/workspace management + Turborepo для task orchestration и caching.
+
 ## Как развиваем документацию
 
 - Продуктовые решения фиксируются в `game-vision.md` или отдельных спецификациях в `docs/specs/`.
