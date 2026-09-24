@@ -10,7 +10,7 @@
 
 ## ADR
 
-- [`adr/008-pnpm-turborepo-monorepo.md`](./adr/008-pnpm-turborepo-monorepo.md) — pnpm workspaces для package/workspace management + Turborepo для task orchestration и caching.
+- [`adr/000-pnpm-turborepo-monorepo.md`](./adr/000-pnpm-turborepo-monorepo.md) — pnpm workspaces для package/workspace management + Turborepo для task orchestration и caching.
 
 ## Как развиваем документацию
 
