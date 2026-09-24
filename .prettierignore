@@ -6,3 +6,11 @@ pnpm-lock.yaml
 *.tsbuildinfo
 docs/
 AGENTS.md
+
+# Vendored upstream skills stay byte-for-byte. The project-local router stays checked.
+.agents/skills/*
+!.agents/skills/web-rts-router/
+!.agents/skills/web-rts-router/**
+
+# Upstream Apache-2.0 LICENSE and NOTICE must not be rewritten.
+.agents/vendor/
