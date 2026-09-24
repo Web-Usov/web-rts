@@ -8,6 +8,12 @@
 - [`technical-vision.md`](./technical-vision.md) — Technical Vision v0.1: зафиксированный стек, simulation architecture, networking, rendering, testing, CI и agent-driven development rules.
 - [`technical-direction.md`](./technical-direction.md) — Technical Direction v0.1: предварительный документ, на основе которого сформирован Technical Vision. При расхождениях приоритет имеет `technical-vision.md`.
 
+## Specs
+
+- [`specs/001-foundation-network-vertical-slice.md`](./specs/001-foundation-network-vertical-slice.md) — Foundation Spec #001: первый authoritative multiplayer vertical slice, tooling, simulation kernel, transport, client/server integration, tests, CI и LAN startup.
+
+Корневой [`AGENTS.md`](../AGENTS.md) содержит обязательные правила для coding agents: source-of-truth hierarchy, архитектурные инварианты, scope discipline и требования к PR/tests.
+
 ## ADR
 
 - [`adr/000-pnpm-turborepo-monorepo.md`](./adr/000-pnpm-turborepo-monorepo.md) — pnpm workspaces для package/workspace management + Turborepo для task orchestration и caching.
