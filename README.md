@@ -7,7 +7,8 @@
 ## Документация
 
 - [Game Vision v0.1](./docs/game-vision.md)
-- [Technical Direction v0.1](./docs/technical-direction.md)
+- [Technical Vision v0.1](./docs/technical-vision.md)
+- [Technical Direction v0.1](./docs/technical-direction.md) — предварительный документ
 - [Индекс документации](./docs/README.md)
 
 Текущий приоритет — технологический foundation и первый multiplayer vertical slice до полноценного gameplay и визуального polish.
