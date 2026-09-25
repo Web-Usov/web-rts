@@ -106,6 +106,29 @@ jobs:
       - name: Simulation scenario tests
         run: pnpm test:simulation
 
+  server-integration:
+    name: server-integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Server integration tests
+        run: pnpm test:server
+
   build:
     name: build
     runs-on: ubuntu-latest
