@@ -14,8 +14,61 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      docs_only: ${{ steps.classify.outputs.docs_only }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Classify changed files
+        id: classify
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+
+          # Pushes to main always receive the full CI pipeline.
+          if [[ "$EVENT_NAME" != "pull_request" ]]; then
+            echo "docs_only=false" >> "$GITHUB_OUTPUT"
+            echo "Push event: running full CI."
+            exit 0
+          fi
+
+          # Triple-dot matches the PR diff (merge-base -> head). Disable rename
+          # detection so code -> docs renames expose both old and new paths.
+          git diff --no-renames --name-only "$BASE_SHA...$HEAD_SHA" > /tmp/changed-files.txt
+
+          echo "Changed files:"
+          cat /tmp/changed-files.txt
+
+          docs_only=true
+          while IFS= read -r file; do
+            [[ -z "$file" ]] && continue
+            case "$file" in
+              AGENTS.md|README.md|*.md|docs/*|.agents/*|skills-lock.json|LICENSE*|NOTICE*)
+                ;;
+              *)
+                docs_only=false
+                break
+                ;;
+            esac
+          done < /tmp/changed-files.txt
+
+          echo "docs_only=$docs_only" >> "$GITHUB_OUTPUT"
+          echo "docs_only=$docs_only"
+
   lint:
     name: lint
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -39,6 +92,8 @@ jobs:
 
   typecheck:
     name: typecheck
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -62,6 +117,8 @@ jobs:
 
   unit-tests:
     name: unit-tests
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -85,6 +142,8 @@ jobs:
 
   simulation-tests:
     name: simulation-tests
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -108,6 +167,8 @@ jobs:
 
   server-integration:
     name: server-integration
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -131,6 +192,8 @@ jobs:
 
   build:
     name: build
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -151,3 +214,64 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+  ci-gate:
+    name: ci-gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: always()
+    needs:
+      - changes
+      - lint
+      - typecheck
+      - unit-tests
+      - simulation-tests
+      - server-integration
+      - build
+    steps:
+      - name: Verify required CI results
+        env:
+          DOCS_ONLY: ${{ needs.changes.outputs.docs_only }}
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          LINT_RESULT: ${{ needs.lint.result }}
+          TYPECHECK_RESULT: ${{ needs.typecheck.result }}
+          UNIT_TESTS_RESULT: ${{ needs.unit-tests.result }}
+          SIMULATION_TESTS_RESULT: ${{ needs.simulation-tests.result }}
+          SERVER_INTEGRATION_RESULT: ${{ needs.server-integration.result }}
+          BUILD_RESULT: ${{ needs.build.result }}
+        run: |
+          set -euo pipefail
+
+          if [[ "$CHANGES_RESULT" != "success" ]]; then
+            echo "changes job failed: $CHANGES_RESULT"
+            exit 1
+          fi
+
+          results=(
+            "$LINT_RESULT"
+            "$TYPECHECK_RESULT"
+            "$UNIT_TESTS_RESULT"
+            "$SIMULATION_TESTS_RESULT"
+            "$SERVER_INTEGRATION_RESULT"
+            "$BUILD_RESULT"
+          )
+
+          if [[ "$DOCS_ONLY" == "true" ]]; then
+            for result in "${results[@]}"; do
+              if [[ "$result" != "success" && "$result" != "skipped" ]]; then
+                echo "Unexpected docs-only CI result: $result"
+                exit 1
+              fi
+            done
+            echo "Docs-only PR: heavy CI jobs were safely skipped."
+            exit 0
+          fi
+
+          for result in "${results[@]}"; do
+            if [[ "$result" != "success" ]]; then
+              echo "Full CI requires all heavy jobs to succeed; got: $result"
+              exit 1
+            fi
+          done
+
+          echo "Full CI passed."
