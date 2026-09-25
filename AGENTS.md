@@ -182,6 +182,38 @@ Bug fix должен иметь regression test, если это практич�
 
 Локальные проверки необходимы, но не являются достаточным доказательством completion. Перед финальным review все required GitHub Actions checks для PR должны завершиться успешно. Агент не должен объявлять PR готовым, опираясь только на локальный вывод команд.
 
+### Browser/playtest verification для player-visible изменений
+
+Если PR меняет то, что пользователь видит или с чем взаимодействует в игре, обязательна реальная браузерная проверка. Это включает, но не ограничивается:
+
+- UI, HUD, lobby, menu и debug UI;
+- Babylon scene, camera, selection, destination markers и другие visual states;
+- mouse/keyboard input и player interaction flow;
+- player-visible gameplay behavior, movement, building, combat, objectives и другие игровые состояния;
+- multiplayer flow, если изменение видно или управляется из нескольких клиентов.
+
+Для таких изменений coding agent обязан до финального review:
+
+1. поднять необходимые web/server процессы в task worktree;
+2. использовать внутренний browser/game-playtest инструмент среды агента для реального открытия игры, кликов, keyboard/mouse actions, переходов между состояниями и проверки результата; одной проверки кода, unit/integration tests или описания «должно работать» недостаточно;
+3. пройти минимум основной изменённый happy-path и релевантный regression-path; для multiplayer изменений использовать необходимое количество browser sessions/tabs, чтобы подтвердить наблюдаемое состояние с разных клиентов;
+4. проверить отсутствие явных browser console/runtime ошибок в протестированном flow;
+5. сделать репрезентативные screenshots ключевых состояний — до/после важного действия или иной набор кадров, который визуально доказывает изменение;
+6. сохранить screenshots предпочтительно в `docs/verification/<issue-or-stage>/` и встроить их в описание PR. Если конкретный внутренний инструмент не позволяет сохранить изображение в репозиторий, screenshot должен быть приложен к PR другим поддерживаемым способом.
+
+В PR для такого изменения обязателен отдельный раздел `Визуальная проверка`, где указаны:
+
+- какой внутренний browser/playtest инструмент использовался;
+- какие шаги и состояния были проверены;
+- результат проверки;
+- встроенные screenshots ключевых состояний.
+
+Visual/browser verification дополняет automated tests и CI, но не заменяет их.
+
+Для docs-only, server-only, tooling-only или внутреннего refactor без player-visible изменений screenshots не требуются.
+
+Если среда агента не предоставляет внутренний browser/game-playtest инструмент или он технически недоступен, агент не должен имитировать результат или отмечать visual verification как выполненную. Ограничение нужно явно указать в PR; задача с обязательной player-visible проверкой не считается полностью проверенной до фактического browser playtest.
+
 ## 12. Branch freshness
 
 Перед финальным review/передачей PR агент должен:
@@ -203,6 +235,8 @@ PR должен содержать:
 - выполненные команды/tests;
 - architectural impact (`none` допустимо);
 - известные ограничения/TODO только если они находятся вне scope.
+
+Если PR содержит player-visible изменения по правилам §11, он также должен содержать раздел `Визуальная проверка` с browser/playtest steps и screenshots.
 
 Все пользовательские тексты, которые coding agent создаёт в GitHub для этого репозитория, оформляются на русском языке:
 
@@ -243,6 +277,7 @@ Coding agent не merge'ит собственный PR и не включает 
 - релевантные tests green;
 - build green;
 - required GitHub Actions checks green;
+- обязательная browser/playtest verification выполнена для player-visible изменений и screenshots приложены в PR;
 - branch проверена поверх актуального `main`, если `main` изменился во время работы;
 - docs обновлены, если public contract изменился;
 - PR не содержит случайного scope expansion;
