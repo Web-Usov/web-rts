@@ -4,6 +4,7 @@ import {
   EVENT_MESSAGE,
   START_MESSAGE,
   STATE_MESSAGE,
+  SYNC_MESSAGE,
   parseGameEvent,
   parseGameStateView,
   type ConnectOptions,
@@ -90,6 +91,10 @@ export class RemoteGameTransport implements GameTransport {
         listener(parsed.data);
       }
     });
+
+    // onJoin already broadcast a snapshot; the SDK drops it if this handler
+    // was not registered yet. Ask again now that listeners exist.
+    this.room.send(SYNC_MESSAGE, {});
   }
 
   sendCommand(command: GameCommand): void {

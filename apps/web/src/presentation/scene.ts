@@ -61,6 +61,7 @@ export function mountPresentation(
   canvas: HTMLCanvasElement,
   onHud: (view: HudView) => void,
   bindings: PresentationBindings,
+  onFps?: (fps: number) => void,
 ): PresentationSession {
   const engine = new Engine(canvas, true, { stencil: true }, true);
   const scene = new Scene(engine);
@@ -281,24 +282,23 @@ export function mountPresentation(
       const point = pick?.pickedPoint;
       const role = meshRole(pick?.pickedMesh ?? null);
       if (point && role === "ground") {
+        const entityId = bindings.clientState.getCommandEntityId();
+        if (entityId === null) {
+          return;
+        }
         const simTarget = babylonToSimulationGround({ x: point.x, z: point.z });
         // Destination marker = instant UX feedback (game-feel), not authority.
         bindings.clientState.setDestinationMarker(simTarget);
         pushPresentation(bindings.clientState.sample(performance.now()));
-
-        const entityId =
-          bindings.clientState.getSelectedIds()[0] ?? bindings.clientState.getLocalUnitEntityId();
-        if (entityId !== null) {
-          clientSequence += 1;
-          const command: GameCommand = {
-            type: "MOVE",
-            commandId: bindings.nextCommandId(),
-            clientSequence,
-            entityIds: [entityId],
-            target: simTarget,
-          };
-          bindings.transport.sendCommand(command);
-        }
+        clientSequence += 1;
+        const command: GameCommand = {
+          type: "MOVE",
+          commandId: bindings.nextCommandId(),
+          clientSequence,
+          entityIds: [entityId],
+          target: simTarget,
+        };
+        bindings.transport.sendCommand(command);
       }
     }
   });
@@ -308,10 +308,15 @@ export function mountPresentation(
   };
   canvas.addEventListener("contextmenu", onContextMenu);
 
+  let fpsStamp = performance.now();
   engine.runRenderLoop(() => {
     const now = performance.now();
     bindings.clientState.setRenderTimeMs(now);
     updateInterpolatedMeshes(bindings.clientState.sample(now));
+    if (onFps && now - fpsStamp >= 250) {
+      fpsStamp = now;
+      onFps(Math.round(engine.getFps()));
+    }
     scene.render();
   });
 

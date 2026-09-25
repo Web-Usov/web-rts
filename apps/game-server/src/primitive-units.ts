@@ -51,12 +51,13 @@ export class PrimitiveUnitRegistry {
    */
   spawnForPlayers(world: World, playerIds: readonly number[]): void {
     this.clear();
-    for (const playerId of playerIds) {
+    const ordered = [...new Set(playerIds)].sort((left, right) => left - right);
+    ordered.forEach((playerId, spawnIndex) => {
       const entityId = world.createEntity();
-      const spawn = foundationUnitSpawnPosition(playerId);
+      const spawn = foundationUnitSpawnPosition(spawnIndex);
       world.positions.set(entityId, { x: spawn.x, y: spawn.y });
       this.byPlayer.set(playerId, entityId);
       this.byEntity.set(entityId, playerId);
-    }
+    });
   }
 }

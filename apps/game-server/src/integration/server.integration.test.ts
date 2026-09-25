@@ -5,6 +5,7 @@ import {
   GAME_DATA_VERSION,
   PROTOCOL_VERSION,
   STATE_MESSAGE,
+  SYNC_MESSAGE,
   type GameStateView,
   type MoveCommand,
 } from "@web-rts/protocol";
@@ -106,6 +107,54 @@ describe("game-server integration", () => {
     expect(clients.map((c) => c.sessionId).filter(Boolean)).toHaveLength(MAX_PLAYERS);
   });
 
+  it("delivers the first lobby snapshot to a freshly connected client", async () => {
+    const room = (await colyseus.createRoom(
+      FOUNDATION_ROOM_NAME,
+      compatibleOptions,
+    )) as FoundationRoom;
+    const client = await colyseus.connectTo(room, compatibleOptions);
+
+    const pending = waitForState(
+      client,
+      (view) =>
+        view.phase === "LOBBY" &&
+        view.localPlayerId === 0 &&
+        view.players.filter((player) => player.connected).length === 1 &&
+        view.roomId === room.roomId,
+    );
+    client.send(SYNC_MESSAGE, {});
+
+    const view = await pending;
+    expect(view.entities).toEqual([]);
+    expect(room.phase).toBe("LOBBY");
+    expect(room.simulationHost).toBeNull();
+  });
+
+  it("sends the same connected player list to every client after sync", async () => {
+    const room = (await colyseus.createRoom(
+      FOUNDATION_ROOM_NAME,
+      compatibleOptions,
+    )) as FoundationRoom;
+    const clientA = await colyseus.connectTo(room, compatibleOptions);
+    const clientB = await colyseus.connectTo(room, compatibleOptions);
+
+    const waitA = waitForState(
+      clientA,
+      (view) => view.players.filter((player) => player.connected).length === 2,
+    );
+    const waitB = waitForState(
+      clientB,
+      (view) => view.players.filter((player) => player.connected).length === 2,
+    );
+    clientA.send(SYNC_MESSAGE, {});
+    clientB.send(SYNC_MESSAGE, {});
+
+    const [viewA, viewB] = await Promise.all([waitA, waitB]);
+    expect(viewA.players).toEqual(viewB.players);
+    expect(viewA.localPlayerId).not.toBe(viewB.localPlayerId);
+    expect(room.clients.length).toBe(2);
+  });
+
   it("rejects the 5th client when the room is full", async () => {
     const room = (await colyseus.createRoom(
       FOUNDATION_ROOM_NAME,
@@ -118,6 +167,32 @@ describe("game-server integration", () => {
 
     await expect(colyseus.connectTo(room, compatibleOptions)).rejects.toThrow();
     expect(room.clients.length).toBe(MAX_PLAYERS);
+  });
+
+  it("spawns unique positions after a non-zero player is replaced", async () => {
+    const room = (await colyseus.createRoom(
+      FOUNDATION_ROOM_NAME,
+      compatibleOptions,
+    )) as FoundationRoom;
+    const clients = [];
+    for (let i = 0; i < MAX_PLAYERS; i += 1) {
+      clients.push(await colyseus.connectTo(room, compatibleOptions));
+    }
+
+    const leaving = clients[1];
+    expect(room.slots.getBySessionId(leaving!.sessionId)?.playerId).toBe(1);
+    await leaving!.leave();
+
+    const replacement = await colyseus.connectTo(room, compatibleOptions);
+    expect(room.slots.getBySessionId(replacement.sessionId)?.playerId).toBe(4);
+    expect(room.startMatch()).toBe(true);
+
+    const points = room.slots.list().map((slot) => {
+      const entityId = room.simulationHost!.primitiveUnits.getEntityId(slot.playerId);
+      expect(entityId).toBeDefined();
+      return room.simulationHost!.world.positions.get(entityId!);
+    });
+    expect(new Set(points.map((point) => `${point?.x},${point?.y}`)).size).toBe(MAX_PLAYERS);
   });
 
   it("frees a slot on leave so a new client can join a previously full room", async () => {

@@ -1,7 +1,7 @@
 import type { GameEvent, GameStateView } from "@web-rts/protocol";
 import {
-  interpolateSnapshots,
-  interpolationAlpha,
+  INTERPOLATION_DELAY_MS,
+  sampleSnapshotBuffer,
   type InterpolatedPose,
   type StateSnapshot,
 } from "./interpolation.js";
@@ -13,9 +13,10 @@ type EventListener = (event: GameEvent) => void;
  * Holds authoritative replicated snapshots and exposes interpolated poses for presentation.
  * Destination marker UX is intentionally separate and never mutates entity authority.
  */
+const MAX_SNAPSHOTS = 8;
+
 export class ClientGameState {
-  private previous: StateSnapshot | null = null;
-  private latest: StateSnapshot | null = null;
+  private readonly snapshots: StateSnapshot[] = [];
   private view: GameStateView | null = null;
   private destinationSim: { x: number; y: number } | null = null;
   private selectedIds: number[] = [];
@@ -38,12 +39,9 @@ export class ClientGameState {
       })),
     };
 
-    if (this.latest === null) {
-      this.previous = snapshot;
-      this.latest = snapshot;
-    } else {
-      this.previous = this.latest;
-      this.latest = snapshot;
+    this.snapshots.push(snapshot);
+    if (this.snapshots.length > MAX_SNAPSHOTS) {
+      this.snapshots.shift();
     }
 
     this.selectedIds = this.selectedIds.filter((id) =>
@@ -57,12 +55,13 @@ export class ClientGameState {
     this.renderTimeMs = timeMs;
   }
 
+  /**
+   * Poses at `renderTimeMs - INTERPOLATION_DELAY_MS`.
+   * Playing on the newest snapshot snaps once per tick; the delay spends the
+   * gap between arrivals interpolating.
+   */
   sample(renderTimeMs: number = this.renderTimeMs): readonly InterpolatedPose[] {
-    if (!this.previous || !this.latest) {
-      return [];
-    }
-    const alpha = interpolationAlpha(this.previous, this.latest, renderTimeMs);
-    return interpolateSnapshots(this.previous, this.latest, alpha);
+    return sampleSnapshotBuffer(this.snapshots, renderTimeMs - INTERPOLATION_DELAY_MS);
   }
 
   getView(): GameStateView | null {
@@ -83,6 +82,20 @@ export class ClientGameState {
       (entity) => entity.kind === "unit" && entity.controllerPlayerId === localPlayerId,
     );
     return unit?.entityId ?? null;
+  }
+
+  /** Connected slots from the latest authoritative view. */
+  getConnectedPlayerCount(): number {
+    return this.view?.players.filter((player) => player.connected).length ?? 0;
+  }
+
+  /**
+   * Entity a local MOVE may target.
+   * Empty selection does not fall back to the bound unit — with more than one
+   * controllable unit that fallback would move the wrong one.
+   */
+  getCommandEntityId(): number | null {
+    return this.selectedIds[0] ?? null;
   }
 
   select(entityId: number | null): void {

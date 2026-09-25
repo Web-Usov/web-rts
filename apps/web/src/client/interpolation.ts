@@ -83,6 +83,45 @@ export function interpolationAlpha(
   return clamp01((renderTimeMs - from.timeMs) / span);
 }
 
+/**
+ * How far behind the newest snapshot presentation plays.
+ * One foundation tick (10 Hz / 100 ms): the renderer spends that interval
+ * moving between two authoritative poses instead of snapping to the latest.
+ */
+export const INTERPOLATION_DELAY_MS = 100;
+
+/**
+ * Picks the two buffer snapshots that bracket `playbackTimeMs` and lerps.
+ * Time at or before the first snapshot holds the first pose.
+ * Time at or after the last snapshot holds the last pose (no extrapolation).
+ */
+export function sampleSnapshotBuffer(
+  snapshots: readonly StateSnapshot[],
+  playbackTimeMs: number,
+): InterpolatedPose[] {
+  const first = snapshots[0];
+  if (first === undefined) {
+    return [];
+  }
+  if (snapshots.length === 1 || playbackTimeMs <= first.timeMs) {
+    return interpolateSnapshots(first, first, 1);
+  }
+
+  let from = first;
+  for (let index = 1; index < snapshots.length; index += 1) {
+    const to = snapshots[index];
+    if (to === undefined) {
+      break;
+    }
+    if (playbackTimeMs <= to.timeMs) {
+      return interpolateSnapshots(from, to, interpolationAlpha(from, to, playbackTimeMs));
+    }
+    from = to;
+  }
+
+  return interpolateSnapshots(from, from, 1);
+}
+
 function clamp01(value: number): number {
   if (value <= 0) {
     return 0;

@@ -41,8 +41,9 @@ export function isWithinFoundationBounds(
 }
 
 /**
- * Distinct start positions for foundation primitive units (player slot order).
- * Indexed by server-assigned playerId; outside simulation ownership model.
+ * Distinct start positions for the current foundation match.
+ * Indexed by spawn slot among players present at Start, not by historical playerId.
+ * playerId 4 after a leave/replace must not wrap onto slot 0.
  */
 export const FOUNDATION_UNIT_SPAWN_POSITIONS: readonly GroundPoint[] = [
   { x: -6, y: -3 },
@@ -51,9 +52,10 @@ export const FOUNDATION_UNIT_SPAWN_POSITIONS: readonly GroundPoint[] = [
   { x: 6, y: 6 },
 ];
 
-export function foundationUnitSpawnPosition(playerId: number): GroundPoint {
-  const index =
-    ((playerId % FOUNDATION_UNIT_SPAWN_POSITIONS.length) + FOUNDATION_UNIT_SPAWN_POSITIONS.length) %
-    FOUNDATION_UNIT_SPAWN_POSITIONS.length;
-  return FOUNDATION_UNIT_SPAWN_POSITIONS[index]!;
+export function foundationUnitSpawnPosition(spawnIndex: number): GroundPoint {
+  const point = FOUNDATION_UNIT_SPAWN_POSITIONS[spawnIndex];
+  if (point === undefined) {
+    throw new RangeError(`foundation spawn index out of range: ${spawnIndex}`);
+  }
+  return point;
 }

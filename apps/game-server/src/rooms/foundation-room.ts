@@ -6,6 +6,7 @@ import {
   PROTOCOL_VERSION,
   START_MESSAGE,
   STATE_MESSAGE,
+  SYNC_MESSAGE,
   parseGameCommand,
   type CommandRejectedEvent,
   type GameEvent,
@@ -68,6 +69,10 @@ export class FoundationRoom extends Room {
 
     this.onMessage(START_MESSAGE, (client) => {
       this.handleStartMessage(client);
+    });
+
+    this.onMessage(SYNC_MESSAGE, (client) => {
+      this.sendState(client);
     });
   }
 
@@ -229,13 +234,17 @@ export class FoundationRoom extends Room {
   /** Per-client GameStateView projection (localPlayerId differs; entities shared in F5). */
   broadcastState(): void {
     for (const client of this.clients) {
-      const slot = this.slots.getBySessionId(client.sessionId);
-      if (!slot) {
-        continue;
-      }
-      const view = this.buildStateView(slot.playerId);
-      client.send(STATE_MESSAGE, view);
+      this.sendState(client);
     }
+  }
+
+  /** One recipient. Used by broadcast and by the post-join sync request. */
+  sendState(client: Client): void {
+    const slot = this.slots.getBySessionId(client.sessionId);
+    if (!slot) {
+      return;
+    }
+    client.send(STATE_MESSAGE, this.buildStateView(slot.playerId));
   }
 
   buildStateView(localPlayerId: number) {

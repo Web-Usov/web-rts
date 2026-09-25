@@ -11,7 +11,13 @@ export const DEFAULT_PORT = 2567;
 export const DEFAULT_MAP_ID = "foundation";
 
 /** Re-export wire message names from protocol (single source of truth). */
-export { COMMAND_MESSAGE, EVENT_MESSAGE, START_MESSAGE, STATE_MESSAGE } from "@web-rts/protocol";
+export {
+  COMMAND_MESSAGE,
+  EVENT_MESSAGE,
+  START_MESSAGE,
+  STATE_MESSAGE,
+  SYNC_MESSAGE,
+} from "@web-rts/protocol";
 
 /**
  * Auth/matchmaking errors use HTTP-style codes (Colyseus docs for onAuth).

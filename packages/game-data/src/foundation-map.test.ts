@@ -35,6 +35,10 @@ describe("foundation map bounds", () => {
 });
 
 describe("foundation unit spawn positions", () => {
+  it("does not wrap a later playerId onto the first spawn slot", () => {
+    expect(() => foundationUnitSpawnPosition(4)).toThrow(RangeError);
+  });
+
   it("returns distinct positions for the first four player slots", () => {
     const positions = [0, 1, 2, 3].map((id) => foundationUnitSpawnPosition(id));
     const keys = new Set(positions.map((p) => `${p.x},${p.y}`));

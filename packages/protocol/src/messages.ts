@@ -9,6 +9,13 @@ export const COMMAND_MESSAGE = "command" as const;
 /** Client → server request to leave LOBBY and start the match. */
 export const START_MESSAGE = "start" as const;
 
+/**
+ * Client → server request for the current GameStateView.
+ * Sent after message handlers are attached, because a snapshot pushed inside
+ * room onJoin can arrive before `room.onMessage` exists and is dropped.
+ */
+export const SYNC_MESSAGE = "sync" as const;
+
 /** Server → client one-shot {@link GameEvent} payloads. */
 export const EVENT_MESSAGE = "event" as const;
 

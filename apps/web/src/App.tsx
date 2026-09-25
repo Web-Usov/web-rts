@@ -26,6 +26,8 @@ export function App() {
   const [joinRoomId, setJoinRoomId] = useState("");
   const [phase, setPhase] = useState<MatchPhase | "-">("-");
   const [localPlayerId, setLocalPlayerId] = useState<number | null>(null);
+  const [connectedPlayers, setConnectedPlayers] = useState(0);
+  const [fps, setFps] = useState(0);
   const [lastEvent, setLastEvent] = useState<string>("");
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -45,6 +47,7 @@ export function App() {
       setPhase(view.phase);
       setLocalPlayerId(view.localPlayerId);
       setRoomId(view.roomId);
+      setConnectedPlayers(view.players.filter((player) => player.connected).length);
     });
     const unsubEvent = transport.subscribeEvent((event: GameEvent) => {
       clientState.handleEvent(event);
@@ -59,14 +62,19 @@ export function App() {
       };
     }
 
-    const session = mountPresentation(canvas, setHud, {
-      transport,
-      clientState,
-      nextCommandId: () => {
-        commandCounter.current += 1;
-        return `cmd-${commandCounter.current}`;
+    const session = mountPresentation(
+      canvas,
+      setHud,
+      {
+        transport,
+        clientState,
+        nextCommandId: () => {
+          commandCounter.current += 1;
+          return `cmd-${commandCounter.current}`;
+        },
       },
-    });
+      setFps,
+    );
 
     return () => {
       unsubState();
@@ -119,6 +127,7 @@ export function App() {
     setStatus("disconnected");
     setPhase("-");
     setLocalPlayerId(null);
+    setConnectedPlayers(0);
     setRoomId("");
   };
 
@@ -186,6 +195,14 @@ export function App() {
             <dd>{localPlayerId ?? "—"}</dd>
           </div>
           <div>
+            <dt>Players</dt>
+            <dd>{connectedPlayers}</dd>
+          </div>
+          <div>
+            <dt>FPS</dt>
+            <dd>{fps}</dd>
+          </div>
+          <div>
             <dt>Entities</dt>
             <dd>{hud.entityCount}</dd>
           </div>
@@ -207,7 +224,7 @@ export function App() {
           <li>Middle or right drag pans</li>
           <li>Wheel zooms</li>
           <li>Left click selects your primitive unit</li>
-          <li>Right click sends MOVE (marker is UX only)</li>
+          <li>Right click moves the selected unit (marker is UX only)</li>
         </ul>
       </aside>
     </div>

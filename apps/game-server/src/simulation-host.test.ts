@@ -57,6 +57,19 @@ describe("SimulationHost", () => {
     expect(host.tick).toBe(1);
   });
 
+  it("assigns distinct spawns when player ids are not 0..3", () => {
+    const host = new SimulationHost({ seed: 1, mapId: "foundation" });
+    host.bootstrapMatch([0, 2, 3, 4]);
+
+    const points = [0, 2, 3, 4].map((playerId) => {
+      const entityId = host.primitiveUnits.getEntityId(playerId);
+      expect(entityId).toBeDefined();
+      return host.world.positions.get(entityId!);
+    });
+    const keys = new Set(points.map((point) => `${point?.x},${point?.y}`));
+    expect(keys.size).toBe(4);
+  });
+
   it("rejects MOVE for a foreign primitive unit without enqueueing", () => {
     const host = new SimulationHost({ seed: 1, mapId: "foundation" });
     host.bootstrapMatch([0, 1]);
