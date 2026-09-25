@@ -12,12 +12,14 @@
     "test": "turbo run test",
     "test:simulation": "turbo run test --filter=@web-rts/scenario-runner",
     "test:server": "turbo run test:integration --filter=@web-rts/game-server",
+    "test:e2e": "playwright test",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint && prettier --check .",
     "format": "prettier --write ."
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.63.0",
     "@types/node": "^22.20.4",
     "eslint": "^10.11.0",
     "eslint-config-prettier": "^10.1.8",

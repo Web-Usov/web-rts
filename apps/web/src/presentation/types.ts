@@ -27,9 +27,11 @@ export interface PresentationSyncData {
   readonly destination: GroundPoint | null;
 }
 
-/** Discrete HUD snapshot. Intentionally has no per-entity transforms. */
+/** Discrete HUD snapshot. Intentionally has no per-frame transforms. */
 export interface HudView {
   readonly entityCount: number;
+  /** Count of replicated objective entities (generic; not Sacred-Site-specific). */
+  readonly objectiveCount: number;
   readonly selectedIds: readonly number[];
   readonly hasDestination: boolean;
 }
