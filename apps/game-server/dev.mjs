@@ -1,2 +1,3 @@
-console.log("[@web-rts/game-server] scaffold placeholder — awaiting later foundation tasks");
-setInterval(() => {}, 60_000);
+console.log(
+  "[@web-rts/game-server] use `pnpm --filter @web-rts/game-server dev` (tsx watch src/main.ts)",
+);

@@ -11,6 +11,7 @@
     "build": "turbo run build",
     "test": "turbo run test",
     "test:simulation": "turbo run test --filter=@web-rts/scenario-runner",
+    "test:server": "turbo run test:integration --filter=@web-rts/game-server",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint && prettier --check .",
     "format": "prettier --write ."
