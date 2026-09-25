@@ -22,6 +22,8 @@ function view(overrides: Partial<GameStateView> = {}): GameStateView {
         y: 0,
         ownerPlayerId: 0,
         controllerPlayerId: 0,
+        objectiveType: null,
+        objectiveState: null,
       },
       {
         entityId: 11,
@@ -30,6 +32,8 @@ function view(overrides: Partial<GameStateView> = {}): GameStateView {
         y: 5,
         ownerPlayerId: 1,
         controllerPlayerId: 1,
+        objectiveType: null,
+        objectiveState: null,
       },
     ],
     ...overrides,
@@ -58,6 +62,8 @@ describe("ClientGameState", () => {
             y: 0,
             ownerPlayerId: 0,
             controllerPlayerId: 0,
+            objectiveType: null,
+            objectiveState: null,
           },
           {
             entityId: 11,
@@ -66,6 +72,8 @@ describe("ClientGameState", () => {
             y: 5,
             ownerPlayerId: 1,
             controllerPlayerId: 1,
+            objectiveType: null,
+            objectiveState: null,
           },
         ],
       }),
@@ -91,6 +99,8 @@ describe("ClientGameState", () => {
             y: 0,
             ownerPlayerId: 0,
             controllerPlayerId: 0,
+            objectiveType: null,
+            objectiveState: null,
           },
           {
             entityId: 11,
@@ -99,6 +109,8 @@ describe("ClientGameState", () => {
             y: 5,
             ownerPlayerId: 1,
             controllerPlayerId: 1,
+            objectiveType: null,
+            objectiveState: null,
           },
         ],
       }),
@@ -136,6 +148,31 @@ describe("ClientGameState", () => {
     expect(state.getConnectedPlayerCount()).toBe(1);
     state.applyAuthoritativeState(view(), 100);
     expect(state.getConnectedPlayerCount()).toBe(2);
+  });
+
+  it("treats selection as local UX gated by replicated controller", () => {
+    const state = new ClientGameState();
+    state.applyAuthoritativeState(
+      view({
+        entities: [
+          ...view().entities,
+          {
+            entityId: 12,
+            kind: "objective",
+            x: 0,
+            y: 0,
+            ownerPlayerId: null,
+            controllerPlayerId: null,
+            objectiveType: "SACRED_SITE",
+            objectiveState: "ACTIVE",
+          },
+        ],
+      }),
+      0,
+    );
+    expect(state.canLocalPlayerControl(10)).toBe(true);
+    expect(state.canLocalPlayerControl(11)).toBe(false);
+    expect(state.canLocalPlayerControl(12)).toBe(false);
   });
 
   it("destination marker does not alter authoritative entity poses", () => {

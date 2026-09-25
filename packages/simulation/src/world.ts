@@ -8,7 +8,15 @@ import {
 import { EventQueue, type SimulationEvent } from "./events.js";
 import { createSeededRng, type Rng } from "./rng.js";
 import { runMovementSystem } from "./systems/movement.js";
-import type { EntityId, Movement, Position } from "./types.js";
+import type {
+  Controller,
+  EntityId,
+  Movement,
+  Objective,
+  Owner,
+  PlayerId,
+  Position,
+} from "./types.js";
 
 /**
  * Framework-agnostic simulation world.
@@ -19,6 +27,9 @@ export class World {
   readonly rng: Rng;
   readonly positions = new ComponentStore<Position>();
   readonly movements = new ComponentStore<Movement>();
+  readonly owners = new ComponentStore<Owner>();
+  readonly controllers = new ComponentStore<Controller>();
+  readonly objectives = new ComponentStore<Objective>();
 
   private tickCount = 0;
   private nextEntityId: EntityId = 1;
@@ -54,6 +65,9 @@ export class World {
     }
     this.positions.remove(entityId);
     this.movements.remove(entityId);
+    this.owners.remove(entityId);
+    this.controllers.remove(entityId);
+    this.objectives.remove(entityId);
   }
 
   hasEntity(entityId: EntityId): boolean {
@@ -156,4 +170,26 @@ export class World {
 
 export function createWorld(options?: CreateWorldOptions): World {
   return new World(options);
+}
+
+/**
+ * MOVE is allowed only when every target has a Controller whose player matches
+ * the session player. Missing Controller (objectives, bare entities) rejects
+ * the whole command. Owner is not consulted.
+ *
+ * This is the gameplay permission rule. The kernel still applies commands that
+ * the application boundary has already authorized (Foundation Spec §8).
+ */
+export function canIssueMove(
+  world: World,
+  playerId: PlayerId,
+  entityIds: readonly EntityId[],
+): boolean {
+  if (entityIds.length === 0) {
+    return false;
+  }
+  return entityIds.every((entityId) => {
+    const controller = world.controllers.get(entityId);
+    return controller !== undefined && controller.controllerPlayerId === playerId;
+  });
 }

@@ -1,6 +1,6 @@
-import { isWithinFoundationBounds } from "@web-rts/game-data";
+import { FOUNDATION_OBJECTIVE_POSITION, isWithinFoundationBounds } from "@web-rts/game-data";
 import type { GameCommand } from "@web-rts/protocol";
-import { createWorld, type SimulationCommand, type World } from "@web-rts/simulation";
+import { canIssueMove, createWorld, type SimulationCommand, type World } from "@web-rts/simulation";
 import { mapGameCommandToSimulation, type SessionPlayerContext } from "./command-mapper.js";
 import { PrimitiveUnitRegistry } from "./primitive-units.js";
 
@@ -29,15 +29,21 @@ export class SimulationHost {
   }
 
   /**
-   * Spawns F5 primitive units for the given server-derived player ids.
+   * Spawns one primitive unit per player and exactly one map-center objective.
    * Call once when leaving LOBBY.
    */
   bootstrapMatch(playerIds: readonly number[]): void {
     this.primitiveUnits.spawnForPlayers(this.world, playerIds);
+    const objectiveId = this.world.createEntity();
+    this.world.positions.set(objectiveId, {
+      x: FOUNDATION_OBJECTIVE_POSITION.x,
+      y: FOUNDATION_OBJECTIVE_POSITION.y,
+    });
+    this.world.objectives.set(objectiveId, { type: "SACRED_SITE", state: "ACTIVE" });
   }
 
   /**
-   * Validates session identity, F5 unit binding, and map bounds, then maps
+   * Validates session identity, Controller permission, and map bounds, then maps
    * protocol → simulation and enqueues on the world command queue.
    */
   enqueueFromSession(command: GameCommand, context: SessionPlayerContext): EnqueueResult {
@@ -45,7 +51,7 @@ export class SimulationHost {
       return { ok: false, reason: "out_of_bounds" };
     }
 
-    if (!this.primitiveUnits.canControlEntities(context.playerId, command.entityIds)) {
+    if (!canIssueMove(this.world, context.playerId, command.entityIds)) {
       return { ok: false, reason: "not_your_unit" };
     }
 

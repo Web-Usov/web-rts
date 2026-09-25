@@ -138,7 +138,7 @@ export function App() {
       <canvas id="game-canvas" className="viewport" />
       <aside className="hud">
         <p className="hud-title">Web RTS</p>
-        <p>F5 vertical slice — authoritative MOVE + replication.</p>
+        <p>F6 vertical slice — ownership, control, Sacred Site.</p>
 
         <div className="lobby">
           <label>

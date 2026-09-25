@@ -28,6 +28,9 @@ export const entityViewSchema = z
     y: z.number().finite(),
     ownerPlayerId: z.number().int().nonnegative().nullable(),
     controllerPlayerId: z.number().int().nonnegative().nullable(),
+    /** Null on units. Present when kind is objective. */
+    objectiveType: z.enum(["SACRED_SITE"]).nullable(),
+    objectiveState: z.enum(["ACTIVE"]).nullable(),
   })
   .strict();
 
