@@ -50,3 +50,5 @@ export {
   type ProtocolParseResult,
   type ProtocolParseSuccess,
 } from "./parse.js";
+
+export { COMMAND_MESSAGE, EVENT_MESSAGE, START_MESSAGE, STATE_MESSAGE } from "./messages.js";

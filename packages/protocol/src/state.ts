@@ -36,6 +36,11 @@ export type EntityView = z.infer<typeof entityViewSchema>;
 /**
  * Network state view DTO delivered through GameTransport.subscribeState.
  * Separated from simulation state (ADR-007).
+ *
+ * `localPlayerId` is filled per recipient by the server/application projection so
+ * the client can bind UI/selection to its session without trusting client-supplied
+ * identity or guessing from entity array order. Future LocalGameTransport can set
+ * the same field. This is not the F6 Owner/Controller permission model.
  */
 export const gameStateViewSchema = z
   .object({
@@ -44,6 +49,7 @@ export const gameStateViewSchema = z
     roomId: z.string().min(1),
     tick: z.number().int().nonnegative(),
     phase: matchPhaseSchema,
+    localPlayerId: z.number().int().nonnegative(),
     players: z.array(playerSlotViewSchema),
     entities: z.array(entityViewSchema),
   })

@@ -10,14 +10,8 @@ export const DEFAULT_PORT = 2567;
 /** Default map when create options omit `mapId`. */
 export const DEFAULT_MAP_ID = "foundation";
 
-/** Client→server message type for gameplay commands. */
-export const COMMAND_MESSAGE = "command" as const;
-
-/** Client→server message type to leave LOBBY and start simulation. */
-export const START_MESSAGE = "start" as const;
-
-/** Server→client message type for one-shot GameEvent payloads. */
-export const EVENT_MESSAGE = "event" as const;
+/** Re-export wire message names from protocol (single source of truth). */
+export { COMMAND_MESSAGE, EVENT_MESSAGE, START_MESSAGE, STATE_MESSAGE } from "@web-rts/protocol";
 
 /**
  * Auth/matchmaking errors use HTTP-style codes (Colyseus docs for onAuth).

@@ -1,7 +1,11 @@
 import { Room, ServerError, type Client } from "colyseus";
 import {
+  COMMAND_MESSAGE,
+  EVENT_MESSAGE,
   GAME_DATA_VERSION,
   PROTOCOL_VERSION,
+  START_MESSAGE,
+  STATE_MESSAGE,
   parseGameCommand,
   type CommandRejectedEvent,
   type GameEvent,
@@ -9,16 +13,10 @@ import {
   type ProtocolMismatchEvent,
 } from "@web-rts/protocol";
 import { DEFAULT_TICK_HZ } from "@web-rts/simulation";
-import {
-  AUTH_ERROR_CODE,
-  COMMAND_MESSAGE,
-  EVENT_MESSAGE,
-  MAX_PLAYERS,
-  ROOM_FULL_ERROR_CODE,
-  START_MESSAGE,
-} from "../constants.js";
+import { AUTH_ERROR_CODE, MAX_PLAYERS, ROOM_FULL_ERROR_CODE } from "../constants.js";
 import { parseRoomJoinOptions } from "../join-options.js";
 import { PlayerSlotRegistry } from "../player-slots.js";
+import { projectWorldToGameStateView } from "../replication-adapter.js";
 import { SimulationHost } from "../simulation-host.js";
 
 type ClientUserData = {
@@ -28,6 +26,7 @@ type ClientUserData = {
 /**
  * Authoritative multiplayer room shell.
  * Owns session lifecycle and command intake; gameplay rules live in SimulationHost / World.
+ * Replication projects World → GameStateView (not Colyseus Schema as simulation state).
  */
 export class FoundationRoom extends Room {
   override maxClients = MAX_PLAYERS;
@@ -109,11 +108,13 @@ export class FoundationRoom extends Room {
     (client as Client & { userData: ClientUserData }).userData = {
       playerId: slot.playerId,
     };
+    this.broadcastState();
   }
 
   override onLeave(client: Client): void {
     // Colyseus 0.18 onLeave is permanent leave; free the slot until F8 reconnect.
     this.slots.release(client.sessionId);
+    this.broadcastState();
   }
 
   override onDispose(): void {
@@ -121,7 +122,7 @@ export class FoundationRoom extends Room {
     this.phase = "FINISHED";
   }
 
-  /** Starts SimulationHost with configured seed/map and enters RUNNING. */
+  /** Starts SimulationHost, spawns primitive units, and enters RUNNING. */
   startMatch(): boolean {
     if (this.phase !== "LOBBY" && this.phase !== "STARTING") {
       return false;
@@ -131,6 +132,8 @@ export class FoundationRoom extends Room {
       seed: this.seed,
       mapId: this.mapId,
     });
+    const playerIds = this.slots.list().map((slot) => slot.playerId);
+    this.simulationHost.bootstrapMatch(playerIds);
     this.phase = "RUNNING";
     this.setMetadata({
       phase: this.phase,
@@ -143,9 +146,11 @@ export class FoundationRoom extends Room {
     this.setFixedTimestep(() => {
       if (this.phase === "RUNNING" && this.simulationHost) {
         this.simulationHost.step();
+        this.broadcastState();
       }
     }, DEFAULT_TICK_HZ);
 
+    this.broadcastState();
     return true;
   }
 
@@ -200,10 +205,18 @@ export class FoundationRoom extends Room {
       }
 
       // Identity is session-derived only (Finding I1 / AGENTS network rules).
-      this.simulationHost.enqueueFromSession(parsed.data, {
+      const result = this.simulationHost.enqueueFromSession(parsed.data, {
         playerId: slot.playerId,
         sessionId: client.sessionId,
       });
+
+      if (!result.ok) {
+        this.sendEvent(client, {
+          type: "COMMAND_REJECTED",
+          commandId: parsed.data.commandId,
+          reason: result.reason,
+        });
+      }
     } catch {
       this.sendEvent(client, {
         type: "COMMAND_REJECTED",
@@ -211,6 +224,34 @@ export class FoundationRoom extends Room {
         reason: "internal_error",
       });
     }
+  }
+
+  /** Per-client GameStateView projection (localPlayerId differs; entities shared in F5). */
+  broadcastState(): void {
+    for (const client of this.clients) {
+      const slot = this.slots.getBySessionId(client.sessionId);
+      if (!slot) {
+        continue;
+      }
+      const view = this.buildStateView(slot.playerId);
+      client.send(STATE_MESSAGE, view);
+    }
+  }
+
+  buildStateView(localPlayerId: number) {
+    const players = this.slots.list().map((slot) => ({
+      playerId: slot.playerId,
+      connected: slot.connected,
+    }));
+
+    return projectWorldToGameStateView({
+      world: this.simulationHost?.world ?? null,
+      roomId: this.roomId,
+      phase: this.phase,
+      localPlayerId,
+      players,
+      bindings: this.simulationHost?.primitiveUnits.snapshot() ?? new Map(),
+    });
   }
 
   private sendEvent(client: Client, event: GameEvent | CommandRejectedEvent): void {

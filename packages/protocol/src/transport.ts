@@ -4,13 +4,18 @@ import type { GameStateView } from "./state.js";
 
 /**
  * Options for establishing a local or remote match session via GameTransport.
- * Concrete remote fields (endpoint, Colyseus room options) are filled by F4/F5 adapters.
+ * Concrete remote fields (endpoint, room options) are filled by adapters.
+ * Endpoint defaults belong in env/config so Docker/LAN (F9) can override them.
  */
 export type ConnectOptions = {
   protocolVersion: number;
   gameDataVersion: string;
   roomId?: string;
   createRoom?: boolean;
+  /** Remote WebSocket/HTTP endpoint override (RemoteGameTransport). */
+  endpoint?: string;
+  seed?: number;
+  mapId?: string;
 };
 
 export type Unsubscribe = () => void;
