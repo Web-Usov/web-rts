@@ -1,10 +1,15 @@
 import { expect, test, type Page } from "@playwright/test";
 import {
   CANVAS_CLICK,
+  MAX_OBJECTIVE_DRIFT_CSS_PX,
+  MIN_UNIT_MOVE_CSS_PX,
   captureCanvasPng,
+  canvasRightClick,
+  cssDistance,
+  expectObjectiveOnCanvas,
+  findLocalUnitCentroid,
   measureCanvasPresentationChange,
   selectLocalUnitByCanvasClick,
-  canvasRightClick,
 } from "./helpers/canvas.js";
 import { attachPageErrorCapture, expectHud, hudValue } from "./helpers/hud.js";
 
@@ -64,6 +69,10 @@ test.describe("F7 foundation multiplayer browser E2E", () => {
         .poll(async () => Number((await hudValue(pageB, "Entities").textContent())?.trim()))
         .toBeGreaterThanOrEqual(3);
 
+      // Canvas pixels, not only the HUD count: the purple objective mesh is drawn.
+      const objectiveBeforeA = await expectObjectiveOnCanvas(pageA);
+      const objectiveBeforeB = await expectObjectiveOnCanvas(pageB);
+
       if (process.env.F7_SAVE_VERIFICATION_SHOTS === "1") {
         await saveVerificationShot(pageA, "running-a.png");
         await saveVerificationShot(pageB, "running-b.png");
@@ -71,6 +80,7 @@ test.describe("F7 foundation multiplayer browser E2E", () => {
 
       const beforeMoveB = await captureCanvasPng(pageB);
       const beforeMoveA = await captureCanvasPng(pageA);
+      const unitBeforeB = await findLocalUnitCentroid(pageB);
 
       await selectLocalUnitByCanvasClick(pageA);
       await expect
@@ -80,27 +90,41 @@ test.describe("F7 foundation multiplayer browser E2E", () => {
       await canvasRightClick(pageA, CANVAS_CLICK.moveTerrain);
       await expectHud(pageA, "Destination", "marked");
 
-      // Authoritative movement: wait until presentation in B diverges from pre-MOVE canvas.
+      // Authoritative movement on B: the same blue unit centroid must travel.
       await expect
         .poll(
           async () => {
-            const afterB = await captureCanvasPng(pageB);
-            return measureCanvasPresentationChange(pageB, beforeMoveB, afterB);
+            const after = await findLocalUnitCentroid(pageB).catch(() => null);
+            return after ? cssDistance(unitBeforeB, after) : 0;
           },
-          { timeout: 20_000, intervals: [500, 750, 1000] },
+          { timeout: 20_000, intervals: [400, 700, 1000] },
         )
-        .toBeGreaterThan(0.0005);
+        .toBeGreaterThanOrEqual(MIN_UNIT_MOVE_CSS_PX);
 
       const afterMoveA = await captureCanvasPng(pageA);
       const afterMoveB = await captureCanvasPng(pageB);
       const changeA = await measureCanvasPresentationChange(pageA, beforeMoveA, afterMoveA);
       const changeB = await measureCanvasPresentationChange(pageB, beforeMoveB, afterMoveB);
       expect(changeA, "client A canvas should change after MOVE").toBeGreaterThan(0.0005);
-      expect(changeB, "client B must observe presentation movement").toBeGreaterThan(0.0005);
+      expect(changeB, "client B canvas should change after the unit moves").toBeGreaterThan(0.0005);
 
-      // Sacred Site / objective still present after movement (generic objective count).
+      const unitAfterB = await findLocalUnitCentroid(pageB);
+      expect(
+        cssDistance(unitBeforeB, unitAfterB),
+        "client B must show player-0 unit displacement",
+      ).toBeGreaterThanOrEqual(MIN_UNIT_MOVE_CSS_PX);
+
+      // Sacred Site stays: HUD count plus the purple mesh still at the same canvas spot.
       await expectHud(pageA, "Objectives", "1");
       await expectHud(pageB, "Objectives", "1");
+      const objectiveAfterA = await expectObjectiveOnCanvas(pageA);
+      const objectiveAfterB = await expectObjectiveOnCanvas(pageB);
+      expect(cssDistance(objectiveBeforeA, objectiveAfterA)).toBeLessThan(
+        MAX_OBJECTIVE_DRIFT_CSS_PX,
+      );
+      expect(cssDistance(objectiveBeforeB, objectiveAfterB)).toBeLessThan(
+        MAX_OBJECTIVE_DRIFT_CSS_PX,
+      );
 
       if (process.env.F7_SAVE_VERIFICATION_SHOTS === "1") {
         await saveVerificationShot(pageA, "after-move-a.png");

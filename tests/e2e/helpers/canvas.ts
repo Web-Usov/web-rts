@@ -15,13 +15,65 @@ export const CANVAS_CLICK = {
   moveTerrain: { x: 640, y: 520 },
 } as const;
 
-/** Player-0 unit material is palette `#3d8bfd`. */
-const LOCAL_UNIT_BLUE = {
-  maxR: 100,
+/**
+ * Inclusive RGB band plus channel separation.
+ * Passed into the page so the scan stays a screenshot pixel test.
+ */
+interface RgbBand {
+  minR: number;
+  maxR: number;
+  minG: number;
+  maxG: number;
+  minB: number;
+  maxB: number;
+  minBlueOverRed: number;
+  minBlueOverGreen: number;
+}
+
+/** Player-0 unit material is palette `#3d8bfd` (low red, high blue). */
+const LOCAL_UNIT_BLUE: RgbBand = {
+  minR: 0,
+  maxR: 99,
   minG: 100,
-  maxG: 180,
+  maxG: 179,
+  minB: 141,
+  maxB: 255,
+  minBlueOverRed: 0,
+  minBlueOverGreen: 1,
+};
+
+/**
+ * Objective material is diffuse (0.72, 0.55, 0.95) plus emissive (0.35, 0.18, 0.55).
+ * Wide enough for lit and shaded faces. Red stays above the blue unit band so
+ * player-0 pixels, white selection, and orange destination do not match.
+ */
+const OBJECTIVE_PURPLE: RgbBand = {
+  minR: 105,
+  maxR: 255,
+  minG: 40,
+  maxG: 210,
   minB: 140,
-} as const;
+  maxB: 255,
+  minBlueOverRed: 12,
+  minBlueOverGreen: 20,
+};
+
+/** Lit face of the objective tower is far larger than anti-aliased fringes. */
+const OBJECTIVE_MIN_PIXELS = 80;
+
+const LOCAL_UNIT_MIN_PIXELS = 20;
+
+/** Several CSS pixels: a real slide, not subpixel centroid noise. */
+export const MIN_UNIT_MOVE_CSS_PX = 8;
+
+/** Objective centroid may flicker by AA, but must not travel with the unit. */
+export const MAX_OBJECTIVE_DRIFT_CSS_PX = 8;
+
+export interface CanvasCentroid {
+  x: number;
+  y: number;
+  count: number;
+}
 
 export async function canvasLocator(page: Page): Promise<Locator> {
   const canvas = page.locator("#game-canvas");
@@ -48,10 +100,13 @@ export async function canvasRightClick(
 }
 
 /**
- * Locates the local (blue) unit by scanning a canvas screenshot for palette pixels.
- * Returns CSS coordinates relative to the canvas element.
+ * Centroid of pixels matching `filter`, in CSS coordinates relative to the canvas.
+ * Returns null when no pixel matches. Does not touch Scene, transport, or simulation.
  */
-export async function findLocalUnitCanvasPoint(page: Page): Promise<{ x: number; y: number }> {
+export async function measureColorCentroid(
+  page: Page,
+  filter: RgbBand,
+): Promise<CanvasCentroid | null> {
   const canvas = await canvasLocator(page);
   const box = await canvas.boundingBox();
   if (!box) {
@@ -60,7 +115,7 @@ export async function findLocalUnitCanvasPoint(page: Page): Promise<{ x: number;
 
   const png = await canvas.screenshot();
   const sample = await page.evaluate(
-    async ({ b64, filter }) => {
+    async ({ b64, band }) => {
       const binary = atob(b64);
       const bytes = new Uint8Array(binary.length);
       for (let i = 0; i < binary.length; i += 1) {
@@ -86,7 +141,16 @@ export async function findLocalUnitCanvasPoint(page: Page): Promise<{ x: number;
           const r = data[i]!;
           const g = data[i + 1]!;
           const b = data[i + 2]!;
-          if (r < filter.maxR && g >= filter.minG && g < filter.maxG && b > filter.minB && b > g) {
+          if (
+            r >= band.minR &&
+            r <= band.maxR &&
+            g >= band.minG &&
+            g <= band.maxG &&
+            b >= band.minB &&
+            b <= band.maxB &&
+            b - r >= band.minBlueOverRed &&
+            b - g >= band.minBlueOverGreen
+          ) {
             sumX += x;
             sumY += y;
             count += 1;
@@ -101,17 +165,62 @@ export async function findLocalUnitCanvasPoint(page: Page): Promise<{ x: number;
         height,
       };
     },
-    { b64: png.toString("base64"), filter: LOCAL_UNIT_BLUE },
+    { b64: png.toString("base64"), band: filter },
   );
 
-  if (sample.cx === null || sample.cy === null || sample.count < 20) {
-    throw new Error(`local unit pixels not found on canvas (count=${sample.count})`);
+  if (sample.cx === null || sample.cy === null || sample.count === 0) {
+    return null;
   }
 
   return {
     x: (sample.cx * box.width) / sample.width,
     y: (sample.cy * box.height) / sample.height,
+    count: sample.count,
   };
+}
+
+export function cssDistance(a: { x: number; y: number }, b: { x: number; y: number }): number {
+  return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+/**
+ * Locates the local (blue) unit by scanning a canvas screenshot for palette pixels.
+ * Returns CSS coordinates relative to the canvas element.
+ */
+export async function findLocalUnitCanvasPoint(page: Page): Promise<{ x: number; y: number }> {
+  const sample = await measureColorCentroid(page, LOCAL_UNIT_BLUE);
+  if (!sample || sample.count < LOCAL_UNIT_MIN_PIXELS) {
+    throw new Error(`local unit pixels not found on canvas (count=${sample?.count ?? 0})`);
+  }
+  return { x: sample.x, y: sample.y };
+}
+
+/** Blue player-0 unit centroid. Same palette scan used to aim the selection click. */
+export async function findLocalUnitCentroid(page: Page): Promise<CanvasCentroid> {
+  const sample = await measureColorCentroid(page, LOCAL_UNIT_BLUE);
+  if (!sample || sample.count < LOCAL_UNIT_MIN_PIXELS) {
+    throw new Error(`local unit pixels not found on canvas (count=${sample?.count ?? 0})`);
+  }
+  return sample;
+}
+
+/**
+ * Purple objective pixels on the Babylon canvas.
+ * Returns the latest centroid once enough pixels match; otherwise the poll fails.
+ */
+export async function expectObjectiveOnCanvas(page: Page): Promise<CanvasCentroid> {
+  await expect
+    .poll(async () => (await measureColorCentroid(page, OBJECTIVE_PURPLE))?.count ?? 0, {
+      timeout: 10_000,
+      intervals: [200, 400, 800],
+    })
+    .toBeGreaterThanOrEqual(OBJECTIVE_MIN_PIXELS);
+
+  const latest = await measureColorCentroid(page, OBJECTIVE_PURPLE);
+  if (!latest || latest.count < OBJECTIVE_MIN_PIXELS) {
+    throw new Error(`objective pixels disappeared (count=${latest?.count ?? 0})`);
+  }
+  return latest;
 }
 
 /**
