@@ -27,10 +27,10 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: `pnpm --filter @web-rts/game-server exec tsx src/main.ts`,
+      command: `pnpm --filter @web-rts/game-server... build && pnpm --filter @web-rts/game-server exec tsx src/main.ts`,
       url: E2E_GAME_SERVER_URL,
       reuseExistingServer: !process.env.CI,
-      timeout: 120_000,
+      timeout: 180_000,
       env: {
         ...process.env,
         PORT: String(E2E_GAME_SERVER_PORT),

@@ -240,6 +240,9 @@ jobs:
       - name: Install Playwright Chromium
         run: pnpm exec playwright install --with-deps chromium
 
+      - name: Build workspace packages
+        run: pnpm build
+
       - name: Browser E2E
         run: pnpm test:e2e
 
