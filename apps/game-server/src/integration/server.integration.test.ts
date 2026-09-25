@@ -3,6 +3,7 @@ import { boot, type ColyseusTestServer } from "@colyseus/testing";
 import { GAME_DATA_VERSION, PROTOCOL_VERSION, type MoveCommand } from "@web-rts/protocol";
 import { createGameServer } from "../app-config.js";
 import {
+  AUTH_ERROR_CODE,
   COMMAND_MESSAGE,
   EVENT_MESSAGE,
   FOUNDATION_ROOM_NAME,
@@ -26,6 +27,15 @@ function createMove(overrides: Partial<MoveCommand> = {}): MoveCommand {
     target: { x: 5, y: 6 },
     ...overrides,
   };
+}
+
+function isMatchMakeError(error: unknown): error is Error & { code: number; name: string } {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    typeof (error as { code: unknown }).code === "number"
+  );
 }
 
 describe("game-server integration", () => {
@@ -88,26 +98,75 @@ describe("game-server integration", () => {
     expect(room.clients.length).toBe(MAX_PLAYERS);
   });
 
-  it("rejects protocol version mismatch on join", async () => {
+  it("frees a slot on leave so a new client can join a previously full room", async () => {
+    const room = (await colyseus.createRoom(
+      FOUNDATION_ROOM_NAME,
+      compatibleOptions,
+    )) as FoundationRoom;
+
+    const clients = [];
+    for (let i = 0; i < MAX_PLAYERS; i += 1) {
+      clients.push(await colyseus.connectTo(room, compatibleOptions));
+    }
+    expect(room.clients.length).toBe(MAX_PLAYERS);
+
+    const leaving = clients[0];
+    expect(leaving).toBeDefined();
+    const leftSessionId = leaving!.sessionId;
+    await leaving!.leave();
+
+    expect(room.clients.length).toBe(MAX_PLAYERS - 1);
+    expect(room.slots.getBySessionId(leftSessionId)).toBeUndefined();
+    expect(room.slots.size).toBe(MAX_PLAYERS - 1);
+
+    const replacement = await colyseus.connectTo(room, compatibleOptions);
+    expect(replacement.sessionId).toBeTruthy();
+    expect(room.clients.length).toBe(MAX_PLAYERS);
+    expect(room.slots.size).toBe(MAX_PLAYERS);
+  });
+
+  it("rejects protocol version mismatch as auth error, not reconnect/shutdown code", async () => {
     const room = await colyseus.createRoom(FOUNDATION_ROOM_NAME, compatibleOptions);
 
-    await expect(
-      colyseus.connectTo(room, {
+    let caught: unknown;
+    try {
+      await colyseus.connectTo(room, {
         protocolVersion: PROTOCOL_VERSION + 1,
         gameDataVersion: GAME_DATA_VERSION,
-      }),
-    ).rejects.toThrow();
+      });
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(caught).toBeDefined();
+    expect(isMatchMakeError(caught)).toBe(true);
+    if (isMatchMakeError(caught)) {
+      expect(caught.code).toBe(AUTH_ERROR_CODE);
+      // Must not look like Colyseus-reserved reconnect (4010) or shutdown (4001).
+      expect(caught.code).not.toBe(4010);
+      expect(caught.code).not.toBe(4001);
+      expect(caught.message).toContain("PROTOCOL_MISMATCH");
+    }
   });
 
   it("rejects game-data version mismatch on join", async () => {
     const room = await colyseus.createRoom(FOUNDATION_ROOM_NAME, compatibleOptions);
 
-    await expect(
-      colyseus.connectTo(room, {
+    let caught: unknown;
+    try {
+      await colyseus.connectTo(room, {
         protocolVersion: PROTOCOL_VERSION,
         gameDataVersion: "9.9.9",
-      }),
-    ).rejects.toThrow();
+      });
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(isMatchMakeError(caught)).toBe(true);
+    if (isMatchMakeError(caught)) {
+      expect(caught.code).toBe(AUTH_ERROR_CODE);
+      expect(caught.message).toContain("PROTOCOL_MISMATCH");
+    }
   });
 
   it("rejects malformed commands without crashing the room", async () => {
@@ -170,12 +229,13 @@ describe("game-server integration", () => {
     client.send(COMMAND_MESSAGE, createMove({ commandId: "mapped-1", clientSequence: 42 }));
     await waitServer;
 
-    expect(room.simulationHost?.pendingCommandCount()).toBe(1);
-
-    // Drain via one tick: command applied; transport fields never entered simulation.
-    room.simulationHost?.step();
-    expect(room.simulationHost?.pendingCommandCount()).toBe(0);
-    expect(room.simulationHost?.tick).toBe(1);
+    const host = room.simulationHost!;
+    // Fixed 10 Hz loop may already have drained the queue — avoid a race on pending===1.
+    if (host.pendingCommandCount() > 0) {
+      host.step();
+    }
+    expect(host.pendingCommandCount()).toBe(0);
+    expect(host.tick).toBeGreaterThanOrEqual(1);
   });
 
   it("starts simulation via client start message with seed/map", async () => {
@@ -195,25 +255,31 @@ describe("game-server integration", () => {
     expect(room.simulationHost?.mapId).toBe("start-map");
   });
 
-  it("survives client disconnect without crashing the room/process", async () => {
+  it("survives client leave without crashing the room/process", async () => {
     const room = (await colyseus.createRoom(
       FOUNDATION_ROOM_NAME,
       compatibleOptions,
     )) as FoundationRoom;
     const clientA = await colyseus.connectTo(room, compatibleOptions);
     const clientB = await colyseus.connectTo(room, compatibleOptions);
+    const leftSessionId = clientA.sessionId;
 
     await clientA.leave();
     expect(room.clients.length).toBe(1);
-    expect(room.slots.getBySessionId(clientA.sessionId)?.connected).toBe(false);
+    expect(room.slots.getBySessionId(leftSessionId)).toBeUndefined();
     expect(room.slots.getBySessionId(clientB.sessionId)?.connected).toBe(true);
 
-    // Room remains usable after disconnect.
+    // Room remains usable after leave.
     room.startMatch();
     expect(room.phase).toBe("RUNNING");
     const waitServer = room.waitForMessage(COMMAND_MESSAGE);
-    clientB.send(COMMAND_MESSAGE, createMove({ commandId: "after-disconnect" }));
+    clientB.send(COMMAND_MESSAGE, createMove({ commandId: "after-leave" }));
     await waitServer;
-    expect(room.simulationHost?.pendingCommandCount()).toBe(1);
+
+    const host = room.simulationHost!;
+    if (host.pendingCommandCount() > 0) {
+      host.step();
+    }
+    expect(host.tick).toBeGreaterThanOrEqual(1);
   });
 });

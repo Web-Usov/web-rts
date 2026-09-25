@@ -9,7 +9,14 @@ import {
   type ProtocolMismatchEvent,
 } from "@web-rts/protocol";
 import { DEFAULT_TICK_HZ } from "@web-rts/simulation";
-import { COMMAND_MESSAGE, EVENT_MESSAGE, MAX_PLAYERS, START_MESSAGE } from "../constants.js";
+import {
+  AUTH_ERROR_CODE,
+  COMMAND_MESSAGE,
+  EVENT_MESSAGE,
+  MAX_PLAYERS,
+  ROOM_FULL_ERROR_CODE,
+  START_MESSAGE,
+} from "../constants.js";
 import { parseRoomJoinOptions } from "../join-options.js";
 import { PlayerSlotRegistry } from "../player-slots.js";
 import { SimulationHost } from "../simulation-host.js";
@@ -84,9 +91,10 @@ export class FoundationRoom extends Room {
           expectedGameDataVersion: GAME_DATA_VERSION,
           actualGameDataVersion,
         };
-        throw new ServerError(4010, JSON.stringify(mismatch));
+        // HTTP-style auth error — never Colyseus-reserved 4010 (MAY_TRY_RECONNECT).
+        throw new ServerError(AUTH_ERROR_CODE, JSON.stringify(mismatch));
       }
-      throw new ServerError(4000, parsed.reason);
+      throw new ServerError(AUTH_ERROR_CODE, parsed.reason);
     }
     return true;
   }
@@ -95,7 +103,8 @@ export class FoundationRoom extends Room {
     void options;
     const slot = this.slots.allocate(client.sessionId);
     if (!slot) {
-      throw new ServerError(4001, "room_full");
+      // Application close code (≥4011); 4001 is reserved as SERVER_SHUTDOWN.
+      throw new ServerError(ROOM_FULL_ERROR_CODE, "room_full");
     }
     (client as Client & { userData: ClientUserData }).userData = {
       playerId: slot.playerId,
@@ -103,7 +112,8 @@ export class FoundationRoom extends Room {
   }
 
   override onLeave(client: Client): void {
-    this.slots.markDisconnected(client.sessionId);
+    // Colyseus 0.18 onLeave is permanent leave; free the slot until F8 reconnect.
+    this.slots.release(client.sessionId);
   }
 
   override onDispose(): void {

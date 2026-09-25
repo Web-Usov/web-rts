@@ -2,12 +2,14 @@
 export const packageName = "@web-rts/game-server" as const;
 
 export {
+  AUTH_ERROR_CODE,
   COMMAND_MESSAGE,
   DEFAULT_MAP_ID,
   DEFAULT_PORT,
   EVENT_MESSAGE,
   FOUNDATION_ROOM_NAME,
   MAX_PLAYERS,
+  ROOM_FULL_ERROR_CODE,
   START_MESSAGE,
 } from "./constants.js";
 

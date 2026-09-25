@@ -42,6 +42,22 @@ describe("PlayerSlotRegistry", () => {
     expect(slots.size).toBe(2);
   });
 
+  it("release frees capacity so a new session can allocate after leave", () => {
+    const slots = new PlayerSlotRegistry();
+    for (let i = 0; i < MAX_PLAYERS; i += 1) {
+      expect(slots.allocate(`s${i}`)).toBeDefined();
+    }
+    expect(slots.allocate("overflow")).toBeUndefined();
+
+    expect(slots.release("s0")?.playerId).toBe(0);
+    expect(slots.getBySessionId("s0")).toBeUndefined();
+    expect(slots.size).toBe(MAX_PLAYERS - 1);
+
+    const replacement = slots.allocate("s-new");
+    expect(replacement).toBeDefined();
+    expect(slots.size).toBe(MAX_PLAYERS);
+  });
+
   it("refuses allocation beyond max players", () => {
     const slots = new PlayerSlotRegistry();
     for (let i = 0; i < MAX_PLAYERS; i += 1) {

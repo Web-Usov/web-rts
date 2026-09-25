@@ -65,6 +65,20 @@ export class PlayerSlotRegistry {
     slot.connected = false;
   }
 
+  /**
+   * Permanently frees a slot after consented leave (`onLeave` in Colyseus 0.18).
+   * Temporary drop/reconnect reservation belongs in F8 (`onDrop` + allowReconnection).
+   */
+  release(sessionId: string): PlayerSlot | undefined {
+    const slot = this.bySession.get(sessionId);
+    if (!slot) {
+      return undefined;
+    }
+    this.bySession.delete(sessionId);
+    this.byPlayerId.delete(slot.playerId);
+    return slot;
+  }
+
   /** Rebinds an existing player slot to a new session (reconnect path; F8 will expand). */
   rebindSession(playerId: number, sessionId: string): PlayerSlot | undefined {
     const slot = this.byPlayerId.get(playerId);
