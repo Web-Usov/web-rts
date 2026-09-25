@@ -215,6 +215,48 @@ jobs:
       - name: Build
         run: pnpm build
 
+  browser-e2e:
+    name: browser-e2e
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Build workspace packages
+        run: pnpm build
+
+      - name: Browser E2E
+        run: pnpm test:e2e
+
+      - name: Upload Playwright artifacts
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-e2e-artifacts
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14
+
   ci-gate:
     name: ci-gate
     runs-on: ubuntu-latest
@@ -228,6 +270,7 @@ jobs:
       - simulation-tests
       - server-integration
       - build
+      - browser-e2e
     steps:
       - name: Verify required CI results
         env:
@@ -239,6 +282,7 @@ jobs:
           SIMULATION_TESTS_RESULT: ${{ needs.simulation-tests.result }}
           SERVER_INTEGRATION_RESULT: ${{ needs.server-integration.result }}
           BUILD_RESULT: ${{ needs.build.result }}
+          BROWSER_E2E_RESULT: ${{ needs.browser-e2e.result }}
         run: |
           set -euo pipefail
 
@@ -254,6 +298,7 @@ jobs:
             "$SIMULATION_TESTS_RESULT"
             "$SERVER_INTEGRATION_RESULT"
             "$BUILD_RESULT"
+            "$BROWSER_E2E_RESULT"
           )
 
           if [[ "$DOCS_ONLY" == "true" ]]; then

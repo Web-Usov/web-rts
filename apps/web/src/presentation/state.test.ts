@@ -11,6 +11,7 @@ describe("presentation state", () => {
     expect(created.upserted.map((entity) => entity.id)).toEqual([1, 2, 3]);
     expect(state.getHudView()).toEqual({
       entityCount: 3,
+      objectiveCount: 1,
       selectedIds: [],
       hasDestination: false,
     });
@@ -30,6 +31,7 @@ describe("presentation state", () => {
     expect(state.getEntity(1)?.position).toEqual({ x: 1, y: 0.6, z: 2 });
     expect(state.getHudView()).toEqual({
       entityCount: 3,
+      objectiveCount: 1,
       selectedIds: [1],
       hasDestination: true,
     });
@@ -60,6 +62,7 @@ describe("presentation state", () => {
     expect(Object.keys(state.getHudView()).sort()).toEqual([
       "entityCount",
       "hasDestination",
+      "objectiveCount",
       "selectedIds",
     ]);
   });

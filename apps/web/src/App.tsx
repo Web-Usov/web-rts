@@ -13,6 +13,7 @@ import type { HudView } from "./presentation/types.js";
 
 const emptyHud: HudView = {
   entityCount: 0,
+  objectiveCount: 0,
   selectedIds: [],
   hasDestination: false,
 };
@@ -205,6 +206,10 @@ export function App() {
           <div>
             <dt>Entities</dt>
             <dd>{hud.entityCount}</dd>
+          </div>
+          <div>
+            <dt>Objectives</dt>
+            <dd>{hud.objectiveCount}</dd>
           </div>
           <div>
             <dt>Selected</dt>
