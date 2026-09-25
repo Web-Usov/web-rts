@@ -8,12 +8,6 @@ import {
   type PlayerSlotView,
 } from "@web-rts/protocol";
 
-/**
- * Temporary F5 binding: server-derived playerId → primitive unit entityId.
- * Not the F6 Owner/Controller permission model — replaced by controller checks later.
- */
-export type PrimitiveUnitBinding = ReadonlyMap<number, EntityId>;
-
 export type ReplicationPlayerSlot = {
   playerId: number;
   connected: boolean;
@@ -26,17 +20,13 @@ export type ReplicationAdapterInput = {
   /** Recipient session player id (per-client projection hook for ADR-007). */
   localPlayerId: number;
   players: readonly ReplicationPlayerSlot[];
-  /**
-   * F5 binding used only to annotate EntityView owner/controller fields with the
-   * bound player slot. Does not implement ownership transfer.
-   */
-  bindings: PrimitiveUnitBinding;
 };
 
 /**
  * Projects simulation World → protocol GameStateView.
  * Lives outside `@web-rts/simulation` (ADR-007). Does not import Colyseus/Babylon.
  *
+ * Owner, controller, and objective fields are read from component stores.
  * Foundation replicates the same entity set to every player; `localPlayerId` is the
  * only per-recipient field today, leaving room for future fog filtering.
  */
@@ -49,17 +39,7 @@ export function projectWorldToGameStateView(input: ReplicationAdapterInput): Gam
       if (position === undefined) {
         continue;
       }
-
-      const boundPlayerId = findBoundPlayerId(input.bindings, entityId);
-      entities.push({
-        entityId,
-        kind: "unit",
-        x: position.x,
-        y: position.y,
-        // Minimal F5 annotation of the temporary player↔unit binding — not F6 semantics.
-        ownerPlayerId: boundPlayerId,
-        controllerPlayerId: boundPlayerId,
-      });
+      entities.push(projectEntity(input.world, entityId, position.x, position.y));
     }
   }
 
@@ -80,11 +60,19 @@ export function projectWorldToGameStateView(input: ReplicationAdapterInput): Gam
   };
 }
 
-function findBoundPlayerId(bindings: PrimitiveUnitBinding, entityId: EntityId): number | null {
-  for (const [playerId, boundEntityId] of bindings) {
-    if (boundEntityId === entityId) {
-      return playerId;
-    }
-  }
-  return null;
+function projectEntity(world: World, entityId: EntityId, x: number, y: number): EntityView {
+  const objective = world.objectives.get(entityId);
+  const owner = world.owners.get(entityId);
+  const controller = world.controllers.get(entityId);
+
+  return {
+    entityId,
+    kind: objective === undefined ? "unit" : "objective",
+    x,
+    y,
+    ownerPlayerId: owner?.ownerPlayerId ?? null,
+    controllerPlayerId: controller?.controllerPlayerId ?? null,
+    objectiveType: objective?.type ?? null,
+    objectiveState: objective?.state ?? null,
+  };
 }

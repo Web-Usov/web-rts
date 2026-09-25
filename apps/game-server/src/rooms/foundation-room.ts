@@ -259,7 +259,6 @@ export class FoundationRoom extends Room {
       phase: this.phase,
       localPlayerId,
       players,
-      bindings: this.simulationHost?.primitiveUnits.snapshot() ?? new Map(),
     });
   }
 

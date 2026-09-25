@@ -29,7 +29,21 @@ describe("SimulationHost", () => {
     expect(unit0).toBeDefined();
     expect(unit1).toBeDefined();
     expect(unit0).not.toBe(unit1);
-    expect(host.world.entityIds()).toHaveLength(2);
+    expect(host.world.owners.get(unit0!)).toEqual({ ownerPlayerId: 0 });
+    expect(host.world.controllers.get(unit0!)).toEqual({ controllerPlayerId: 0 });
+    expect(host.world.owners.get(unit1!)).toEqual({ ownerPlayerId: 1 });
+    expect(host.world.controllers.get(unit1!)).toEqual({ controllerPlayerId: 1 });
+
+    const objectives = host.world
+      .entityIds()
+      .filter((entityId) => host.world.objectives.has(entityId));
+    expect(objectives).toHaveLength(1);
+    expect(host.world.positions.get(objectives[0]!)).toEqual({ x: 0, y: 0 });
+    expect(host.world.objectives.get(objectives[0]!)).toEqual({
+      type: "SACRED_SITE",
+      state: "ACTIVE",
+    });
+    expect(host.world.controllers.has(objectives[0]!)).toBe(false);
 
     const parsed = parseGameCommand({
       ...move,
@@ -81,6 +95,36 @@ describe("SimulationHost", () => {
     );
     expect(result).toEqual({ ok: false, reason: "not_your_unit" });
     expect(host.pendingCommandCount()).toBe(0);
+  });
+
+  it("follows a controller change without changing owner, and rejects objective MOVE", () => {
+    const host = new SimulationHost({ seed: 1, mapId: "foundation" });
+    host.bootstrapMatch([0, 1]);
+    const unit0 = host.primitiveUnits.getEntityId(0)!;
+    const objectiveId = host.world
+      .entityIds()
+      .find((entityId) => host.world.objectives.has(entityId))!;
+
+    host.world.controllers.set(unit0, { controllerPlayerId: 1 });
+
+    const previous = host.enqueueFromSession(
+      { ...move, entityIds: [unit0], commandId: "old-controller" },
+      { playerId: 0, sessionId: "session-0" },
+    );
+    const next = host.enqueueFromSession(
+      { ...move, entityIds: [unit0], commandId: "new-controller" },
+      { playerId: 1, sessionId: "session-1" },
+    );
+    const objective = host.enqueueFromSession(
+      { ...move, entityIds: [objectiveId], commandId: "objective" },
+      { playerId: 0, sessionId: "session-0" },
+    );
+
+    expect(previous).toEqual({ ok: false, reason: "not_your_unit" });
+    expect(next.ok).toBe(true);
+    expect(objective).toEqual({ ok: false, reason: "not_your_unit" });
+    expect(host.world.owners.get(unit0)?.ownerPlayerId).toBe(0);
+    expect(host.pendingCommandCount()).toBe(1);
   });
 
   it("rejects out-of-bounds MOVE without enqueueing", () => {

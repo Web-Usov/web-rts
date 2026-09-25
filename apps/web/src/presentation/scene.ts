@@ -36,6 +36,7 @@ import type { HudView, PresentationEntity, PresentationSyncData } from "./types.
 const PALETTE = ["#3d8bfd", "#e15a45", "#e6c34a", "#3cba6e"] as const;
 const DRAG_THRESHOLD_PX = 4;
 const UNIT_HEIGHT = 0.6;
+const OBJECTIVE_HEIGHT = 2.2;
 
 interface EntityVisual {
   mesh: AbstractMesh;
@@ -115,6 +116,11 @@ export function mountPresentation(
   destination.isPickable = false;
   destination.setEnabled(false);
 
+  const objectiveMaterial = new StandardMaterial("objective-material", scene);
+  objectiveMaterial.diffuseColor = new Color3(0.72, 0.55, 0.95);
+  objectiveMaterial.emissiveColor = new Color3(0.35, 0.18, 0.55);
+  objectiveMaterial.specularColor = Color3.Black();
+
   const presentation = new PresentationState();
   const visuals = new Map<number, EntityVisual>();
   const materials = new Map<number, StandardMaterial>();
@@ -129,7 +135,10 @@ export function mountPresentation(
       const visual = visuals.get(entity.id) ?? createVisual(scene, entity, materials);
       visuals.set(entity.id, visual);
       visual.mesh.position.set(entity.position.x, entity.position.y, entity.position.z);
-      visual.mesh.material = materialFor(scene, materials, entity.colorSlot);
+      visual.mesh.material =
+        entity.kind === "objective"
+          ? objectiveMaterial
+          : materialFor(scene, materials, entity.colorSlot);
     }
 
     for (const [id, visual] of visuals) {
@@ -190,8 +199,13 @@ export function mountPresentation(
         const entity = poseToPresentation(pose);
         visual = createVisual(scene, entity, materials);
         visuals.set(pose.entityId, visual);
+        visual.mesh.material =
+          entity.kind === "objective"
+            ? objectiveMaterial
+            : materialFor(scene, materials, entity.colorSlot);
       }
-      const position = simulationToBabylonPosition({ x: pose.x, y: pose.y }, UNIT_HEIGHT);
+      const height = pose.kind === "objective" ? OBJECTIVE_HEIGHT / 2 : UNIT_HEIGHT;
+      const position = simulationToBabylonPosition({ x: pose.x, y: pose.y }, height);
       visual.mesh.position.set(position.x, position.y, position.z);
     }
 
@@ -266,9 +280,7 @@ export function mountPresentation(
     if (button === 0 && moved < DRAG_THRESHOLD_PX) {
       const pick = info.pickInfo;
       const id = presentationId(pick?.pickedMesh ?? null);
-      const localUnitId = bindings.clientState.getLocalUnitEntityId();
-      // Selection is an action; only the local bound unit is selectable in F5.
-      if (id !== null && id === localUnitId) {
+      if (id !== null && bindings.clientState.canLocalPlayerControl(id)) {
         bindings.clientState.select(id);
       } else {
         bindings.clientState.select(null);
@@ -342,11 +354,16 @@ export function mountPresentation(
 
 function poseToPresentation(pose: InterpolatedPose): PresentationEntity {
   const colorSlot =
-    pose.controllerPlayerId !== null && pose.controllerPlayerId >= 0 ? pose.controllerPlayerId : 0;
+    pose.kind === "objective"
+      ? 0
+      : pose.controllerPlayerId !== null && pose.controllerPlayerId >= 0
+        ? pose.controllerPlayerId
+        : 0;
+  const height = pose.kind === "objective" ? OBJECTIVE_HEIGHT / 2 : UNIT_HEIGHT;
   return {
     id: pose.entityId,
     kind: pose.kind,
-    position: simulationToBabylonPosition({ x: pose.x, y: pose.y }, UNIT_HEIGHT),
+    position: simulationToBabylonPosition({ x: pose.x, y: pose.y }, height),
     colorSlot,
   };
 }
@@ -394,7 +411,7 @@ function createVisual(
     entity.kind === "objective"
       ? MeshBuilder.CreateCylinder(
           `objective-${entity.id}`,
-          { diameterTop: 0.2, diameterBottom: 1.4, height: 2.2, tessellation: 5 },
+          { diameterTop: 0.2, diameterBottom: 1.4, height: OBJECTIVE_HEIGHT, tessellation: 5 },
           scene,
         )
       : MeshBuilder.CreateBox(`unit-${entity.id}`, { size: 1.1 }, scene);

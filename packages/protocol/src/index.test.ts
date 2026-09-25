@@ -21,7 +21,7 @@ const validMove: MoveCommand = {
 
 describe("versions", () => {
   it("exports protocol and game-data versions for mismatch detection", () => {
-    expect(PROTOCOL_VERSION).toBe(2);
+    expect(PROTOCOL_VERSION).toBe(3);
     expect(GAME_DATA_VERSION).toBe("0.0.0");
   });
 
@@ -147,6 +147,8 @@ describe("parseGameEvent / parseGameStateView", () => {
           y: 2,
           ownerPlayerId: 0,
           controllerPlayerId: 0,
+          objectiveType: null,
+          objectiveState: null,
         },
         {
           entityId: 2,
@@ -155,10 +157,36 @@ describe("parseGameEvent / parseGameStateView", () => {
           y: 0,
           ownerPlayerId: null,
           controllerPlayerId: null,
+          objectiveType: "SACRED_SITE",
+          objectiveState: "ACTIVE",
         },
       ],
     });
     expect(result.success).toBe(true);
+  });
+
+  it("rejects an objective view that omits type and state", () => {
+    expect(
+      parseGameStateView({
+        protocolVersion: PROTOCOL_VERSION,
+        gameDataVersion: GAME_DATA_VERSION,
+        roomId: "room-1",
+        tick: 0,
+        phase: "RUNNING",
+        localPlayerId: 0,
+        players: [],
+        entities: [
+          {
+            entityId: 2,
+            kind: "objective",
+            x: 0,
+            y: 0,
+            ownerPlayerId: null,
+            controllerPlayerId: null,
+          },
+        ],
+      }).success,
+    ).toBe(false);
   });
 
   it("rejects state views missing localPlayerId", () => {

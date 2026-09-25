@@ -72,7 +72,20 @@ export class ClientGameState {
     return this.view?.localPlayerId ?? null;
   }
 
-  /** Entity bound to the local session via F5 controllerPlayerId annotation. */
+  /**
+   * UX-only: true when the replicated Controller matches the local session.
+   * The server still rejects MOVE that this check would miss.
+   */
+  canLocalPlayerControl(entityId: number): boolean {
+    const localPlayerId = this.getLocalPlayerId();
+    if (localPlayerId === null || !this.view) {
+      return false;
+    }
+    const entity = this.view.entities.find((candidate) => candidate.entityId === entityId);
+    return entity?.controllerPlayerId === localPlayerId;
+  }
+
+  /** First unit whose Controller matches the local session. */
   getLocalUnitEntityId(): number | null {
     const localPlayerId = this.getLocalPlayerId();
     if (localPlayerId === null || !this.view) {

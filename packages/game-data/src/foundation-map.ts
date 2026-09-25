@@ -52,6 +52,9 @@ export const FOUNDATION_UNIT_SPAWN_POSITIONS: readonly GroundPoint[] = [
   { x: 6, y: 6 },
 ];
 
+/** Center of the foundation map. The match objective is placed here. */
+export const FOUNDATION_OBJECTIVE_POSITION: GroundPoint = { x: 0, y: 0 };
+
 export function foundationUnitSpawnPosition(spawnIndex: number): GroundPoint {
   const point = FOUNDATION_UNIT_SPAWN_POSITIONS[spawnIndex];
   if (point === undefined) {

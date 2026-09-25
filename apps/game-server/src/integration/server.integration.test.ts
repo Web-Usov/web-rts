@@ -435,6 +435,24 @@ describe("game-server integration", () => {
     expect(viewA.localPlayerId).toBe(playerA);
     expect(viewB.localPlayerId).not.toBe(viewA.localPlayerId);
     expect(host.primitiveUnits.size).toBe(2);
+
+    const objectivesA = viewA.entities.filter((entity) => entity.kind === "objective");
+    const objectivesB = viewB.entities.filter((entity) => entity.kind === "objective");
+    expect(objectivesA).toHaveLength(1);
+    expect(objectivesB).toEqual(objectivesA);
+    expect(objectivesA[0]).toMatchObject({
+      x: 0,
+      y: 0,
+      objectiveType: "SACRED_SITE",
+      objectiveState: "ACTIVE",
+      ownerPlayerId: null,
+      controllerPlayerId: null,
+    });
+    expect(entityA).toMatchObject({
+      ownerPlayerId: playerA,
+      controllerPlayerId: playerA,
+      kind: "unit",
+    });
   });
 
   it("rejects out-of-bounds MOVE and foreign-unit MOVE without crashing", async () => {
@@ -473,6 +491,25 @@ describe("game-server integration", () => {
       }),
     );
     expect(await foreign).toMatchObject({ type: "COMMAND_REJECTED", reason: "not_your_unit" });
+
+    const objectiveId = host.world
+      .entityIds()
+      .find((entityId) => host.world.objectives.has(entityId));
+    expect(objectiveId).toBeDefined();
+    const objectiveMove = clientA.waitForMessage(EVENT_MESSAGE);
+    clientA.send(
+      COMMAND_MESSAGE,
+      createMove({
+        commandId: "objective",
+        entityIds: [objectiveId!],
+        target: { x: 1, y: 1 },
+      }),
+    );
+    expect(await objectiveMove).toMatchObject({
+      type: "COMMAND_REJECTED",
+      reason: "not_your_unit",
+    });
+    expect(host.world.positions.get(objectiveId!)).toEqual({ x: 0, y: 0 });
 
     expect(room.phase).toBe("RUNNING");
     expect(host.pendingCommandCount()).toBe(0);
