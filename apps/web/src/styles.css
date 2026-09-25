@@ -35,11 +35,11 @@ body,
   position: absolute;
   top: 16px;
   left: 16px;
-  width: min(280px, calc(100% - 32px));
+  width: min(320px, calc(100% - 32px));
   padding: 14px 16px;
   border: 1px solid rgb(255 255 255 / 12%);
   background: rgb(10 14 18 / 78%);
-  pointer-events: none;
+  pointer-events: auto;
 }
 
 .hud-title {
@@ -54,6 +54,51 @@ body,
   color: #c5d0c8;
   font-size: 13px;
   line-height: 1.4;
+}
+
+.lobby {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.lobby label {
+  display: grid;
+  gap: 4px;
+  color: #8ea094;
+  font-size: 12px;
+}
+
+.lobby input {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid rgb(255 255 255 / 16%);
+  background: rgb(0 0 0 / 35%);
+  color: #e7ece8;
+}
+
+.lobby-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.lobby button {
+  padding: 6px 10px;
+  border: 1px solid rgb(255 255 255 / 18%);
+  background: rgb(40 52 48 / 90%);
+  color: #e7ece8;
+  cursor: pointer;
+}
+
+.lobby button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.error {
+  color: #e15a45 !important;
+  margin: 8px 0 !important;
 }
 
 .hud dl {
@@ -75,6 +120,8 @@ body,
 .hud dd {
   margin: 0;
   font-variant-numeric: tabular-nums;
+  text-align: right;
+  word-break: break-all;
 }
 
 .hud ul {

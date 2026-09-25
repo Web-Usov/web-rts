@@ -10,6 +10,9 @@ import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh.js";
 import type { LinesMesh } from "@babylonjs/core/Meshes/linesMesh.js";
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder.js";
 import { Scene } from "@babylonjs/core/scene.js";
+import type { GameCommand, GameTransport } from "@web-rts/protocol";
+import type { ClientGameState } from "../client/client-game-state.js";
+import type { InterpolatedPose } from "../client/interpolation.js";
 import {
   RTS_CAMERA_ALPHA,
   RTS_CAMERA_BETA,
@@ -22,12 +25,17 @@ import {
   zoomRtsCamera,
   type RtsCameraPose,
 } from "./camera.js";
-import { developerPresentationFixture } from "./fixture.js";
+import {
+  babylonToSimulationGround,
+  simulationToBabylonGround,
+  simulationToBabylonPosition,
+} from "./coordinates.js";
 import { PresentationState } from "./state.js";
-import type { GroundPoint, HudView, PresentationEntity } from "./types.js";
+import type { HudView, PresentationEntity, PresentationSyncData } from "./types.js";
 
 const PALETTE = ["#3d8bfd", "#e15a45", "#e6c34a", "#3cba6e"] as const;
 const DRAG_THRESHOLD_PX = 4;
+const UNIT_HEIGHT = 0.6;
 
 interface EntityVisual {
   mesh: AbstractMesh;
@@ -37,14 +45,23 @@ export interface PresentationSession {
   dispose(): void;
 }
 
+export type PresentationBindings = {
+  transport: GameTransport;
+  clientState: ClientGameState;
+  /** Issues MOVE for the currently selected local unit. */
+  nextCommandId: () => string;
+};
+
 /**
- * Babylon scene is a view of PresentationState.
+ * Babylon scene is a view of PresentationState fed by ClientGameState.
  * It does not own gameplay rules, time, or authority.
  * WebGL Engine is required so build and CI do not depend on WebGPU.
  */
 export function mountPresentation(
   canvas: HTMLCanvasElement,
   onHud: (view: HudView) => void,
+  bindings: PresentationBindings,
+  onFps?: (fps: number) => void,
 ): PresentationSession {
   const engine = new Engine(canvas, true, { stencil: true }, true);
   const scene = new Scene(engine);
@@ -98,14 +115,16 @@ export function mountPresentation(
   destination.isPickable = false;
   destination.setEnabled(false);
 
-  const state = new PresentationState();
+  const presentation = new PresentationState();
   const visuals = new Map<number, EntityVisual>();
   const materials = new Map<number, StandardMaterial>();
-  const unsubscribe = state.subscribe(onHud);
+  const unsubscribeHud = presentation.subscribe(onHud);
+
+  let clientSequence = 0;
 
   const syncVisuals = (): void => {
     const alive = new Set<number>();
-    for (const entity of state.getEntities()) {
+    for (const entity of presentation.getEntities()) {
       alive.add(entity.id);
       const visual = visuals.get(entity.id) ?? createVisual(scene, entity, materials);
       visuals.set(entity.id, visual);
@@ -120,8 +139,8 @@ export function mountPresentation(
       }
     }
 
-    const selectedId = state.getSelectedIds()[0];
-    const selected = selectedId === undefined ? undefined : state.getEntity(selectedId);
+    const selectedId = presentation.getSelectedIds()[0];
+    const selected = selectedId === undefined ? undefined : presentation.getEntity(selectedId);
     if (selected) {
       selection.position.set(selected.position.x, 0.05, selected.position.z);
       selection.setEnabled(true);
@@ -129,7 +148,7 @@ export function mountPresentation(
       selection.setEnabled(false);
     }
 
-    const marker = state.getDestination();
+    const marker = presentation.getDestination();
     if (marker) {
       destination.position.set(marker.x, 0.05, marker.z);
       destination.setEnabled(true);
@@ -138,8 +157,24 @@ export function mountPresentation(
     }
   };
 
+  const pushPresentation = (poses: readonly InterpolatedPose[]): void => {
+    const sync: PresentationSyncData = {
+      entities: poses.map((pose) => poseToPresentation(pose)),
+      selectedIds: [...bindings.clientState.getSelectedIds()],
+      destination: (() => {
+        const marker = bindings.clientState.getDestinationMarker();
+        return marker ? simulationToBabylonGround(marker) : null;
+      })(),
+    };
+    presentation.apply(sync);
+    syncVisuals();
+  };
+
+  const unsubscribeState = bindings.clientState.subscribeState((poses) => {
+    pushPresentation(poses);
+  });
+
   scene.activeCamera = camera;
-  state.apply(developerPresentationFixture);
   syncVisuals();
 
   let dragging = false;
@@ -147,6 +182,42 @@ export function mountPresentation(
   let lastX = 0;
   let lastY = 0;
   let dragDistance = 0;
+
+  const updateInterpolatedMeshes = (poses: readonly InterpolatedPose[]): void => {
+    for (const pose of poses) {
+      let visual = visuals.get(pose.entityId);
+      if (!visual) {
+        const entity = poseToPresentation(pose);
+        visual = createVisual(scene, entity, materials);
+        visuals.set(pose.entityId, visual);
+      }
+      const position = simulationToBabylonPosition({ x: pose.x, y: pose.y }, UNIT_HEIGHT);
+      visual.mesh.position.set(position.x, position.y, position.z);
+    }
+
+    const selectedId = bindings.clientState.getSelectedIds()[0];
+    const selectedPose =
+      selectedId === undefined ? undefined : poses.find((pose) => pose.entityId === selectedId);
+    if (selectedPose) {
+      const position = simulationToBabylonPosition(
+        { x: selectedPose.x, y: selectedPose.y },
+        UNIT_HEIGHT,
+      );
+      selection.position.set(position.x, 0.05, position.z);
+      selection.setEnabled(true);
+    } else {
+      selection.setEnabled(false);
+    }
+
+    const marker = bindings.clientState.getDestinationMarker();
+    if (marker) {
+      const ground = simulationToBabylonGround(marker);
+      destination.position.set(ground.x, 0.05, ground.z);
+      destination.setEnabled(true);
+    } else {
+      destination.setEnabled(false);
+    }
+  };
 
   const pointerObserver = scene.onPointerObservable.add((info) => {
     const event = info.event;
@@ -195,8 +266,14 @@ export function mountPresentation(
     if (button === 0 && moved < DRAG_THRESHOLD_PX) {
       const pick = info.pickInfo;
       const id = presentationId(pick?.pickedMesh ?? null);
-      state.select(id);
-      syncVisuals();
+      const localUnitId = bindings.clientState.getLocalUnitEntityId();
+      // Selection is an action; only the local bound unit is selectable in F5.
+      if (id !== null && id === localUnitId) {
+        bindings.clientState.select(id);
+      } else {
+        bindings.clientState.select(null);
+      }
+      pushPresentation(bindings.clientState.sample(performance.now()));
       return;
     }
 
@@ -205,9 +282,23 @@ export function mountPresentation(
       const point = pick?.pickedPoint;
       const role = meshRole(pick?.pickedMesh ?? null);
       if (point && role === "ground") {
-        const destinationPoint: GroundPoint = { x: point.x, z: point.z };
-        state.setDestination(destinationPoint);
-        syncVisuals();
+        const entityId = bindings.clientState.getCommandEntityId();
+        if (entityId === null) {
+          return;
+        }
+        const simTarget = babylonToSimulationGround({ x: point.x, z: point.z });
+        // Destination marker = instant UX feedback (game-feel), not authority.
+        bindings.clientState.setDestinationMarker(simTarget);
+        pushPresentation(bindings.clientState.sample(performance.now()));
+        clientSequence += 1;
+        const command: GameCommand = {
+          type: "MOVE",
+          commandId: bindings.nextCommandId(),
+          clientSequence,
+          entityIds: [entityId],
+          target: simTarget,
+        };
+        bindings.transport.sendCommand(command);
       }
     }
   });
@@ -217,7 +308,15 @@ export function mountPresentation(
   };
   canvas.addEventListener("contextmenu", onContextMenu);
 
+  let fpsStamp = performance.now();
   engine.runRenderLoop(() => {
+    const now = performance.now();
+    bindings.clientState.setRenderTimeMs(now);
+    updateInterpolatedMeshes(bindings.clientState.sample(now));
+    if (onFps && now - fpsStamp >= 250) {
+      fpsStamp = now;
+      onFps(Math.round(engine.getFps()));
+    }
     scene.render();
   });
 
@@ -228,7 +327,8 @@ export function mountPresentation(
 
   return {
     dispose() {
-      unsubscribe();
+      unsubscribeHud();
+      unsubscribeState();
       scene.onPointerObservable.remove(pointerObserver);
       canvas.removeEventListener("contextmenu", onContextMenu);
       window.removeEventListener("resize", onResize);
@@ -237,6 +337,17 @@ export function mountPresentation(
       scene.dispose();
       engine.dispose();
     },
+  };
+}
+
+function poseToPresentation(pose: InterpolatedPose): PresentationEntity {
+  const colorSlot =
+    pose.controllerPlayerId !== null && pose.controllerPlayerId >= 0 ? pose.controllerPlayerId : 0;
+  return {
+    id: pose.entityId,
+    kind: pose.kind,
+    position: simulationToBabylonPosition({ x: pose.x, y: pose.y }, UNIT_HEIGHT),
+    colorSlot,
   };
 }
 

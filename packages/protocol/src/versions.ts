@@ -1,8 +1,10 @@
 /**
  * Wire protocol version. Bump on breaking command/event/state contract changes.
+ * F5: GameStateView gained required `localPlayerId` for session→unit identity
+ * without trusting client payloads or Colyseus-specific types.
  * @see docs/technical-vision.md §11
  */
-export const PROTOCOL_VERSION = 1 as const;
+export const PROTOCOL_VERSION = 2 as const;
 
 /**
  * Declarative game-data / balance contract version exchanged at handshake.

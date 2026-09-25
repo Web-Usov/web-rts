@@ -21,7 +21,7 @@ const validMove: MoveCommand = {
 
 describe("versions", () => {
   it("exports protocol and game-data versions for mismatch detection", () => {
-    expect(PROTOCOL_VERSION).toBe(1);
+    expect(PROTOCOL_VERSION).toBe(2);
     expect(GAME_DATA_VERSION).toBe("0.0.0");
   });
 
@@ -137,6 +137,7 @@ describe("parseGameEvent / parseGameStateView", () => {
       roomId: "room-1",
       tick: 12,
       phase: "RUNNING",
+      localPlayerId: 0,
       players: [{ playerId: 0, connected: true }],
       entities: [
         {
@@ -160,8 +161,18 @@ describe("parseGameEvent / parseGameStateView", () => {
     expect(result.success).toBe(true);
   });
 
-  it("rejects invalid state views", () => {
-    expect(parseGameStateView({ phase: "RUNNING" }).success).toBe(false);
+  it("rejects state views missing localPlayerId", () => {
+    expect(
+      parseGameStateView({
+        protocolVersion: PROTOCOL_VERSION,
+        gameDataVersion: GAME_DATA_VERSION,
+        roomId: "room-1",
+        tick: 0,
+        phase: "LOBBY",
+        players: [],
+        entities: [],
+      }).success,
+    ).toBe(false);
   });
 });
 
