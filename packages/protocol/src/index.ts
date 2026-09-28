@@ -36,9 +36,13 @@ export {
 
 export type {
   ConnectOptions,
+  ConnectionListener,
   EventListener,
   GameTransport,
+  ResumeSessionOptions,
+  ResumeSessionResult,
   StateListener,
+  TransportConnectionNotice,
   Unsubscribe,
 } from "./transport.js";
 

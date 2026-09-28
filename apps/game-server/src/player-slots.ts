@@ -65,9 +65,18 @@ export class PlayerSlotRegistry {
     slot.connected = false;
   }
 
+  /** Marks a reserved slot connected again after Colyseus `onReconnect`. */
+  markConnected(sessionId: string): void {
+    const slot = this.bySession.get(sessionId);
+    if (!slot) {
+      return;
+    }
+    slot.connected = true;
+  }
+
   /**
-   * Permanently frees a slot after consented leave (`onLeave` in Colyseus 0.18).
-   * Temporary drop/reconnect reservation belongs in F8 (`onDrop` + allowReconnection).
+   * Permanently frees a slot after consented leave or reconnect timeout
+   * (`onLeave` in Colyseus 0.18). Unexpected drop uses `markDisconnected` instead.
    */
   release(sessionId: string): PlayerSlot | undefined {
     const slot = this.bySession.get(sessionId);
@@ -79,7 +88,10 @@ export class PlayerSlotRegistry {
     return slot;
   }
 
-  /** Rebinds an existing player slot to a new session (reconnect path; F8 will expand). */
+  /**
+   * Rebinds an existing player slot when a session id actually changes.
+   * Colyseus 0.18 reconnect keeps the same sessionId, so FoundationRoom does not call this.
+   */
   rebindSession(playerId: number, sessionId: string): PlayerSlot | undefined {
     const slot = this.byPlayerId.get(playerId);
     if (!slot) {

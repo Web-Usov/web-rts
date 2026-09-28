@@ -571,9 +571,11 @@ Web client не должен знать, работает матч локаль�
 ```ts
 interface GameTransport {
   connect(options: ConnectOptions): Promise<void>;
+  resumePreviousSession(options?: ResumeSessionOptions): Promise<ResumeSessionResult>;
   sendCommand(command: GameCommand): void;
   subscribeState(listener: StateListener): Unsubscribe;
   subscribeEvent(listener: EventListener): Unsubscribe;
+  subscribeConnection(listener: ConnectionListener): Unsubscribe;
   disconnect(): Promise<void>;
 }
 ```
@@ -751,7 +753,9 @@ Replication adapter преобразует это в network visibility.
 - player slot сохраняется **30 секунд** после неожиданного disconnect;
 - simulation продолжает работать;
 - entity игрока не уничтожаются;
+- на время grace Owner и Controller сохраняются;
 - reconnect возвращает control;
+- явный Disconnect не резервирует slot;
 - после timeout поведение определяется game mode policy.
 
 Для network vertical slice после timeout допустимо просто оставить сущности без controller.

@@ -5,9 +5,10 @@ import {
   type GameEvent,
   type GameStateView,
   type MatchPhase,
+  type TransportConnectionNotice,
 } from "@web-rts/protocol";
 import { ClientGameState } from "./client/client-game-state.js";
-import { RemoteGameTransport } from "./network/remote-game-transport.js";
+import { getBrowserGameTransport } from "./network/remote-game-transport.js";
 import { mountPresentation } from "./presentation/scene.js";
 import type { HudView } from "./presentation/types.js";
 
@@ -18,7 +19,7 @@ const emptyHud: HudView = {
   hasDestination: false,
 };
 
-type ConnectionStatus = "disconnected" | "connecting" | "connected" | "error";
+type ConnectionStatus = "disconnected" | "connecting" | "reconnecting" | "connected" | "error";
 
 export function App() {
   const [hud, setHud] = useState<HudView>(emptyHud);
@@ -32,15 +33,16 @@ export function App() {
   const [lastEvent, setLastEvent] = useState<string>("");
   const [errorMessage, setErrorMessage] = useState("");
 
-  const transportRef = useRef<RemoteGameTransport | null>(null);
+  const transportRef = useRef<ReturnType<typeof getBrowserGameTransport> | null>(null);
   const clientStateRef = useRef<ClientGameState | null>(null);
   const commandCounter = useRef(0);
 
   useEffect(() => {
-    const transport = new RemoteGameTransport();
+    const transport = getBrowserGameTransport();
     const clientState = new ClientGameState();
     transportRef.current = transport;
     clientStateRef.current = clientState;
+    let alive = true;
 
     const unsubState = transport.subscribeState((view: GameStateView) => {
       // Presentation clock only — not used by simulation (AGENTS §8).
@@ -54,34 +56,67 @@ export function App() {
       clientState.handleEvent(event);
       setLastEvent(`${event.type}${event.type === "COMMAND_REJECTED" ? `: ${event.reason}` : ""}`);
     });
+    const unsubConnection = transport.subscribeConnection((notice: TransportConnectionNotice) => {
+      if (!alive) {
+        return;
+      }
+      if (notice === "reconnecting") {
+        setStatus("reconnecting");
+        setErrorMessage("");
+      } else if (notice === "reconnected") {
+        setStatus("connected");
+        setErrorMessage("");
+      } else if (notice === "left") {
+        setStatus("disconnected");
+      } else {
+        setStatus("error");
+        setErrorMessage("session expired");
+      }
+    });
 
     const canvas = document.querySelector<HTMLCanvasElement>("#game-canvas");
-    if (!canvas) {
-      return () => {
-        unsubState();
-        unsubEvent();
-      };
-    }
+    const session = canvas
+      ? mountPresentation(
+          canvas,
+          setHud,
+          {
+            transport,
+            clientState,
+            nextCommandId: () => {
+              commandCounter.current += 1;
+              return `cmd-${commandCounter.current}`;
+            },
+          },
+          setFps,
+        )
+      : null;
 
-    const session = mountPresentation(
-      canvas,
-      setHud,
-      {
-        transport,
-        clientState,
-        nextCommandId: () => {
-          commandCounter.current += 1;
-          return `cmd-${commandCounter.current}`;
-        },
-      },
-      setFps,
-    );
+    if (transport.hasResumeToken()) {
+      setStatus("reconnecting");
+      setErrorMessage("");
+    }
+    void transport.resumePreviousSession().then((result) => {
+      if (!alive) {
+        return;
+      }
+      if (result.status === "restored") {
+        setStatus("connected");
+        setRoomId(transport.connectedRoomId ?? "");
+        setErrorMessage("");
+      } else if (result.status === "expired") {
+        setStatus("error");
+        setErrorMessage("session expired");
+      }
+    });
 
     return () => {
+      alive = false;
       unsubState();
       unsubEvent();
-      session.dispose();
-      void transport.disconnect();
+      unsubConnection();
+      session?.dispose();
+      // Reload must stay an unexpected socket drop. Consented leave here would
+      // free the slot and wipe the sessionStorage token before resume can run.
     };
   }, []);
 
@@ -139,7 +174,7 @@ export function App() {
       <canvas id="game-canvas" className="viewport" />
       <aside className="hud">
         <p className="hud-title">Web RTS</p>
-        <p>F6 vertical slice — ownership, control, Sacred Site.</p>
+        <p>Foundation match.</p>
 
         <div className="lobby">
           <label>
@@ -154,14 +189,18 @@ export function App() {
             <button
               type="button"
               onClick={() => void connect("create")}
-              disabled={status === "connecting"}
+              disabled={status === "connecting" || status === "reconnecting"}
             >
               Create room
             </button>
             <button
               type="button"
               onClick={() => void connect("join")}
-              disabled={status === "connecting" || joinRoomId.trim().length === 0}
+              disabled={
+                status === "connecting" ||
+                status === "reconnecting" ||
+                joinRoomId.trim().length === 0
+              }
             >
               Join room
             </button>
@@ -171,7 +210,7 @@ export function App() {
             <button
               type="button"
               onClick={() => void disconnect()}
-              disabled={status === "disconnected"}
+              disabled={status !== "connected"}
             >
               Disconnect
             </button>

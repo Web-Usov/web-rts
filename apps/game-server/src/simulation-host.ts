@@ -65,6 +65,18 @@ export class SimulationHost {
     this.world.enqueueCommand(command);
   }
 
+  /**
+   * Drops active control for one player after permanent leave.
+   * Does not destroy entities, Owner, or Objective components.
+   */
+  releaseControlForPlayer(playerId: number): void {
+    for (const [entityId, controller] of this.world.controllers.entries()) {
+      if (controller.controllerPlayerId === playerId) {
+        this.world.controllers.remove(entityId);
+      }
+    }
+  }
+
   step(): void {
     this.world.step();
   }

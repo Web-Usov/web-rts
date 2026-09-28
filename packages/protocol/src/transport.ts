@@ -25,15 +25,38 @@ export type StateListener = (state: GameStateView) => void;
 export type EventListener = (event: GameEvent) => void;
 
 /**
+ * Generic session resume. Adapters own any opaque token; this type has no SDK fields.
+ * `endpoint` is a remote-adapter override and is ignored by a future local transport.
+ */
+export type ResumeSessionOptions = {
+  endpoint?: string;
+};
+
+export type ResumeSessionResult =
+  { status: "restored" } | { status: "absent" } | { status: "expired" };
+
+/**
+ * Transport-level connection notices. These are not gameplay commands and
+ * carry no session secret.
+ */
+export type TransportConnectionNotice = "reconnecting" | "reconnected" | "left" | "expired";
+
+export type ConnectionListener = (notice: TransportConnectionNotice) => void;
+
+/**
  * Client boundary that isolates presentation/UI from the concrete multiplayer SDK.
  * Local and remote implementations share this contract (ADR-006).
  *
- * No Colyseus types appear here — RemoteGameTransport (F4/F5) adapts the SDK behind this interface.
+ * No Colyseus types appear here — RemoteGameTransport adapts the SDK behind this interface.
+ * `resumePreviousSession` restores an existing player context or reports that it cannot.
+ * It must not allocate a new room or player identity.
  */
 export interface GameTransport {
   connect(options: ConnectOptions): Promise<void>;
+  resumePreviousSession(options?: ResumeSessionOptions): Promise<ResumeSessionResult>;
   sendCommand(command: GameCommand): void;
   subscribeState(listener: StateListener): Unsubscribe;
   subscribeEvent(listener: EventListener): Unsubscribe;
+  subscribeConnection(listener: ConnectionListener): Unsubscribe;
   disconnect(): Promise<void>;
 }

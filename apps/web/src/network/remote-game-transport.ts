@@ -1,4 +1,4 @@
-import { Client, type Room } from "@colyseus/sdk";
+import { Client, CloseCode, type Room } from "@colyseus/sdk";
 import {
   COMMAND_MESSAGE,
   EVENT_MESSAGE,
@@ -8,12 +8,20 @@ import {
   parseGameEvent,
   parseGameStateView,
   type ConnectOptions,
+  type ConnectionListener,
   type EventListener,
   type GameCommand,
   type GameTransport,
+  type ResumeSessionOptions,
+  type ResumeSessionResult,
   type StateListener,
+  type TransportConnectionNotice,
   type Unsubscribe,
 } from "@web-rts/protocol";
+import {
+  createSessionStorageResumeTokenStore,
+  type OpaqueResumeTokenStore,
+} from "./resume-token-store.js";
 
 /** Dev default; override via ConnectOptions.endpoint or VITE_GAME_SERVER_URL (F9/Docker/LAN). */
 export const DEFAULT_GAME_SERVER_URL = "http://localhost:2567";
@@ -22,19 +30,26 @@ export const FOUNDATION_ROOM_NAME = "foundation";
 
 export type RemoteGameTransportOptions = {
   defaultEndpoint?: string;
+  resumeTokenStore?: OpaqueResumeTokenStore;
 };
 
 /**
  * Colyseus adapter behind {@link GameTransport}.
  * Presentation/UI must not import `@colyseus/sdk` directly.
+ *
+ * Create, join, and manual reconnect all go through {@link attachRoom} so
+ * STATE/EVENT listeners exist before the post-attach SYNC request.
  */
 export class RemoteGameTransport implements GameTransport {
   private client: Client | null = null;
   private room: Room | null = null;
   private readonly stateListeners = new Set<StateListener>();
   private readonly eventListeners = new Set<EventListener>();
+  private readonly connectionListeners = new Set<ConnectionListener>();
   private readonly defaultEndpoint: string;
+  private readonly resumeTokenStore: OpaqueResumeTokenStore;
   private roomId: string | null = null;
+  private resumeInFlight: Promise<ResumeSessionResult> | null = null;
 
   constructor(options: RemoteGameTransportOptions = {}) {
     const fromEnv =
@@ -43,14 +58,20 @@ export class RemoteGameTransport implements GameTransport {
         ? import.meta.env.VITE_GAME_SERVER_URL
         : undefined;
     this.defaultEndpoint = options.defaultEndpoint ?? fromEnv ?? DEFAULT_GAME_SERVER_URL;
+    this.resumeTokenStore = options.resumeTokenStore ?? createSessionStorageResumeTokenStore();
   }
 
   get connectedRoomId(): string | null {
     return this.roomId;
   }
 
+  /** True when this tab still has an opaque resume token. The token itself is not exposed. */
+  hasResumeToken(): boolean {
+    return this.resumeTokenStore.read() !== null;
+  }
+
   async connect(options: ConnectOptions): Promise<void> {
-    await this.disconnect();
+    await this.closeCurrentRoom({ clearToken: true });
 
     const endpoint = options.endpoint ?? this.defaultEndpoint;
     this.client = new Client(endpoint);
@@ -66,35 +87,40 @@ export class RemoteGameTransport implements GameTransport {
       joinOptions["mapId"] = options.mapId;
     }
 
-    if (options.createRoom || !options.roomId) {
-      this.room = await this.client.create(FOUNDATION_ROOM_NAME, joinOptions);
-    } else {
-      this.room = await this.client.joinById(options.roomId, joinOptions);
+    const room =
+      options.createRoom || !options.roomId
+        ? await this.client.create(FOUNDATION_ROOM_NAME, joinOptions)
+        : await this.client.joinById(options.roomId, joinOptions);
+    this.attachRoom(room);
+  }
+
+  /**
+   * Restores the previous player context from the opaque session token.
+   * Failure clears the token and does not create a room or a new player.
+   */
+  async resumePreviousSession(options: ResumeSessionOptions = {}): Promise<ResumeSessionResult> {
+    const endpoint = options.endpoint ?? this.defaultEndpoint;
+    if (this.resumeInFlight) {
+      const result = await this.resumeInFlight;
+      this.sendSync();
+      return result;
+    }
+    if (this.room) {
+      this.sendSync();
+      return { status: "restored" };
     }
 
-    this.roomId = this.room.roomId;
-    this.room.onMessage(STATE_MESSAGE, (payload: unknown) => {
-      const parsed = parseGameStateView(payload);
-      if (!parsed.success) {
-        return;
-      }
-      for (const listener of this.stateListeners) {
-        listener(parsed.data);
-      }
-    });
-    this.room.onMessage(EVENT_MESSAGE, (payload: unknown) => {
-      const parsed = parseGameEvent(payload);
-      if (!parsed.success) {
-        return;
-      }
-      for (const listener of this.eventListeners) {
-        listener(parsed.data);
-      }
-    });
+    const token = this.resumeTokenStore.read();
+    if (!token) {
+      return { status: "absent" };
+    }
 
-    // onJoin already broadcast a snapshot; the SDK drops it if this handler
-    // was not registered yet. Ask again now that listeners exist.
-    this.room.send(SYNC_MESSAGE, {});
+    this.resumeInFlight = this.resumeWithToken(token, endpoint);
+    try {
+      return await this.resumeInFlight;
+    } finally {
+      this.resumeInFlight = null;
+    }
   }
 
   sendCommand(command: GameCommand): void {
@@ -126,17 +152,148 @@ export class RemoteGameTransport implements GameTransport {
     };
   }
 
+  subscribeConnection(listener: ConnectionListener): Unsubscribe {
+    this.connectionListeners.add(listener);
+    return () => {
+      this.connectionListeners.delete(listener);
+    };
+  }
+
+  /** Consented leave. Frees the server slot immediately and deletes the resume token. */
   async disconnect(): Promise<void> {
+    await this.closeCurrentRoom({ clearToken: true });
+    this.emit("left");
+  }
+
+  private async resumeWithToken(token: string, endpoint: string): Promise<ResumeSessionResult> {
+    this.emit("reconnecting");
+    try {
+      this.client = new Client(endpoint);
+      const room = await this.client.reconnect(token);
+      this.attachRoom(room);
+      this.emit("reconnected");
+      return { status: "restored" };
+    } catch {
+      this.resumeTokenStore.clear();
+      this.room = null;
+      this.roomId = null;
+      this.client = null;
+      this.emit("expired");
+      return { status: "expired" };
+    }
+  }
+
+  /**
+   * Shared listener setup for create, join, and manual reconnect.
+   * SYNC is sent only after STATE/EVENT handlers exist (F5).
+   */
+  private attachRoom(room: Room): void {
+    this.room = room;
+    this.roomId = room.roomId;
+    // SDK default skips automatic reconnect during the first 5s and then fires
+    // onLeave. That would discard a server reservation that is still inside grace.
+    room.reconnection.minUptime = 0;
+    this.persistRoomToken(room);
+
+    room.onMessage(STATE_MESSAGE, (payload: unknown) => {
+      const parsed = parseGameStateView(payload);
+      if (!parsed.success) {
+        return;
+      }
+      for (const listener of this.stateListeners) {
+        listener(parsed.data);
+      }
+    });
+    room.onMessage(EVENT_MESSAGE, (payload: unknown) => {
+      const parsed = parseGameEvent(payload);
+      if (!parsed.success) {
+        return;
+      }
+      for (const listener of this.eventListeners) {
+        listener(parsed.data);
+      }
+    });
+
+    room.onDrop(() => {
+      this.emit("reconnecting");
+    });
+    room.onReconnect(() => {
+      // JOIN_ROOM assigns the rotated token after onReconnect listeners return.
+      queueMicrotask(() => {
+        if (this.room !== room) {
+          return;
+        }
+        this.persistRoomToken(room);
+        this.sendSync();
+        this.emit("reconnected");
+      });
+    });
+    room.onLeave((code) => {
+      if (this.room !== room) {
+        return;
+      }
+      this.room = null;
+      this.roomId = null;
+      this.client = null;
+      this.resumeTokenStore.clear();
+      this.emit(code === CloseCode.CONSENTED ? "left" : "expired");
+    });
+
+    this.sendSync();
+  }
+
+  private persistRoomToken(room: Room): void {
+    const token = room.reconnectionToken;
+    if (typeof token !== "string" || !token.includes(":")) {
+      return;
+    }
+    this.resumeTokenStore.write(token);
+  }
+
+  private sendSync(): void {
+    if (!this.room) {
+      return;
+    }
+    try {
+      this.room.send(SYNC_MESSAGE, {});
+    } catch {
+      /* socket may still be settling */
+    }
+  }
+
+  private async closeCurrentRoom(options: { clearToken: boolean }): Promise<void> {
+    if (options.clearToken) {
+      this.resumeTokenStore.clear();
+    }
     const room = this.room;
     this.room = null;
     this.roomId = null;
     this.client = null;
-    if (room) {
-      try {
-        await room.leave();
-      } catch {
-        /* ignore disconnect races */
-      }
+    if (!room) {
+      return;
+    }
+    room.reconnection.enabled = false;
+    try {
+      await room.leave(true);
+    } catch {
+      /* ignore disconnect races */
     }
   }
+
+  private emit(notice: TransportConnectionNotice): void {
+    for (const listener of this.connectionListeners) {
+      listener(notice);
+    }
+  }
+}
+
+let browserTransport: RemoteGameTransport | null = null;
+
+/**
+ * One transport for the page. React StrictMode remounts must not consented-leave
+ * the session or wipe the resume token.
+ */
+export function getBrowserGameTransport(): RemoteGameTransport {
+  browserTransport ??= new RemoteGameTransport();
+  return browserTransport;
 }
