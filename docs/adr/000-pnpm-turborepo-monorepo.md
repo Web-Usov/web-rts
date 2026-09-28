@@ -74,12 +74,15 @@ CI:                   GitHub Actions
     },
     "lint": {},
     "dev": {
+      "dependsOn": ["^build"],
       "cache": false,
       "persistent": true
     }
   }
 }
 ```
+
+`dev` зависит от `^build`: workspace-пакеты отдают собранный `dist` через `exports`, и без этой зависимости приложения стартуют на устаревшем артефакте.
 
 Фактический `turbo.json` может отличаться после scaffold, если этого потребуют реальные build outputs и package dependencies.
 
