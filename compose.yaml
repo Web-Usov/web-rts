@@ -1,0 +1,41 @@
+services:
+  game-server:
+    build:
+      context: .
+      dockerfile: apps/game-server/Dockerfile
+    environment:
+      PORT: "2567"
+    ports:
+      - "${GAME_SERVER_PORT:-2567}:2567"
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - >-
+          fetch('http://127.0.0.1:2567/health')
+          .then((response) => process.exit(response.ok ? 0 : 1))
+          .catch(() => process.exit(1))
+      interval: 2s
+      timeout: 2s
+      retries: 20
+      start_period: 3s
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_GAME_SERVER_URL: "${GAME_SERVER_URL:-}"
+        VITE_GAME_SERVER_PORT: "${GAME_SERVER_PORT:-2567}"
+    ports:
+      - "${WEB_PORT:-5173}:80"
+    depends_on:
+      game-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1/ || exit 1"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+      start_period: 2s
