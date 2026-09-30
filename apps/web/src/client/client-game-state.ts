@@ -132,6 +132,19 @@ export class ClientGameState {
     return this.destinationSim;
   }
 
+  /**
+   * Drops the presented match after a terminal session end.
+   * Temporary reconnect must not call this: the same room is still authoritative.
+   */
+  reset(): void {
+    this.snapshots.length = 0;
+    this.view = null;
+    this.destinationSim = null;
+    this.selectedIds = [];
+    this.renderTimeMs = 0;
+    this.emitState();
+  }
+
   handleEvent(event: GameEvent): void {
     for (const listener of this.eventListeners) {
       listener(event);

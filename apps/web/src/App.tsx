@@ -37,6 +37,16 @@ export function App() {
   const clientStateRef = useRef<ClientGameState | null>(null);
   const commandCounter = useRef(0);
 
+  const clearPresentedMatch = (): void => {
+    clientStateRef.current?.reset();
+    setHud(emptyHud);
+    setPhase("-");
+    setLocalPlayerId(null);
+    setConnectedPlayers(0);
+    setRoomId("");
+    setLastEvent("");
+  };
+
   useEffect(() => {
     const transport = getBrowserGameTransport();
     const clientState = new ClientGameState();
@@ -67,8 +77,10 @@ export function App() {
         setStatus("connected");
         setErrorMessage("");
       } else if (notice === "left") {
+        clearPresentedMatch();
         setStatus("disconnected");
       } else {
+        clearPresentedMatch();
         setStatus("error");
         setErrorMessage("session expired");
       }
@@ -104,6 +116,7 @@ export function App() {
         setRoomId(transport.connectedRoomId ?? "");
         setErrorMessage("");
       } else if (result.status === "expired") {
+        clearPresentedMatch();
         setStatus("error");
         setErrorMessage("session expired");
       }
@@ -125,6 +138,7 @@ export function App() {
     if (!transport) {
       return;
     }
+    clearPresentedMatch();
     setStatus("connecting");
     setErrorMessage("");
     try {
@@ -160,11 +174,9 @@ export function App() {
 
   const disconnect = async (): Promise<void> => {
     await transportRef.current?.disconnect();
+    clearPresentedMatch();
     setStatus("disconnected");
-    setPhase("-");
-    setLocalPlayerId(null);
-    setConnectedPlayers(0);
-    setRoomId("");
+    setErrorMessage("");
   };
 
   const selected = hud.selectedIds.length === 0 ? "none" : hud.selectedIds.map(String).join(", ");

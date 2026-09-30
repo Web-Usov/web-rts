@@ -121,7 +121,27 @@ test.describe("F8 foundation reconnect browser E2E", () => {
         MAX_OBJECTIVE_DRIFT_CSS_PX,
       );
 
+      await pageA.getByRole("button", { name: "Disconnect" }).click();
+      await expectHud(pageA, "Status", "disconnected");
+      await expectHud(pageA, "Room", "—");
+      await expectHud(pageA, "Phase", "-");
+      await expectHud(pageA, "Entities", "0");
+      await expectHud(pageA, "Objectives", "0");
+      await expectHud(pageA, "Selected", "none");
+      await expectHud(pageA, "Destination", "none");
+      await expect
+        .poll(async () => {
+          try {
+            await findLocalUnitCentroid(pageA);
+            return "visible";
+          } catch {
+            return "gone";
+          }
+        })
+        .toBe("gone");
+
       if (process.env.F8_SAVE_VERIFICATION_SHOTS === "1") {
+        await saveVerificationShot(pageA, "after-disconnect.png");
         await saveVerificationShot(pageB, "after-reconnect-move.png");
       }
 
