@@ -29,11 +29,11 @@
 - F5 — Replication + primitive movement (#10);
 - F6 — Owner/Controller + generic Sacred Site objective (#11);
 - F7 — Multiplayer browser E2E (#12);
-- F8 — Reconnect (#13).
+- F8 — Reconnect (#13);
+- F9 — Docker/LAN startup (#14).
 
 Следующие открытые foundation stages:
 
-- [F9 — Docker/LAN startup](https://github.com/Web-Usov/web-rts/issues/14);
 - [F10 — Debug/performance instrumentation](https://github.com/Web-Usov/web-rts/issues/15);
 - [F11 — LocalGameTransport/WebWorker skeleton](https://github.com/Web-Usov/web-rts/issues/16).
 
@@ -51,7 +51,8 @@ GitHub Issues остаются источником implementation scope и acce
 - Owner и Controller — разные simulation concepts;
 - objectives generic, renderer не hardcode конкретный objective entity id;
 - browser multiplayer smoke является required full-CI частью через `browser-e2e` → `ci-gate`;
-- reconnect foundation policy: 30 секунд grace для unexpected drop/reload, explicit Disconnect permanent, terminal leave снимает Controller и сохраняет entity/Owner.
+- reconnect foundation policy: 30 секунд grace для unexpected drop/reload, explicit Disconnect permanent, terminal leave снимает Controller и сохраняет entity/Owner;
+- Docker Compose поднимает web + game-server без database/Redis; LAN-клиент по умолчанию использует hostname открытой web-страницы и опубликованный game-server port.
 
 Полные правила и детали находятся в `AGENTS.md`, `docs/technical-vision.md`, `docs/adr/` и `docs/specs/`.
 
