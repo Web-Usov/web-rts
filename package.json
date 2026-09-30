@@ -13,6 +13,7 @@
     "test:simulation": "turbo run test --filter=@web-rts/scenario-runner",
     "test:server": "turbo run test:integration --filter=@web-rts/game-server",
     "test:e2e": "playwright test",
+    "test:docker-smoke": "node scripts/docker-smoke.mjs",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint && prettier --check .",
     "format": "prettier --write ."
