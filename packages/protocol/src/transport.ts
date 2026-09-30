@@ -5,7 +5,8 @@ import type { GameStateView } from "./state.js";
 /**
  * Options for establishing a local or remote match session via GameTransport.
  * Concrete remote fields (endpoint, room options) are filled by adapters.
- * Endpoint defaults belong in env/config so Docker/LAN (F9) can override them.
+ * Remote endpoint defaults live in the adapter: explicit URL, then the page
+ * hostname and game-server port, so Docker/LAN does not hardcode localhost.
  */
 export type ConnectOptions = {
   protocolVersion: number;

@@ -257,6 +257,43 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
 
+  docker-lan-smoke:
+    name: docker-lan-smoke
+    needs: changes
+    if: needs.changes.outputs.docs_only != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      WEB_PORT: "18080"
+      GAME_SERVER_PORT: "18081"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Start Compose stack
+        run: docker compose up -d --build
+
+      - name: Docker LAN smoke
+        run: pnpm test:docker-smoke
+
+      - name: Show Compose diagnostics
+        if: failure()
+        run: |
+          docker compose ps
+          docker compose logs
+
+      - name: Stop Compose stack
+        if: always()
+        run: docker compose down --volumes --remove-orphans
+
   ci-gate:
     name: ci-gate
     runs-on: ubuntu-latest
@@ -271,6 +308,7 @@ jobs:
       - server-integration
       - build
       - browser-e2e
+      - docker-lan-smoke
     steps:
       - name: Verify required CI results
         env:
@@ -283,6 +321,7 @@ jobs:
           SERVER_INTEGRATION_RESULT: ${{ needs.server-integration.result }}
           BUILD_RESULT: ${{ needs.build.result }}
           BROWSER_E2E_RESULT: ${{ needs.browser-e2e.result }}
+          DOCKER_LAN_SMOKE_RESULT: ${{ needs.docker-lan-smoke.result }}
         run: |
           set -euo pipefail
 
@@ -299,6 +338,7 @@ jobs:
             "$SERVER_INTEGRATION_RESULT"
             "$BUILD_RESULT"
             "$BROWSER_E2E_RESULT"
+            "$DOCKER_LAN_SMOKE_RESULT"
           )
 
           if [[ "$DOCS_ONLY" == "true" ]]; then

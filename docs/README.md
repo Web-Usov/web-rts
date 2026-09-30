@@ -11,6 +11,7 @@
 ## Specs
 
 - [`specs/001-foundation-network-vertical-slice.md`](./specs/001-foundation-network-vertical-slice.md) — Foundation Spec #001: первый authoritative multiplayer vertical slice, tooling, simulation kernel, transport, client/server integration, tests, CI и LAN startup.
+- [`docker-lan.md`](./docker-lan.md) — Docker Compose startup: порты, LAN URL, env, smoke и ручной checklist со второго устройства.
 
 Корневой [`AGENTS.md`](../AGENTS.md) содержит обязательные правила для coding agents: source-of-truth hierarchy, архитектурные инварианты, scope discipline и требования к PR/tests.
 
