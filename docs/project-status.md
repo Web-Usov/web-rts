@@ -4,14 +4,19 @@
 
 ## Как использовать
 
-Для новой самостоятельной задачи:
+Для нового обычного Task Chat:
 
-1. прочитать `AGENTS.md`;
+1. прочитать `docs/agentic-workflow.md` и определить свою роль как orchestrator / planner / reviewer;
 2. прочитать этот checkpoint;
 3. получить актуальное состояние `main`, PR и GitHub Actions из GitHub;
-4. прочитать `.agents/skills/web-rts-router/SKILL.md`;
+4. прочитать `AGENTS.md` и `.agents/skills/web-rts-router/SKILL.md` как ограничения для отдельного Coding Agent;
 5. прочитать релевантные Game Vision / Technical Vision / ADR / spec / issue;
-6. проверить актуальный код на `origin/main` перед планированием реализации.
+6. проверить актуальный код на `origin/main` перед планированием реализации;
+7. подготовить implementation plan и готовый prompt для Coding Agent.
+
+Обычный Task Chat не выполняет implementation самостоятельно, если пользователь явно не попросил `реализуй сам`, `сделай PR сам` или эквивалентное действие. Короткая команда вида `Делаем F9, issue #14. Начинай` означает planning + handoff Coding Agent, а не самостоятельное изменение repository.
+
+Coding Agent, получивший handoff, следует `AGENTS.md` и правилу `1 task/issue = 1 branch = 1 worktree = 1 PR`.
 
 История предыдущего чата, summary предыдущей agent session и финальный отчёт coding agent могут использоваться как вспомогательный контекст, но не считаются доказательством актуального состояния репозитория, PR или CI.
 
@@ -53,7 +58,7 @@ GitHub Issues остаются источником implementation scope и acce
 - browser multiplayer smoke является required full-CI частью через `browser-e2e` → `ci-gate`;
 - reconnect foundation policy: 30 секунд grace для unexpected drop/reload, explicit Disconnect permanent, terminal leave снимает Controller и сохраняет entity/Owner.
 
-Полные правила и детали находятся в `AGENTS.md`, `docs/technical-vision.md`, `docs/adr/` и `docs/specs/`.
+Полные правила и детали находятся в `docs/agentic-workflow.md`, `AGENTS.md`, `docs/technical-vision.md`, `docs/adr/` и `docs/specs/`.
 
 ## Когда обновлять этот файл
 
