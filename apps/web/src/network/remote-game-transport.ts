@@ -18,13 +18,13 @@ import {
   type TransportConnectionNotice,
   type Unsubscribe,
 } from "@web-rts/protocol";
+import { resolveGameServerEndpoint } from "./game-server-endpoint.js";
 import {
   createSessionStorageResumeTokenStore,
   type OpaqueResumeTokenStore,
 } from "./resume-token-store.js";
 
-/** Dev default; override via ConnectOptions.endpoint or VITE_GAME_SERVER_URL (F9/Docker/LAN). */
-export const DEFAULT_GAME_SERVER_URL = "http://localhost:2567";
+export { DEFAULT_GAME_SERVER_URL } from "./game-server-endpoint.js";
 
 export const FOUNDATION_ROOM_NAME = "foundation";
 
@@ -52,12 +52,7 @@ export class RemoteGameTransport implements GameTransport {
   private resumeInFlight: Promise<ResumeSessionResult> | null = null;
 
   constructor(options: RemoteGameTransportOptions = {}) {
-    const fromEnv =
-      typeof import.meta !== "undefined" &&
-      typeof import.meta.env?.VITE_GAME_SERVER_URL === "string"
-        ? import.meta.env.VITE_GAME_SERVER_URL
-        : undefined;
-    this.defaultEndpoint = options.defaultEndpoint ?? fromEnv ?? DEFAULT_GAME_SERVER_URL;
+    this.defaultEndpoint = options.defaultEndpoint ?? resolveConfiguredGameServerEndpoint();
     this.resumeTokenStore = options.resumeTokenStore ?? createSessionStorageResumeTokenStore();
   }
 
@@ -285,6 +280,24 @@ export class RemoteGameTransport implements GameTransport {
       listener(notice);
     }
   }
+}
+
+function readViteString(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined;
+}
+
+/**
+ * Per-call `ConnectOptions.endpoint` still wins inside connect/resume.
+ * This value is the next default: explicit Vite URL, then page hostname + port.
+ */
+function resolveConfiguredGameServerEndpoint(): string {
+  const env = typeof import.meta === "undefined" ? undefined : import.meta.env;
+  const pageHostname = typeof window === "undefined" ? undefined : window.location.hostname;
+  return resolveGameServerEndpoint({
+    explicitUrl: readViteString(env?.VITE_GAME_SERVER_URL),
+    configuredPort: readViteString(env?.VITE_GAME_SERVER_PORT),
+    pageHostname,
+  });
 }
 
 let browserTransport: RemoteGameTransport | null = null;
