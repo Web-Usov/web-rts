@@ -23,8 +23,59 @@ import {
   type OpaqueResumeTokenStore,
 } from "./resume-token-store.js";
 
-/** Dev default; override via ConnectOptions.endpoint or VITE_GAME_SERVER_URL (F9/Docker/LAN). */
-export const DEFAULT_GAME_SERVER_URL = "http://localhost:2567";
+export const DEFAULT_GAME_SERVER_PORT = 2567;
+export const DEFAULT_GAME_SERVER_URL = `http://localhost:${DEFAULT_GAME_SERVER_PORT}`;
+
+export type GameServerBrowserLocation = {
+  protocol: string;
+  hostname: string;
+};
+
+export type GameServerEndpointConfig = {
+  explicitUrl?: string;
+  port?: string | number;
+  location?: GameServerBrowserLocation;
+};
+
+/**
+ * Resolves the browser-visible game-server endpoint.
+ *
+ * Docker/LAN builds intentionally avoid hard-coding the Docker host address:
+ * when no explicit URL is configured, the client reuses the hostname that
+ * served the page and only supplies the configured game-server port.
+ */
+export function resolveGameServerEndpoint(config: GameServerEndpointConfig = {}): string {
+  const explicitUrl = config.explicitUrl?.trim();
+  if (explicitUrl) {
+    return explicitUrl;
+  }
+
+  const port = parseGameServerPort(config.port);
+  const hostname = config.location?.hostname.trim();
+  if (hostname) {
+    const protocol = config.location?.protocol === "https:" ? "https:" : "http:";
+    return `${protocol}//${hostname}:${port}`;
+  }
+
+  return `http://localhost:${port}`;
+}
+
+function parseGameServerPort(value: string | number | undefined): number {
+  if (typeof value === "number") {
+    return Number.isInteger(value) && value >= 1 && value <= 65_535
+      ? value
+      : DEFAULT_GAME_SERVER_PORT;
+  }
+
+  if (typeof value !== "string" || !/^\d+$/.test(value.trim())) {
+    return DEFAULT_GAME_SERVER_PORT;
+  }
+
+  const parsed = Number(value.trim());
+  return Number.isInteger(parsed) && parsed >= 1 && parsed <= 65_535
+    ? parsed
+    : DEFAULT_GAME_SERVER_PORT;
+}
 
 export const FOUNDATION_ROOM_NAME = "foundation";
 
@@ -57,7 +108,23 @@ export class RemoteGameTransport implements GameTransport {
       typeof import.meta.env?.VITE_GAME_SERVER_URL === "string"
         ? import.meta.env.VITE_GAME_SERVER_URL
         : undefined;
-    this.defaultEndpoint = options.defaultEndpoint ?? fromEnv ?? DEFAULT_GAME_SERVER_URL;
+    const portFromEnv =
+      typeof import.meta !== "undefined" &&
+      typeof import.meta.env?.VITE_GAME_SERVER_PORT === "string"
+        ? import.meta.env.VITE_GAME_SERVER_PORT
+        : undefined;
+    const browserLocation =
+      typeof window !== "undefined"
+        ? { protocol: window.location.protocol, hostname: window.location.hostname }
+        : undefined;
+
+    this.defaultEndpoint =
+      options.defaultEndpoint ??
+      resolveGameServerEndpoint({
+        explicitUrl: fromEnv,
+        port: portFromEnv,
+        location: browserLocation,
+      });
     this.resumeTokenStore = options.resumeTokenStore ?? createSessionStorageResumeTokenStore();
   }
 
