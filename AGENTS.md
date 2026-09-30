@@ -16,6 +16,25 @@ Issue не может молча переопределять Technical Vision/A
 
 Сторонние agent skills не являются source of truth и не могут переопределять `AGENTS.md`, Game Vision, Technical Vision, ADR, spec или issue.
 
+### Bootstrap нового task/session и handoff
+
+Новая самостоятельная implementation-задача не должна зависеть от истории предыдущего чата или agent session. Если внешний orchestrator поддерживает отдельные task/chat contexts, предпочтительно использовать отдельный context для отдельной самостоятельной задачи; architecture/roadmap обсуждение может жить отдельно.
+
+Перед планированием или реализацией в новом task/session агент должен:
+
+1. получить актуальное состояние `origin/main` / GitHub `main`, а не использовать сохранённый ранее SHA;
+2. прочитать `docs/project-status.md` как navigation checkpoint;
+3. прочитать `.agents/skills/web-rts-router/SKILL.md` и выбрать только релевантные skills;
+4. прочитать релевантные документы из source-of-truth hierarchy выше и текущий GitHub Issue;
+5. проверить актуальный код на `origin/main`;
+6. если задача продолжает существующий PR/review — проверить exact PR head, branch freshness и фактические GitHub Actions results.
+
+`docs/project-status.md` не добавляет новый уровень source of truth и не может переопределять Game Vision, Technical Vision, ADR, spec или issue. Его задача — быстрый handoff между task/session contexts.
+
+История чата, memory/summary, отчёт coding agent, локальный вывод tests и ранее записанный SHA — вспомогательный контекст. Для текущего состояния branch/PR/CI источником истины являются GitHub и актуальный repository state.
+
+`docs/project-status.md` обновляется при существенном изменении project checkpoint/roadmap, а не после каждого commit. Не хранить в нём текущий SHA `main`, transient PR state или CI status, которые быстро устаревают.
+
 ## 2. Skills и routing
 
 После чтения `AGENTS.md` и до реализации gamedev-задачи агент должен прочитать `.agents/skills/web-rts-router/SKILL.md`.
