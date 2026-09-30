@@ -4,6 +4,13 @@ export const FOUNDATION_ROOM_NAME = "foundation" as const;
 /** Hard cap from Game Vision / Technical Vision (≤ 4 players). */
 export const MAX_PLAYERS = 4;
 
+/**
+ * Production reservation after an unexpected disconnect.
+ * Client join payloads cannot change this. Tests may assign
+ * `FoundationRoom.reconnectGraceSeconds` on the server room only.
+ */
+export const DEFAULT_RECONNECT_GRACE_SECONDS = 30;
+
 /** Default HTTP/WebSocket listen port. */
 export const DEFAULT_PORT = 2567;
 

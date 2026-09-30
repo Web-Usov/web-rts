@@ -127,6 +127,41 @@ describe("SimulationHost", () => {
     expect(host.pendingCommandCount()).toBe(1);
   });
 
+  it("releases one player's Controller and leaves Owner, entity, and objective", () => {
+    const host = new SimulationHost({ seed: 1, mapId: "foundation" });
+    host.bootstrapMatch([0, 1]);
+    const unit0 = host.primitiveUnits.getEntityId(0)!;
+    const unit1 = host.primitiveUnits.getEntityId(1)!;
+    const objectiveId = host.world
+      .entityIds()
+      .find((entityId) => host.world.objectives.has(entityId))!;
+    const tickBefore = host.tick;
+
+    host.releaseControlForPlayer(0);
+
+    expect(host.world.hasEntity(unit0)).toBe(true);
+    expect(host.world.hasEntity(unit1)).toBe(true);
+    expect(host.world.hasEntity(objectiveId)).toBe(true);
+    expect(host.primitiveUnits.getEntityId(0)).toBe(unit0);
+    expect(host.world.owners.get(unit0)).toEqual({ ownerPlayerId: 0 });
+    expect(host.world.controllers.has(unit0)).toBe(false);
+    expect(host.world.owners.get(unit1)).toEqual({ ownerPlayerId: 1 });
+    expect(host.world.controllers.get(unit1)).toEqual({ controllerPlayerId: 1 });
+    expect(host.world.objectives.get(objectiveId)).toEqual({
+      type: "SACRED_SITE",
+      state: "ACTIVE",
+    });
+    expect(host.world.controllers.has(objectiveId)).toBe(false);
+    expect(host.tick).toBe(tickBefore);
+
+    const rejected = host.enqueueFromSession(
+      { ...move, entityIds: [unit0], commandId: "after-release" },
+      { playerId: 0, sessionId: "session-0" },
+    );
+    expect(rejected).toEqual({ ok: false, reason: "not_your_unit" });
+    expect(host.pendingCommandCount()).toBe(0);
+  });
+
   it("rejects out-of-bounds MOVE without enqueueing", () => {
     const host = new SimulationHost({ seed: 1, mapId: "foundation" });
     host.bootstrapMatch([0]);

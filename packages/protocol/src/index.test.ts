@@ -189,6 +189,22 @@ describe("parseGameEvent / parseGameStateView", () => {
     ).toBe(false);
   });
 
+  it("rejects a state view that carries a reconnection token", () => {
+    expect(
+      parseGameStateView({
+        protocolVersion: PROTOCOL_VERSION,
+        gameDataVersion: GAME_DATA_VERSION,
+        roomId: "room-1",
+        tick: 0,
+        phase: "LOBBY",
+        localPlayerId: 0,
+        players: [],
+        entities: [],
+        reconnectionToken: "room-1:secret",
+      }).success,
+    ).toBe(false);
+  });
+
   it("rejects state views missing localPlayerId", () => {
     expect(
       parseGameStateView({
@@ -205,7 +221,7 @@ describe("parseGameEvent / parseGameStateView", () => {
 });
 
 describe("GameTransport contract", () => {
-  it("describes connect/sendCommand/subscriptions/disconnect without Colyseus types", () => {
+  it("describes connect/resume/subscriptions/disconnect without Colyseus types", () => {
     const connectOptions: ConnectOptions = {
       protocolVersion: PROTOCOL_VERSION,
       gameDataVersion: GAME_DATA_VERSION,
@@ -217,6 +233,9 @@ describe("GameTransport contract", () => {
     const transport: GameTransport = {
       async connect(options) {
         expect(options).toEqual(connectOptions);
+      },
+      async resumePreviousSession() {
+        return { status: "absent" };
       },
       sendCommand(command) {
         expect(command.type).toBe("MOVE");
@@ -233,6 +252,11 @@ describe("GameTransport contract", () => {
           listeners.event = undefined;
         };
       },
+      subscribeConnection() {
+        return () => {
+          /* no-op */
+        };
+      },
       async disconnect() {
         /* no-op */
       },
@@ -240,9 +264,11 @@ describe("GameTransport contract", () => {
 
     void transport;
     expect(typeof transport.connect).toBe("function");
+    expect(typeof transport.resumePreviousSession).toBe("function");
     expect(typeof transport.sendCommand).toBe("function");
     expect(typeof transport.subscribeState).toBe("function");
     expect(typeof transport.subscribeEvent).toBe("function");
+    expect(typeof transport.subscribeConnection).toBe("function");
     expect(typeof transport.disconnect).toBe("function");
   });
 });

@@ -92,6 +92,20 @@ describe("ReplicationAdapter", () => {
       ownerPlayerId: 0,
       controllerPlayerId: 1,
     });
+
+    world.controllers.remove(unitId);
+    const released = projectWorldToGameStateView({
+      world,
+      roomId: "r",
+      phase: "RUNNING",
+      localPlayerId: 0,
+      players: [{ playerId: 0, connected: false }],
+    });
+    expect(released.players).toEqual([{ playerId: 0, connected: false }]);
+    expect(released.entities.find((entity) => entity.entityId === unitId)).toMatchObject({
+      ownerPlayerId: 0,
+      controllerPlayerId: null,
+    });
   });
 
   it("projects empty entities in lobby when world is null", () => {

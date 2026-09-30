@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { GAME_DATA_VERSION, PROTOCOL_VERSION, type GameStateView } from "@web-rts/protocol";
 import { ClientGameState } from "./client-game-state.js";
+import { PresentationState } from "../presentation/state.js";
 
 function view(overrides: Partial<GameStateView> = {}): GameStateView {
   return {
@@ -183,5 +184,69 @@ describe("ClientGameState", () => {
     expect(state.getDestinationMarker()).toEqual({ x: 99, y: 99 });
     expect(state.sample(0)).toEqual(before);
     expect(state.getView()?.entities.find((e) => e.entityId === 10)?.x).toBe(0);
+  });
+
+  it("reset clears the presented match so the next room does not interpolate the old one", () => {
+    const state = new ClientGameState();
+    const presentation = new PresentationState();
+    state.subscribeState((poses) => {
+      const marker = state.getDestinationMarker();
+      presentation.apply({
+        entities: poses.map((pose) => ({
+          id: pose.entityId,
+          kind: pose.kind,
+          position: { x: pose.x, y: 0, z: pose.y },
+          colorSlot: 0,
+        })),
+        selectedIds: [...state.getSelectedIds()],
+        destination: marker ? { x: marker.x, z: marker.y } : null,
+      });
+    });
+
+    state.applyAuthoritativeState(view({ tick: 1 }), 0);
+    state.applyAuthoritativeState(
+      view({
+        tick: 2,
+        entities: view().entities.map((entity) =>
+          entity.entityId === 10 ? { ...entity, x: 100 } : entity,
+        ),
+      }),
+      100,
+    );
+    state.select(10);
+    state.setDestinationMarker({ x: 3, y: 4 });
+    expect(presentation.getEntities().length).toBeGreaterThan(0);
+    expect(presentation.getHudView().hasDestination).toBe(true);
+
+    state.reset();
+
+    expect(state.getView()).toBeNull();
+    expect(state.sample(10_000)).toEqual([]);
+    expect(state.getSelectedIds()).toEqual([]);
+    expect(state.getDestinationMarker()).toBeNull();
+    expect(state.getConnectedPlayerCount()).toBe(0);
+    expect(state.getLocalUnitEntityId()).toBeNull();
+    expect(presentation.getEntities()).toEqual([]);
+    expect(presentation.getSelectedIds()).toEqual([]);
+    expect(presentation.getDestination()).toBeNull();
+    expect(presentation.getHudView()).toEqual({
+      entityCount: 0,
+      objectiveCount: 0,
+      selectedIds: [],
+      hasDestination: false,
+    });
+
+    state.applyAuthoritativeState(
+      view({
+        roomId: "next-room",
+        tick: 0,
+        entities: view().entities.map((entity) =>
+          entity.entityId === 10 ? { ...entity, x: 1 } : entity,
+        ),
+      }),
+      5_000,
+    );
+    expect(state.sample(5_000).find((pose) => pose.entityId === 10)?.x).toBe(1);
+    expect(state.getView()?.roomId).toBe("next-room");
   });
 });

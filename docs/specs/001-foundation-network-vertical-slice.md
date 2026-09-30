@@ -343,12 +343,16 @@ Babylon scene не является gameplay state.
 ```ts
 interface GameTransport {
   connect(options: ConnectOptions): Promise<void>;
+  resumePreviousSession(options?: ResumeSessionOptions): Promise<ResumeSessionResult>;
   sendCommand(command: GameCommand): void;
   subscribeState(listener: StateListener): Unsubscribe;
   subscribeEvent(listener: EventListener): Unsubscribe;
+  subscribeConnection(listener: ConnectionListener): Unsubscribe;
   disconnect(): Promise<void>;
 }
 ```
+
+`resumePreviousSession` восстанавливает уже существующий player context либо сообщает, что токена нет или он больше не действителен. Метод не создаёт новую room и новую identity. Конкретный opaque token остаётся внутри remote adapter и не входит в `GameStateView`.
 
 В Foundation реализуется `RemoteGameTransport`.
 
@@ -358,12 +362,14 @@ interface GameTransport {
 
 Начальная reconnect policy:
 
-- grace period: **30 seconds**;
-- player slot сохраняется;
+- grace period: **30 seconds** после неожиданного disconnect; client payload не может изменить это значение;
+- player slot сохраняется, `connected = false`, Owner и Controller сохраняются;
 - simulation продолжает работать;
 - unit не удаляется;
-- reconnect восстанавливает controller/session;
-- после timeout entity остаётся существовать, но может потерять controller.
+- reconnect в пределах grace восстанавливает тот же session/player context и control;
+- явный Disconnect — consented leave без grace: slot и Controller освобождаются сразу, resume token удаляется;
+- browser reload хранит opaque reconnection token в `sessionStorage` (не в `localStorage`) и вызывает resume; истёкший token не создаёт новую identity;
+- после timeout entity остаётся существовать, Owner сохраняется, Controller снимается (`controllerPlayerId = null`).
 
 Политика AI takeover не входит в Foundation.
 

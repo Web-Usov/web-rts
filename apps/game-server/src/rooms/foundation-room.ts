@@ -14,7 +14,12 @@ import {
   type ProtocolMismatchEvent,
 } from "@web-rts/protocol";
 import { DEFAULT_TICK_HZ } from "@web-rts/simulation";
-import { AUTH_ERROR_CODE, MAX_PLAYERS, ROOM_FULL_ERROR_CODE } from "../constants.js";
+import {
+  AUTH_ERROR_CODE,
+  DEFAULT_RECONNECT_GRACE_SECONDS,
+  MAX_PLAYERS,
+  ROOM_FULL_ERROR_CODE,
+} from "../constants.js";
 import { parseRoomJoinOptions } from "../join-options.js";
 import { PlayerSlotRegistry } from "../player-slots.js";
 import { projectWorldToGameStateView } from "../replication-adapter.js";
@@ -35,6 +40,12 @@ export class FoundationRoom extends Room {
   phase: MatchPhase = "LOBBY";
   seed = 0;
   mapId = "foundation";
+  /**
+   * Unexpected-disconnect reservation in seconds. Production default is 30.
+   * Integration tests may assign a shorter value on this server instance.
+   * Join/create payloads are never copied onto this field.
+   */
+  reconnectGraceSeconds = DEFAULT_RECONNECT_GRACE_SECONDS;
   readonly slots = new PlayerSlotRegistry();
   simulationHost: SimulationHost | null = null;
 
@@ -116,9 +127,44 @@ export class FoundationRoom extends Room {
     this.broadcastState();
   }
 
-  override onLeave(client: Client): void {
-    // Colyseus 0.18 onLeave is permanent leave; free the slot until F8 reconnect.
-    this.slots.release(client.sessionId);
+  /**
+   * Unexpected disconnect (Colyseus 0.18). Consented `leave()` does not come here.
+   * Broadcast the reserved slot before awaiting `allowReconnection`, because that
+   * promise stays pending for the whole grace period.
+   */
+  override async onDrop(client: Client): Promise<void> {
+    this.slots.markDisconnected(client.sessionId);
+    this.broadcastState();
+    try {
+      await this.allowReconnection(client, this.reconnectGraceSeconds);
+    } catch {
+      // Timeout or rejected resume. Permanent cleanup runs in onLeave.
+    }
+  }
+
+  /**
+   * Same Colyseus sessionId and player slot. Does not allocate a new player.
+   * The reconnecting client is skipped here: its socket may not have JOIN yet,
+   * and it requests a fresh snapshot after its own listeners are attached.
+   */
+  override onReconnect(client: Client): void {
+    const slot = this.slots.getBySessionId(client.sessionId);
+    if (!slot) {
+      return;
+    }
+    this.slots.markConnected(client.sessionId);
+    this.broadcastState(client.sessionId);
+  }
+
+  /**
+   * Permanent leave: consented Disconnect, or reconnect timeout after onDrop.
+   * Frees the slot and active Controller. Owner and the entity stay.
+   */
+  override async onLeave(client: Client): Promise<void> {
+    const slot = this.slots.release(client.sessionId);
+    if (slot) {
+      this.simulationHost?.releaseControlForPlayer(slot.playerId);
+    }
     this.broadcastState();
   }
 
@@ -232,8 +278,11 @@ export class FoundationRoom extends Room {
   }
 
   /** Per-client GameStateView projection (localPlayerId differs; entities shared in F5). */
-  broadcastState(): void {
+  broadcastState(exceptSessionId?: string): void {
     for (const client of this.clients) {
+      if (client.sessionId === exceptSessionId) {
+        continue;
+      }
       this.sendState(client);
     }
   }
@@ -244,7 +293,11 @@ export class FoundationRoom extends Room {
     if (!slot) {
       return;
     }
-    client.send(STATE_MESSAGE, this.buildStateView(slot.playerId));
+    try {
+      client.send(STATE_MESSAGE, this.buildStateView(slot.playerId));
+    } catch {
+      // A client mid-handshake cannot accept a send yet. It asks again with SYNC.
+    }
   }
 
   buildStateView(localPlayerId: number) {
