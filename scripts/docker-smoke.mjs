@@ -20,9 +20,8 @@ async function waitFor(name, check) {
     }
   }
 
-  throw new Error(
-    `[docker-smoke] ${name} did not become ready: ${lastError instanceof Error ? lastError.message : String(lastError)}`,
-  );
+  const detail = lastError instanceof Error ? lastError.message : String(lastError);
+  throw new Error(`[docker-smoke] ${name} did not become ready: ${detail}`);
 }
 
 await waitFor("game-server health", async () => {
