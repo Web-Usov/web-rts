@@ -32,9 +32,9 @@ export type GameServerBrowserLocation = {
 };
 
 export type GameServerEndpointConfig = {
-  explicitUrl?: string;
-  port?: string | number;
-  location?: GameServerBrowserLocation;
+  explicitUrl?: string | undefined;
+  port?: string | number | undefined;
+  location?: GameServerBrowserLocation | undefined;
 };
 
 /**
