@@ -19,6 +19,7 @@ import {
   type Unsubscribe,
 } from "@web-rts/protocol";
 import { resolveGameServerEndpoint } from "./game-server-endpoint.js";
+import { RoundTripMonitor, probeLiveRoomPing } from "./round-trip.js";
 import {
   createSessionStorageResumeTokenStore,
   type OpaqueResumeTokenStore,
@@ -50,6 +51,7 @@ export class RemoteGameTransport implements GameTransport {
   private readonly resumeTokenStore: OpaqueResumeTokenStore;
   private roomId: string | null = null;
   private resumeInFlight: Promise<ResumeSessionResult> | null = null;
+  private readonly roundTrip = new RoundTripMonitor(1_000);
 
   constructor(options: RemoteGameTransportOptions = {}) {
     this.defaultEndpoint = options.defaultEndpoint ?? resolveConfiguredGameServerEndpoint();
@@ -154,6 +156,11 @@ export class RemoteGameTransport implements GameTransport {
     };
   }
 
+  /** Cached Colyseus `Room.ping` sample. `null` before a live room or after it closes. */
+  readRoundTripMs(): number | null {
+    return this.roundTrip.read();
+  }
+
   /** Consented leave. Frees the server slot immediately and deletes the resume token. */
   async disconnect(): Promise<void> {
     await this.closeCurrentRoom({ clearToken: true });
@@ -230,9 +237,11 @@ export class RemoteGameTransport implements GameTransport {
       this.room = null;
       this.roomId = null;
       this.client = null;
+      this.roundTrip.stop();
       this.resumeTokenStore.clear();
       this.emit(code === CloseCode.CONSENTED ? "left" : "expired");
     });
+    this.roundTrip.start(() => probeLiveRoomPing(room));
 
     this.sendSync();
   }
@@ -264,6 +273,7 @@ export class RemoteGameTransport implements GameTransport {
     this.room = null;
     this.roomId = null;
     this.client = null;
+    this.roundTrip.stop();
     if (!room) {
       return;
     }

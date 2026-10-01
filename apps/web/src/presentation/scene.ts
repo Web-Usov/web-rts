@@ -8,6 +8,7 @@ import { Color3 } from "@babylonjs/core/Maths/math.color.js";
 import { Vector3 } from "@babylonjs/core/Maths/math.vector.js";
 import type { AbstractMesh } from "@babylonjs/core/Meshes/abstractMesh.js";
 import type { LinesMesh } from "@babylonjs/core/Meshes/linesMesh.js";
+import { SceneInstrumentation } from "@babylonjs/core/Instrumentation/sceneInstrumentation.js";
 import { MeshBuilder } from "@babylonjs/core/Meshes/meshBuilder.js";
 import { Scene } from "@babylonjs/core/scene.js";
 import type { GameCommand, GameTransport } from "@web-rts/protocol";
@@ -30,6 +31,11 @@ import {
   simulationToBabylonGround,
   simulationToBabylonPosition,
 } from "./coordinates.js";
+import {
+  EMPTY_RENDERER_DEBUG_SAMPLE,
+  snapshotRendererDebugSample,
+  type RendererDebugSample,
+} from "./renderer-debug.js";
 import { PresentationState } from "./state.js";
 import type { HudView, PresentationEntity, PresentationSyncData } from "./types.js";
 
@@ -44,7 +50,15 @@ interface EntityVisual {
 
 export interface PresentationSession {
   dispose(): void;
+  readRendererDebugSample(): RendererDebugSample;
+  /** Development-only. Production builds no-op without loading the Inspector package. */
+  showInspector(): Promise<void>;
 }
+
+export type PresentationOptions = {
+  /** When false, SceneInstrumentation is not created. Production passes false. */
+  instrumentRenderer?: boolean;
+};
 
 export type PresentationBindings = {
   transport: GameTransport;
@@ -63,10 +77,19 @@ export function mountPresentation(
   onHud: (view: HudView) => void,
   bindings: PresentationBindings,
   onFps?: (fps: number) => void,
+  options?: PresentationOptions,
 ): PresentationSession {
   const engine = new Engine(canvas, true, { stencil: true }, true);
   const scene = new Scene(engine);
   scene.clearColor.set(0.07, 0.09, 0.12, 1);
+  let instrumentation: SceneInstrumentation | null = null;
+  if (import.meta.env.DEV && options?.instrumentRenderer === true) {
+    instrumentation = new SceneInstrumentation(scene);
+    instrumentation.captureFrameTime = true;
+  }
+  const instrumentRenderer = instrumentation !== null;
+  let rendererSample: RendererDebugSample = EMPTY_RENDERER_DEBUG_SAMPLE;
+  let inspectorToken: { dispose(): Promise<void>; isDisposed: boolean } | null = null;
 
   const poseHolder = { current: createRtsCameraPose() };
   const camera = new ArcRotateCamera(
@@ -330,6 +353,14 @@ export function mountPresentation(
       onFps(Math.round(engine.getFps()));
     }
     scene.render();
+    if (instrumentRenderer) {
+      rendererSample = snapshotRendererDebugSample({
+        fps: engine.getFps(),
+        drawCalls: instrumentation?.drawCallsCounter.current ?? 0,
+        activeMeshes: scene.getActiveMeshes().length,
+        frameTimeMs: instrumentation?.frameTimeCounter.current ?? 0,
+      });
+    }
   });
 
   const onResize = (): void => {
@@ -338,6 +369,22 @@ export function mountPresentation(
   window.addEventListener("resize", onResize);
 
   return {
+    readRendererDebugSample() {
+      return rendererSample;
+    },
+    async showInspector() {
+      if (!import.meta.env.DEV) {
+        return;
+      }
+      if (inspectorToken && !inspectorToken.isDisposed) {
+        return;
+      }
+      const { ShowInspector } = await import("@babylonjs/inspector");
+      inspectorToken = ShowInspector(scene, {
+        layoutMode: "overlay",
+        autoResizeEngine: false,
+      });
+    },
     dispose() {
       unsubscribeHud();
       unsubscribeState();
@@ -345,6 +392,10 @@ export function mountPresentation(
       canvas.removeEventListener("contextmenu", onContextMenu);
       window.removeEventListener("resize", onResize);
       engine.stopRenderLoop();
+      const token = inspectorToken;
+      inspectorToken = null;
+      void token?.dispose();
+      instrumentation?.dispose();
       grid.dispose();
       scene.dispose();
       engine.dispose();

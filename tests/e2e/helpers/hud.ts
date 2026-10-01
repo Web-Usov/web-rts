@@ -1,10 +1,10 @@
 import type { Locator, Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 
-/** Reads a HUD `<dt>/<dd>` pair by definition term label. */
+/** Reads a lobby HUD `<dt>/<dd>` pair by definition term label. */
 export function hudValue(page: Page, label: string): Locator {
   return page
-    .locator("dl div")
+    .locator(".hud dl div")
     .filter({ has: page.locator("dt", { hasText: label }) })
     .locator("dd");
 }

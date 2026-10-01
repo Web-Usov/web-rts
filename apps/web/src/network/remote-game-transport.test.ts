@@ -44,6 +44,14 @@ describe("RemoteGameTransport resume", () => {
     expect(transport.connectedRoomId).toBeNull();
   });
 
+  it("reports RTT unavailable before a live room exists", () => {
+    const transport = new RemoteGameTransport({
+      defaultEndpoint: "http://127.0.0.1:9",
+      resumeTokenStore: memoryStore(),
+    });
+    expect(transport.readRoundTripMs()).toBeNull();
+  });
+
   it("clears the token on explicit disconnect without opening a socket", async () => {
     const store = memoryStore();
     store.write("room:opaque");

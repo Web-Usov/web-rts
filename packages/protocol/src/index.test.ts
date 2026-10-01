@@ -257,6 +257,9 @@ describe("GameTransport contract", () => {
           /* no-op */
         };
       },
+      readRoundTripMs() {
+        return null;
+      },
       async disconnect() {
         /* no-op */
       },
@@ -269,6 +272,7 @@ describe("GameTransport contract", () => {
     expect(typeof transport.subscribeState).toBe("function");
     expect(typeof transport.subscribeEvent).toBe("function");
     expect(typeof transport.subscribeConnection).toBe("function");
+    expect(transport.readRoundTripMs()).toBeNull();
     expect(typeof transport.disconnect).toBe("function");
   });
 });

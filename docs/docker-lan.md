@@ -73,6 +73,14 @@ hostname -I
 
 Для локального `pnpm dev` те же browser-настройки задаются отдельно как `VITE_GAME_SERVER_URL` и `VITE_GAME_SERVER_PORT`. Playwright E2E по-прежнему передаёт явный `VITE_GAME_SERVER_URL`.
 
+## Debug instrumentation
+
+Отдельного deploy-флага нет.
+
+Web production-образ собирается через `vite build`. В этой сборке `import.meta.env.DEV` равен false, поэтому debug overlay, Babylon `SceneInstrumentation` и Inspector не активируются. Lobby и connect UI остаются. Локальные `pnpm dev` и Playwright поднимают Vite dev server, где overlay включён.
+
+Game-server в Docker получает `NODE_ENV=production`. Structured lifecycle logs (join, leave, command rejection, errors) пишутся всегда. Построчный лог длительности каждого simulation tick в production выключен. Для foundation `matchId` в этих логах равен `roomId`. Явный `TICK_DIAGNOSTICS_LOG=1` включает per-tick лог, `TICK_DIAGNOSTICS_LOG=0` выключает его.
+
 ## Когда нужен `--build`
 
 `docker compose up` собирает образы, если их ещё нет, и не пересобирает уже существующие.
