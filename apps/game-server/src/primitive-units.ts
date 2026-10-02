@@ -1,4 +1,4 @@
-import { foundationUnitSpawnPosition } from "@web-rts/game-data";
+import { spawnFoundationUnits } from "@web-rts/game-data";
 import type { EntityId, World } from "@web-rts/simulation";
 
 /**
@@ -27,14 +27,8 @@ export class PrimitiveUnitRegistry {
    */
   spawnForPlayers(world: World, playerIds: readonly number[]): void {
     this.clear();
-    const ordered = [...new Set(playerIds)].sort((left, right) => left - right);
-    ordered.forEach((playerId, spawnIndex) => {
-      const entityId = world.createEntity();
-      const spawn = foundationUnitSpawnPosition(spawnIndex);
-      world.positions.set(entityId, { x: spawn.x, y: spawn.y });
-      world.owners.set(entityId, { ownerPlayerId: playerId });
-      world.controllers.set(entityId, { controllerPlayerId: playerId });
+    for (const [playerId, entityId] of spawnFoundationUnits(world, playerIds)) {
       this.byPlayer.set(playerId, entityId);
-    });
+    }
   }
 }

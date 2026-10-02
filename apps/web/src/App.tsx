@@ -10,7 +10,10 @@ import {
 import { ClientGameState } from "./client/client-game-state.js";
 import { DebugOverlay, type DebugOverlayView } from "./debug/DebugOverlay.js";
 import { DEBUG_METRICS_INTERVAL_MS, isDebugInstrumentationEnabled } from "./debug/debug-metrics.js";
-import { getBrowserGameTransport } from "./network/remote-game-transport.js";
+import {
+  createPageGameTransport,
+  type PageGameTransport,
+} from "./network/create-page-game-transport.js";
 import { mountPresentation, type PresentationSession } from "./presentation/scene.js";
 import type { HudView } from "./presentation/types.js";
 
@@ -48,7 +51,7 @@ export function App() {
   const [errorMessage, setErrorMessage] = useState("");
   const [debugView, setDebugView] = useState<DebugOverlayView>(emptyDebugView);
 
-  const transportRef = useRef<ReturnType<typeof getBrowserGameTransport> | null>(null);
+  const transportRef = useRef<PageGameTransport | null>(null);
   const clientStateRef = useRef<ClientGameState | null>(null);
   const presentationRef = useRef<PresentationSession | null>(null);
   const commandCounter = useRef(0);
@@ -66,7 +69,7 @@ export function App() {
   };
 
   useEffect(() => {
-    const transport = getBrowserGameTransport();
+    const transport = createPageGameTransport(window.location.search);
     const clientState = new ClientGameState();
     transportRef.current = transport;
     clientStateRef.current = clientState;

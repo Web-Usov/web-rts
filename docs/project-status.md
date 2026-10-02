@@ -36,11 +36,12 @@ Coding Agent, получивший handoff, следует `AGENTS.md` и пра
 - F7 — Multiplayer browser E2E (#12);
 - F8 — Reconnect (#13);
 - F9 — Docker/LAN startup (#14);
-- F10 — Debug/performance instrumentation (#15).
+- F10 — Debug/performance instrumentation (#15);
+- F11 — LocalGameTransport/WebWorker skeleton (#16).
 
 Следующие открытые foundation stages:
 
-- [F11 — LocalGameTransport/WebWorker skeleton](https://github.com/Web-Usov/web-rts/issues/16).
+- нет. Foundation Spec #001 в части F0–F11 закрыт. Новый stage начинается только с отдельного issue/spec.
 
 GitHub Issues остаются источником implementation scope и acceptance criteria. Этот список нужен только как быстрый navigation checkpoint.
 
@@ -52,6 +53,7 @@ GitHub Issues остаются источником implementation scope и acce
 - simulation работает на fixed tick и seeded RNG;
 - Babylon.js отвечает только за presentation;
 - Colyseus изолирован за `GameTransport` / remote transport boundary;
+- `/?transport=local` исполняет ту же shared simulation в WebWorker через `LocalGameTransport`; обычный `/` остаётся `RemoteGameTransport`; presentation не ветвится по режиму;
 - replication отделена от simulation state;
 - Owner и Controller — разные simulation concepts;
 - objectives generic, renderer не hardcode конкретный objective entity id;

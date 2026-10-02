@@ -54,6 +54,14 @@ test.describe("F10 debug overlay", () => {
 
     await page.getByRole("button", { name: "Inspector" }).click();
     await expect(page.getByText("Scene Explorer")).toBeVisible();
+    // Inspector v2 may stack onboarding dialogs that hide the page from the a11y tree.
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      const dismiss = page.getByRole("button", { name: "dismiss" }).first();
+      if (!(await dismiss.isVisible())) {
+        break;
+      }
+      await dismiss.click();
+    }
     await expect(page.getByRole("button", { name: "Create room" })).toBeVisible();
   });
 });

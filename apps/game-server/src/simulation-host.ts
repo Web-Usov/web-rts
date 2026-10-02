@@ -1,6 +1,6 @@
-import { FOUNDATION_OBJECTIVE_POSITION, isWithinFoundationBounds } from "@web-rts/game-data";
+import { assessFoundationMove, placeFoundationObjective } from "@web-rts/game-data";
 import type { GameCommand } from "@web-rts/protocol";
-import { canIssueMove, createWorld, type SimulationCommand, type World } from "@web-rts/simulation";
+import { createWorld, type SimulationCommand, type World } from "@web-rts/simulation";
 import { mapGameCommandToSimulation, type SessionPlayerContext } from "./command-mapper.js";
 import { PrimitiveUnitRegistry } from "./primitive-units.js";
 
@@ -34,12 +34,7 @@ export class SimulationHost {
    */
   bootstrapMatch(playerIds: readonly number[]): void {
     this.primitiveUnits.spawnForPlayers(this.world, playerIds);
-    const objectiveId = this.world.createEntity();
-    this.world.positions.set(objectiveId, {
-      x: FOUNDATION_OBJECTIVE_POSITION.x,
-      y: FOUNDATION_OBJECTIVE_POSITION.y,
-    });
-    this.world.objectives.set(objectiveId, { type: "SACRED_SITE", state: "ACTIVE" });
+    placeFoundationObjective(this.world);
   }
 
   /**
@@ -47,12 +42,14 @@ export class SimulationHost {
    * protocol → simulation and enqueues on the world command queue.
    */
   enqueueFromSession(command: GameCommand, context: SessionPlayerContext): EnqueueResult {
-    if (!isWithinFoundationBounds(command.target)) {
-      return { ok: false, reason: "out_of_bounds" };
-    }
-
-    if (!canIssueMove(this.world, context.playerId, command.entityIds)) {
-      return { ok: false, reason: "not_your_unit" };
+    const decision = assessFoundationMove(
+      this.world,
+      context.playerId,
+      command.entityIds,
+      command.target,
+    );
+    if (!decision.ok) {
+      return decision;
     }
 
     const mapped = mapGameCommandToSimulation(command, context);

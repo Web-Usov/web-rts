@@ -62,3 +62,10 @@ export {
   STATE_MESSAGE,
   SYNC_MESSAGE,
 } from "./messages.js";
+
+export {
+  projectWorldToGameStateView,
+  type ReplicationPlayerSlot,
+  type ReplicationProjectionInput,
+  type ReplicationWorldSource,
+} from "./project-state.js";
