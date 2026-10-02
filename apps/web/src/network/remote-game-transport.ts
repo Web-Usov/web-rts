@@ -19,6 +19,7 @@ import {
   type Unsubscribe,
 } from "@web-rts/protocol";
 import { resolveGameServerEndpoint } from "./game-server-endpoint.js";
+import { RoundTripMonitor, probeLiveRoomPing } from "./round-trip.js";
 import {
   createSessionStorageResumeTokenStore,
   type OpaqueResumeTokenStore,
@@ -31,6 +32,11 @@ export const FOUNDATION_ROOM_NAME = "foundation";
 export type RemoteGameTransportOptions = {
   defaultEndpoint?: string;
   resumeTokenStore?: OpaqueResumeTokenStore;
+  /**
+   * Test seam for one RTT sample. Production omits this and uses the live room ping.
+   * A dropped socket stops sampling; reconnect starts it again.
+   */
+  roundTripProbe?: () => Promise<number>;
 };
 
 /**
@@ -48,12 +54,15 @@ export class RemoteGameTransport implements GameTransport {
   private readonly connectionListeners = new Set<ConnectionListener>();
   private readonly defaultEndpoint: string;
   private readonly resumeTokenStore: OpaqueResumeTokenStore;
+  private readonly roundTripProbe: (() => Promise<number>) | null;
   private roomId: string | null = null;
   private resumeInFlight: Promise<ResumeSessionResult> | null = null;
+  private readonly roundTrip = new RoundTripMonitor(1_000);
 
   constructor(options: RemoteGameTransportOptions = {}) {
     this.defaultEndpoint = options.defaultEndpoint ?? resolveConfiguredGameServerEndpoint();
     this.resumeTokenStore = options.resumeTokenStore ?? createSessionStorageResumeTokenStore();
+    this.roundTripProbe = options.roundTripProbe ?? null;
   }
 
   get connectedRoomId(): string | null {
@@ -154,6 +163,11 @@ export class RemoteGameTransport implements GameTransport {
     };
   }
 
+  /** Cached Colyseus `Room.ping` sample. `null` before a live room or after it closes. */
+  readRoundTripMs(): number | null {
+    return this.roundTrip.read();
+  }
+
   /** Consented leave. Frees the server slot immediately and deletes the resume token. */
   async disconnect(): Promise<void> {
     await this.closeCurrentRoom({ clearToken: true });
@@ -210,9 +224,18 @@ export class RemoteGameTransport implements GameTransport {
     });
 
     room.onDrop(() => {
+      if (this.room !== room) {
+        return;
+      }
+      // No live socket: a cached sample would be shown as the current RTT.
+      this.roundTrip.stop();
       this.emit("reconnecting");
     });
     room.onReconnect(() => {
+      if (this.room !== room) {
+        return;
+      }
+      this.startRoundTrip(room);
       // JOIN_ROOM assigns the rotated token after onReconnect listeners return.
       queueMicrotask(() => {
         if (this.room !== room) {
@@ -230,11 +253,18 @@ export class RemoteGameTransport implements GameTransport {
       this.room = null;
       this.roomId = null;
       this.client = null;
+      this.roundTrip.stop();
       this.resumeTokenStore.clear();
       this.emit(code === CloseCode.CONSENTED ? "left" : "expired");
     });
+    this.startRoundTrip(room);
 
     this.sendSync();
+  }
+
+  private startRoundTrip(room: Room): void {
+    const probe = this.roundTripProbe ?? (() => probeLiveRoomPing(room));
+    this.roundTrip.start(probe);
   }
 
   private persistRoomToken(room: Room): void {
@@ -264,6 +294,7 @@ export class RemoteGameTransport implements GameTransport {
     this.room = null;
     this.roomId = null;
     this.client = null;
+    this.roundTrip.stop();
     if (!room) {
       return;
     }

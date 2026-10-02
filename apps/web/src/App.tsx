@@ -8,9 +8,23 @@ import {
   type TransportConnectionNotice,
 } from "@web-rts/protocol";
 import { ClientGameState } from "./client/client-game-state.js";
+import { DebugOverlay, type DebugOverlayView } from "./debug/DebugOverlay.js";
+import { DEBUG_METRICS_INTERVAL_MS, isDebugInstrumentationEnabled } from "./debug/debug-metrics.js";
 import { getBrowserGameTransport } from "./network/remote-game-transport.js";
-import { mountPresentation } from "./presentation/scene.js";
+import { mountPresentation, type PresentationSession } from "./presentation/scene.js";
 import type { HudView } from "./presentation/types.js";
+
+const debugEnabled = isDebugInstrumentationEnabled(import.meta.env.DEV);
+
+const emptyDebugView: DebugOverlayView = {
+  fps: 0,
+  roundTripMs: null,
+  tick: 0,
+  entityCount: 0,
+  drawCalls: 0,
+  activeMeshes: 0,
+  frameTimeMs: 0,
+};
 
 const emptyHud: HudView = {
   entityCount: 0,
@@ -32,10 +46,13 @@ export function App() {
   const [fps, setFps] = useState(0);
   const [lastEvent, setLastEvent] = useState<string>("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [debugView, setDebugView] = useState<DebugOverlayView>(emptyDebugView);
 
   const transportRef = useRef<ReturnType<typeof getBrowserGameTransport> | null>(null);
   const clientStateRef = useRef<ClientGameState | null>(null);
+  const presentationRef = useRef<PresentationSession | null>(null);
   const commandCounter = useRef(0);
+  const matchSampleRef = useRef({ tick: 0, entityCount: 0 });
 
   const clearPresentedMatch = (): void => {
     clientStateRef.current?.reset();
@@ -45,6 +62,7 @@ export function App() {
     setConnectedPlayers(0);
     setRoomId("");
     setLastEvent("");
+    matchSampleRef.current = { tick: 0, entityCount: 0 };
   };
 
   useEffect(() => {
@@ -57,6 +75,10 @@ export function App() {
     const unsubState = transport.subscribeState((view: GameStateView) => {
       // Presentation clock only — not used by simulation (AGENTS §8).
       clientState.applyAuthoritativeState(view, performance.now());
+      matchSampleRef.current = {
+        tick: view.tick,
+        entityCount: view.entities.length,
+      };
       setPhase(view.phase);
       setLocalPlayerId(view.localPlayerId);
       setRoomId(view.roomId);
@@ -100,8 +122,10 @@ export function App() {
             },
           },
           setFps,
+          { instrumentRenderer: debugEnabled },
         )
       : null;
+    presentationRef.current = session;
 
     if (transport.hasResumeToken()) {
       setStatus("reconnecting");
@@ -127,9 +151,32 @@ export function App() {
       unsubState();
       unsubEvent();
       unsubConnection();
+      presentationRef.current = null;
       session?.dispose();
       // Reload must stay an unexpected socket drop. Consented leave here would
       // free the slot and wipe the sessionStorage token before resume can run.
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!debugEnabled) {
+      return;
+    }
+    const timer = window.setInterval(() => {
+      const renderer = presentationRef.current?.readRendererDebugSample();
+      const roundTripMs = transportRef.current?.readRoundTripMs() ?? null;
+      setDebugView({
+        fps: renderer?.fps ?? 0,
+        roundTripMs,
+        tick: matchSampleRef.current.tick,
+        entityCount: matchSampleRef.current.entityCount,
+        drawCalls: renderer?.drawCalls ?? 0,
+        activeMeshes: renderer?.activeMeshes ?? 0,
+        frameTimeMs: renderer?.frameTimeMs ?? 0,
+      });
+    }, DEBUG_METRICS_INTERVAL_MS);
+    return () => {
+      window.clearInterval(timer);
     };
   }, []);
 
@@ -283,6 +330,14 @@ export function App() {
           <li>Right click moves the selected unit (marker is UX only)</li>
         </ul>
       </aside>
+      {debugEnabled ? (
+        <DebugOverlay
+          view={debugView}
+          onShowInspector={() => {
+            void presentationRef.current?.showInspector();
+          }}
+        />
+      ) : null}
     </div>
   );
 }

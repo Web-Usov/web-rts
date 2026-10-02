@@ -35,11 +35,11 @@ Coding Agent, получивший handoff, следует `AGENTS.md` и пра
 - F6 — Owner/Controller + generic Sacred Site objective (#11);
 - F7 — Multiplayer browser E2E (#12);
 - F8 — Reconnect (#13);
-- F9 — Docker/LAN startup (#14).
+- F9 — Docker/LAN startup (#14);
+- F10 — Debug/performance instrumentation (#15).
 
 Следующие открытые foundation stages:
 
-- [F10 — Debug/performance instrumentation](https://github.com/Web-Usov/web-rts/issues/15);
 - [F11 — LocalGameTransport/WebWorker skeleton](https://github.com/Web-Usov/web-rts/issues/16).
 
 GitHub Issues остаются источником implementation scope и acceptance criteria. Этот список нужен только как быстрый navigation checkpoint.
@@ -58,7 +58,9 @@ GitHub Issues остаются источником implementation scope и acce
 - browser multiplayer smoke является required full-CI частью через `browser-e2e` → `ci-gate`;
 - Docker/LAN smoke является required full-CI частью через `docker-lan-smoke` → `ci-gate`; docs-only PR по-прежнему пропускает тяжёлые jobs;
 - LAN client без явного URL подключается к hostname страницы и опубликованному порту game-server, а не к hardcoded `localhost`;
-- reconnect foundation policy: 30 секунд grace для unexpected drop/reload, explicit Disconnect permanent, terminal leave снимает Controller и сохраняет entity/Owner.
+- reconnect foundation policy: 30 секунд grace для unexpected drop/reload, explicit Disconnect permanent, terminal leave снимает Controller и сохраняет entity/Owner;
+- development debug overlay и Babylon Inspector включены только при Vite `import.meta.env.DEV` (`pnpm dev`, Playwright); production `vite build` их не активирует, lobby/connect UI остаётся;
+- foundation logging считает `matchId = roomId` (один match lifecycle на Room); verbose per-tick duration logs выключены при `NODE_ENV=production`, в test и в CI, пока явно не задан `TICK_DIAGNOSTICS_LOG=1`.
 
 Полные правила и детали находятся в `docs/agentic-workflow.md`, `AGENTS.md`, `docs/technical-vision.md`, `docs/adr/` и `docs/specs/`.
 

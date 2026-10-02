@@ -265,6 +265,32 @@ describe("game-server integration", () => {
     }
   });
 
+  it("records simulation tick duration after the match starts", async () => {
+    const room = (await colyseus.createRoom(
+      FOUNDATION_ROOM_NAME,
+      compatibleOptions,
+    )) as FoundationRoom;
+    await colyseus.connectTo(room, compatibleOptions);
+    expect(room.startMatch()).toBe(true);
+
+    let diagnostic = room.lastTickDiagnostic;
+    for (
+      let attempt = 0;
+      attempt < 40 && (diagnostic === null || diagnostic.tick < 1);
+      attempt += 1
+    ) {
+      await new Promise((resolve) => {
+        setTimeout(resolve, 50);
+      });
+      diagnostic = room.lastTickDiagnostic;
+    }
+
+    expect(diagnostic).not.toBeNull();
+    expect(diagnostic?.tick).toBeGreaterThanOrEqual(1);
+    expect(diagnostic?.durationMs).toBeGreaterThanOrEqual(0);
+    expect(diagnostic?.entityCount).toBeGreaterThanOrEqual(2);
+  });
+
   it("rejects malformed commands without crashing the room", async () => {
     const room = (await colyseus.createRoom(
       FOUNDATION_ROOM_NAME,

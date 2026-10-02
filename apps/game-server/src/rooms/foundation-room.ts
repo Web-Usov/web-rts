@@ -21,6 +21,17 @@ import {
   ROOM_FULL_ERROR_CODE,
 } from "../constants.js";
 import { parseRoomJoinOptions } from "../join-options.js";
+import {
+  createMatchLogRecord,
+  writeMatchLog,
+  type MatchLogContext,
+  type MatchLogFields,
+} from "../logging/match-log.js";
+import {
+  buildTickDiagnostic,
+  isVerboseTickLoggingEnabled,
+  type TickDiagnostic,
+} from "../logging/tick-diagnostics.js";
 import { PlayerSlotRegistry } from "../player-slots.js";
 import { projectWorldToGameStateView } from "../replication-adapter.js";
 import { SimulationHost } from "../simulation-host.js";
@@ -48,6 +59,8 @@ export class FoundationRoom extends Room {
   reconnectGraceSeconds = DEFAULT_RECONNECT_GRACE_SECONDS;
   readonly slots = new PlayerSlotRegistry();
   simulationHost: SimulationHost | null = null;
+  /** Latest measured simulation step. Updated every tick; verbose logging is separate. */
+  lastTickDiagnostic: TickDiagnostic | null = null;
 
   override onCreate(options: unknown): void {
     const parsed = parseRoomJoinOptions(options);
@@ -85,9 +98,11 @@ export class FoundationRoom extends Room {
     this.onMessage(SYNC_MESSAGE, (client) => {
       this.sendState(client);
     });
+
+    this.emitMatchLog({ level: "info", event: "room_created" });
   }
 
-  override onAuth(_client: Client, options: unknown): boolean {
+  override onAuth(client: Client, options: unknown): boolean {
     const parsed = parseRoomJoinOptions(options);
     if (!parsed.success) {
       if (parsed.reason === "protocol_mismatch" && parsed.compatibility) {
@@ -106,9 +121,17 @@ export class FoundationRoom extends Room {
           expectedGameDataVersion: GAME_DATA_VERSION,
           actualGameDataVersion,
         };
+        this.emitMatchLog(
+          { level: "warn", event: "protocol_mismatch", reason: "protocol_mismatch" },
+          { sessionId: client.sessionId },
+        );
         // HTTP-style auth error — never Colyseus-reserved 4010 (MAY_TRY_RECONNECT).
         throw new ServerError(AUTH_ERROR_CODE, JSON.stringify(mismatch));
       }
+      this.emitMatchLog(
+        { level: "warn", event: "auth_rejected", reason: parsed.reason },
+        { sessionId: client.sessionId },
+      );
       throw new ServerError(AUTH_ERROR_CODE, parsed.reason);
     }
     return true;
@@ -118,12 +141,20 @@ export class FoundationRoom extends Room {
     void options;
     const slot = this.slots.allocate(client.sessionId);
     if (!slot) {
+      this.emitMatchLog(
+        { level: "warn", event: "join_rejected", reason: "room_full" },
+        { sessionId: client.sessionId },
+      );
       // Application close code (≥4011); 4001 is reserved as SERVER_SHUTDOWN.
       throw new ServerError(ROOM_FULL_ERROR_CODE, "room_full");
     }
     (client as Client & { userData: ClientUserData }).userData = {
       playerId: slot.playerId,
     };
+    this.emitMatchLog(
+      { level: "info", event: "player_joined" },
+      { playerId: slot.playerId, sessionId: client.sessionId },
+    );
     this.broadcastState();
   }
 
@@ -133,7 +164,14 @@ export class FoundationRoom extends Room {
    * promise stays pending for the whole grace period.
    */
   override async onDrop(client: Client): Promise<void> {
+    const slot = this.slots.getBySessionId(client.sessionId);
     this.slots.markDisconnected(client.sessionId);
+    this.emitMatchLog(
+      { level: "info", event: "player_dropped" },
+      slot
+        ? { playerId: slot.playerId, sessionId: client.sessionId }
+        : { sessionId: client.sessionId },
+    );
     this.broadcastState();
     try {
       await this.allowReconnection(client, this.reconnectGraceSeconds);
@@ -153,6 +191,10 @@ export class FoundationRoom extends Room {
       return;
     }
     this.slots.markConnected(client.sessionId);
+    this.emitMatchLog(
+      { level: "info", event: "player_reconnected" },
+      { playerId: slot.playerId, sessionId: client.sessionId },
+    );
     this.broadcastState(client.sessionId);
   }
 
@@ -164,11 +206,18 @@ export class FoundationRoom extends Room {
     const slot = this.slots.release(client.sessionId);
     if (slot) {
       this.simulationHost?.releaseControlForPlayer(slot.playerId);
+      this.emitMatchLog(
+        { level: "info", event: "player_left" },
+        { playerId: slot.playerId, sessionId: client.sessionId },
+      );
+    } else {
+      this.emitMatchLog({ level: "info", event: "player_left" }, { sessionId: client.sessionId });
     }
     this.broadcastState();
   }
 
   override onDispose(): void {
+    this.emitMatchLog({ level: "info", event: "room_disposed" });
     this.simulationHost = null;
     this.phase = "FINISHED";
   }
@@ -186,6 +235,11 @@ export class FoundationRoom extends Room {
     const playerIds = this.slots.list().map((slot) => slot.playerId);
     this.simulationHost.bootstrapMatch(playerIds);
     this.phase = "RUNNING";
+    this.emitMatchLog({
+      level: "info",
+      event: "match_started",
+      entityCount: this.simulationHost.world.entityIds().length,
+    });
     this.setMetadata({
       phase: this.phase,
       seed: this.seed,
@@ -195,10 +249,29 @@ export class FoundationRoom extends Room {
 
     // Drive fixed ticks at the simulation boundary (not gameplay rules).
     this.setFixedTimestep(() => {
-      if (this.phase === "RUNNING" && this.simulationHost) {
-        this.simulationHost.step();
-        this.broadcastState();
+      const host = this.simulationHost;
+      if (this.phase !== "RUNNING" || !host) {
+        return;
       }
+      const diagnostic = buildTickDiagnostic({
+        step: () => {
+          host.step();
+        },
+        tick: () => host.tick,
+        entityCount: () => host.world.entityIds().length,
+        pendingCommandCount: () => host.pendingCommandCount(),
+      });
+      this.lastTickDiagnostic = diagnostic;
+      if (isVerboseTickLoggingEnabled()) {
+        this.emitMatchLog({
+          level: "info",
+          event: "simulation_tick",
+          durationMs: diagnostic.durationMs,
+          entityCount: diagnostic.entityCount,
+          pendingCommandCount: diagnostic.pendingCommandCount,
+        });
+      }
+      this.broadcastState();
     }, DEFAULT_TICK_HZ);
 
     this.broadcastState();
@@ -210,6 +283,18 @@ export class FoundationRoom extends Room {
       return;
     }
     if (!this.startMatch()) {
+      const slot = this.slots.getBySessionId(client.sessionId);
+      this.emitMatchLog(
+        {
+          level: "warn",
+          event: "command_rejected",
+          reason: "invalid_phase",
+          commandId: "start",
+        },
+        slot
+          ? { playerId: slot.playerId, sessionId: client.sessionId }
+          : { sessionId: client.sessionId },
+      );
       this.sendEvent(client, {
         type: "COMMAND_REJECTED",
         commandId: "start",
@@ -222,6 +307,15 @@ export class FoundationRoom extends Room {
     try {
       const slot = this.slots.getBySessionId(client.sessionId);
       if (!slot) {
+        this.emitMatchLog(
+          {
+            level: "warn",
+            event: "command_rejected",
+            reason: "no_session",
+            commandId: "unknown",
+          },
+          { sessionId: client.sessionId },
+        );
         this.sendEvent(client, {
           type: "COMMAND_REJECTED",
           commandId: "unknown",
@@ -238,6 +332,15 @@ export class FoundationRoom extends Room {
           typeof (payload as Record<string, unknown>)["commandId"] === "string"
             ? ((payload as Record<string, unknown>)["commandId"] as string)
             : "unknown";
+        this.emitMatchLog(
+          {
+            level: "warn",
+            event: "command_rejected",
+            reason: "invalid_schema",
+            commandId,
+          },
+          { playerId: slot.playerId, sessionId: client.sessionId },
+        );
         this.sendEvent(client, {
           type: "COMMAND_REJECTED",
           commandId,
@@ -247,6 +350,15 @@ export class FoundationRoom extends Room {
       }
 
       if (!this.simulationHost || this.phase !== "RUNNING") {
+        this.emitMatchLog(
+          {
+            level: "warn",
+            event: "command_rejected",
+            reason: "not_running",
+            commandId: parsed.data.commandId,
+          },
+          { playerId: slot.playerId, sessionId: client.sessionId },
+        );
         this.sendEvent(client, {
           type: "COMMAND_REJECTED",
           commandId: parsed.data.commandId,
@@ -262,19 +374,56 @@ export class FoundationRoom extends Room {
       });
 
       if (!result.ok) {
+        this.emitMatchLog(
+          {
+            level: "warn",
+            event: "command_rejected",
+            reason: result.reason,
+            commandId: parsed.data.commandId,
+          },
+          { playerId: slot.playerId, sessionId: client.sessionId },
+        );
         this.sendEvent(client, {
           type: "COMMAND_REJECTED",
           commandId: parsed.data.commandId,
           reason: result.reason,
         });
       }
-    } catch {
+    } catch (error) {
+      const slot = this.slots.getBySessionId(client.sessionId);
+      this.emitMatchLog(
+        {
+          level: "error",
+          event: "internal_error",
+          error: error instanceof Error ? error.message : "unknown",
+        },
+        slot
+          ? { playerId: slot.playerId, sessionId: client.sessionId }
+          : { sessionId: client.sessionId },
+      );
       this.sendEvent(client, {
         type: "COMMAND_REJECTED",
         commandId: "unknown",
         reason: "internal_error",
       });
     }
+  }
+
+  private emitMatchLog(
+    fields: MatchLogFields,
+    identity?: { playerId?: number; sessionId?: string },
+  ): void {
+    const context: MatchLogContext = {
+      roomId: this.roomId,
+      tick: this.simulationHost?.tick ?? 0,
+    };
+    if (identity?.playerId !== undefined) {
+      context.playerId = identity.playerId;
+    }
+    if (identity?.sessionId !== undefined) {
+      context.sessionId = identity.sessionId;
+    }
+    writeMatchLog(createMatchLogRecord(context, fields));
   }
 
   /** Per-client GameStateView projection (localPlayerId differs; entities shared in F5). */

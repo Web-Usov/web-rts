@@ -59,5 +59,11 @@ export interface GameTransport {
   subscribeState(listener: StateListener): Unsubscribe;
   subscribeEvent(listener: EventListener): Unsubscribe;
   subscribeConnection(listener: ConnectionListener): Unsubscribe;
+  /**
+   * Latest measured round-trip in milliseconds.
+   * `null` means unavailable: no live session yet, or this transport cannot measure RTT.
+   * Future LocalGameTransport returns `null`. This is not a Colyseus type and not a wire field.
+   */
+  readRoundTripMs(): number | null;
   disconnect(): Promise<void>;
 }
