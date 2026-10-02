@@ -32,6 +32,11 @@ export const FOUNDATION_ROOM_NAME = "foundation";
 export type RemoteGameTransportOptions = {
   defaultEndpoint?: string;
   resumeTokenStore?: OpaqueResumeTokenStore;
+  /**
+   * Test seam for one RTT sample. Production omits this and uses the live room ping.
+   * A dropped socket stops sampling; reconnect starts it again.
+   */
+  roundTripProbe?: () => Promise<number>;
 };
 
 /**
@@ -49,6 +54,7 @@ export class RemoteGameTransport implements GameTransport {
   private readonly connectionListeners = new Set<ConnectionListener>();
   private readonly defaultEndpoint: string;
   private readonly resumeTokenStore: OpaqueResumeTokenStore;
+  private readonly roundTripProbe: (() => Promise<number>) | null;
   private roomId: string | null = null;
   private resumeInFlight: Promise<ResumeSessionResult> | null = null;
   private readonly roundTrip = new RoundTripMonitor(1_000);
@@ -56,6 +62,7 @@ export class RemoteGameTransport implements GameTransport {
   constructor(options: RemoteGameTransportOptions = {}) {
     this.defaultEndpoint = options.defaultEndpoint ?? resolveConfiguredGameServerEndpoint();
     this.resumeTokenStore = options.resumeTokenStore ?? createSessionStorageResumeTokenStore();
+    this.roundTripProbe = options.roundTripProbe ?? null;
   }
 
   get connectedRoomId(): string | null {
@@ -217,9 +224,18 @@ export class RemoteGameTransport implements GameTransport {
     });
 
     room.onDrop(() => {
+      if (this.room !== room) {
+        return;
+      }
+      // No live socket: a cached sample would be shown as the current RTT.
+      this.roundTrip.stop();
       this.emit("reconnecting");
     });
     room.onReconnect(() => {
+      if (this.room !== room) {
+        return;
+      }
+      this.startRoundTrip(room);
       // JOIN_ROOM assigns the rotated token after onReconnect listeners return.
       queueMicrotask(() => {
         if (this.room !== room) {
@@ -241,9 +257,14 @@ export class RemoteGameTransport implements GameTransport {
       this.resumeTokenStore.clear();
       this.emit(code === CloseCode.CONSENTED ? "left" : "expired");
     });
-    this.roundTrip.start(() => probeLiveRoomPing(room));
+    this.startRoundTrip(room);
 
     this.sendSync();
+  }
+
+  private startRoundTrip(room: Room): void {
+    const probe = this.roundTripProbe ?? (() => probeLiveRoomPing(room));
+    this.roundTrip.start(probe);
   }
 
   private persistRoomToken(room: Room): void {

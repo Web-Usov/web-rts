@@ -102,16 +102,19 @@ export class RoundTripMonitor {
       this.inFlight = true;
       void probe().then(
         (value) => {
-          this.inFlight = false;
           if (generation !== this.generation) {
             return;
           }
+          this.inFlight = false;
           const normalized = normalizeRoundTripMs(value);
           if (normalized !== null) {
             this.reading = normalized;
           }
         },
         () => {
+          if (generation !== this.generation) {
+            return;
+          }
           this.inFlight = false;
         },
       );

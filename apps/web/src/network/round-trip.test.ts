@@ -86,6 +86,72 @@ describe("RoundTripMonitor", () => {
     expect(monitor.read()).toBeNull();
   });
 
+  it("does not let a probe that resolves after stop/start clear the next session", async () => {
+    const started: number[] = [];
+    const resolvers: Array<(value: number) => void> = [];
+    const scheduled: Array<() => void> = [];
+    const monitor = new RoundTripMonitor(
+      1_000,
+      (callback) => {
+        scheduled.push(callback);
+        return scheduled.length as unknown as ReturnType<typeof setInterval>;
+      },
+      () => {},
+    );
+
+    const probe = (id: number) => () => {
+      started.push(id);
+      return new Promise<number>((resolve) => {
+        resolvers[id] = resolve;
+      });
+    };
+
+    monitor.start(probe(1));
+    monitor.start(probe(2));
+    expect(started).toEqual([1, 2]);
+
+    resolvers[1]?.(10);
+    await Promise.resolve();
+    expect(monitor.read()).toBeNull();
+
+    scheduled.at(-1)?.();
+    expect(started).toEqual([1, 2]);
+
+    resolvers[2]?.(30);
+    await Promise.resolve();
+    expect(monitor.read()).toBe(30);
+  });
+
+  it("does not let a rejected previous probe clear the next session", async () => {
+    const started: number[] = [];
+    const rejecters: Array<(error: Error) => void> = [];
+    const scheduled: Array<() => void> = [];
+    const monitor = new RoundTripMonitor(
+      1_000,
+      (callback) => {
+        scheduled.push(callback);
+        return scheduled.length as unknown as ReturnType<typeof setInterval>;
+      },
+      () => {},
+    );
+
+    const probe = (id: number) => () => {
+      started.push(id);
+      return new Promise<number>((_resolve, reject) => {
+        rejecters[id] = reject;
+      });
+    };
+
+    monitor.start(probe(1));
+    monitor.start(probe(2));
+    rejecters[1]?.(new Error("stale"));
+    await Promise.resolve();
+
+    scheduled.at(-1)?.();
+    expect(started).toEqual([1, 2]);
+    expect(monitor.read()).toBeNull();
+  });
+
   it("ignores negative and non-finite samples", () => {
     expect(normalizeRoundTripMs(0)).toBe(0);
     expect(normalizeRoundTripMs(-1)).toBeNull();
