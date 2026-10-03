@@ -27,3 +27,11 @@ export {
   type Vec2,
 } from "./types.js";
 export { canIssueMove, createWorld, World } from "./world.js";
+export {
+  assessFoundationMove,
+  placeFoundationObjective,
+  spawnFoundationUnits,
+  type FoundationMoveDecision,
+  type FoundationMoveRefusal,
+} from "./foundation-match.js";
+export { readWorldSnapshot, type WorldEntitySnapshot, type WorldSnapshot } from "./snapshot.js";
