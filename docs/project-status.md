@@ -45,6 +45,17 @@ Coding Agent, получивший handoff, следует `AGENTS.md` и пра
 
 GitHub Issues остаются источником implementation scope и acceptance criteria. Этот список нужен только как быстрый navigation checkpoint.
 
+## Следующий gameplay milestone — DRAFT
+
+Следующее продуктовое направление зафиксировано как draft, но **ещё не готово к implementation**:
+
+- [Gameplay Spec #002 — First Economy & Defense Vertical Slice](./specs/002-first-economy-defense-vertical-slice.md);
+- tracking issue: [#50 — DRAFT Gameplay Vertical Slice #002](https://github.com/Web-Usov/web-rts/issues/50).
+
+Draft фиксирует уже согласованные продуктовые решения: Wood gathering, Worker loop, стартовый Town Hall, physical construction, grid/occupancy, deterministic pathfinding, Wall, Soldier combat, hybrid automatic/garrison Tower, basic PvE AI, одну wave, `WAVE_CLEARED` и Sacred Site defeat.
+
+Перед созданием implementation issues обязателен отдельный architecture review. Минимум нужно закрыть grid/world semantics, blocker selection, generic garrison representation, team/hostility, protocol/replication contracts и безопасную dependency graph для параллельной разработки.
+
 ## Устойчивые архитектурные опорные точки
 
 - multiplayer server authoritative;
