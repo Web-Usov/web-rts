@@ -11,6 +11,7 @@
 ## Specs
 
 - [`specs/001-foundation-network-vertical-slice.md`](./specs/001-foundation-network-vertical-slice.md) — Foundation Spec #001: первый authoritative multiplayer vertical slice, tooling, simulation kernel, transport, client/server integration, tests, CI и LAN startup.
+- [`specs/002-first-economy-defense-vertical-slice.md`](./specs/002-first-economy-defense-vertical-slice.md) — **DRAFT** Gameplay Spec #002: первый economy/defense loop — Wood gathering, construction, grid/pathfinding, combat, Tower garrison, PvE wave и Sacred Site defeat. До implementation требуется architecture review; tracking issue #50.
 - [`docker-lan.md`](./docker-lan.md) — Docker Compose startup: порты, LAN URL, env, smoke и ручной checklist со второго устройства.
 
 Корневой [`AGENTS.md`](../AGENTS.md) содержит обязательные правила для coding agents: source-of-truth hierarchy, архитектурные инварианты, scope discipline и требования к PR/tests.
