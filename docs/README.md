@@ -5,6 +5,7 @@
 ## Документы
 
 - [`game-vision.md`](./game-vision.md) — Game Vision v0.1: направление игры, режимы, core loop, цели матча и границы MVP.
+- [`art-direction.md`](./art-direction.md) — Art Direction v0.1: visual DNA, shape/material language, readability и density principles, zoom-level rules и curated concept references.
 - [`technical-vision.md`](./technical-vision.md) — Technical Vision v0.1: зафиксированный стек, simulation architecture, networking, rendering, testing, CI и agent-driven development rules.
 - [`technical-direction.md`](./technical-direction.md) — Technical Direction v0.1: предварительный документ, на основе которого сформирован Technical Vision. При расхождениях приоритет имеет `technical-vision.md`.
 
@@ -29,6 +30,7 @@
 ## Как развиваем документацию
 
 - Продуктовые решения фиксируются в `game-vision.md` или отдельных спецификациях в `docs/specs/`.
+- Визуальное направление конкретизируется в `art-direction.md`; оно не может молча переопределять Game Vision.
 - Значимые технические решения оформляются как ADR в `docs/adr/`.
 - Реализация конкретной фичи должна начинаться со spec и acceptance criteria.
 - GitHub Issues используются для задач реализации, а не как единственное место хранения продуктовой документации.
