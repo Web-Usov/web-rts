@@ -1,19 +1,24 @@
 import {
-  assessFoundationMove,
-  placeFoundationObjective,
-  spawnFoundationUnits,
-} from "@web-rts/game-data";
-import {
   GAME_DATA_VERSION,
   PROTOCOL_VERSION,
   checkProtocolCompatibility,
   parseGameCommand,
-  projectWorldToGameStateView,
+  type EntityView,
   type GameCommand,
   type GameEvent,
+  type GameStateView,
   type MatchPhase,
 } from "@web-rts/protocol";
-import { createWorld, type SimulationCommand, type World } from "@web-rts/simulation";
+import {
+  assessFoundationMove,
+  createWorld,
+  placeFoundationObjective,
+  readWorldSnapshot,
+  spawnFoundationUnits,
+  type SimulationCommand,
+  type World,
+  type WorldEntitySnapshot,
+} from "@web-rts/simulation";
 import {
   LOCAL_PLAYER_ID,
   LOCAL_ROOM_ID,
@@ -50,13 +55,7 @@ export function createLocalMatchRuntime(
     post({
       type: "state",
       sessionId,
-      state: projectWorldToGameStateView({
-        world,
-        roomId: LOCAL_ROOM_ID,
-        phase,
-        localPlayerId: LOCAL_PLAYER_ID,
-        players: [{ playerId: LOCAL_PLAYER_ID, connected: true }],
-      }),
+      state: projectLocalState(world, phase),
     });
   };
 
@@ -214,6 +213,33 @@ export function createLocalMatchRuntime(
     dispose(): void {
       resetMatch();
     },
+  };
+}
+
+function projectLocalState(world: World | null, phase: MatchPhase): GameStateView {
+  const snapshot = world ? readWorldSnapshot(world) : null;
+  return {
+    protocolVersion: PROTOCOL_VERSION,
+    gameDataVersion: GAME_DATA_VERSION,
+    roomId: LOCAL_ROOM_ID,
+    tick: snapshot?.tick ?? 0,
+    phase,
+    localPlayerId: LOCAL_PLAYER_ID,
+    players: [{ playerId: LOCAL_PLAYER_ID, connected: true }],
+    entities: (snapshot?.entities ?? []).map(toEntityView),
+  };
+}
+
+function toEntityView(entity: WorldEntitySnapshot): EntityView {
+  return {
+    entityId: entity.entityId,
+    kind: entity.kind,
+    x: entity.x,
+    y: entity.y,
+    ownerPlayerId: entity.ownerPlayerId,
+    controllerPlayerId: entity.controllerPlayerId,
+    objectiveType: entity.objectiveType,
+    objectiveState: entity.objectiveState,
   };
 }
 

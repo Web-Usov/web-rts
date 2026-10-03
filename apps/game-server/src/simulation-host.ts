@@ -1,6 +1,11 @@
-import { assessFoundationMove, placeFoundationObjective } from "@web-rts/game-data";
 import type { GameCommand } from "@web-rts/protocol";
-import { createWorld, type SimulationCommand, type World } from "@web-rts/simulation";
+import {
+  assessFoundationMove,
+  createWorld,
+  placeFoundationObjective,
+  type SimulationCommand,
+  type World,
+} from "@web-rts/simulation";
 import { mapGameCommandToSimulation, type SessionPlayerContext } from "./command-mapper.js";
 import { PrimitiveUnitRegistry } from "./primitive-units.js";
 

@@ -1,5 +1,4 @@
-import { spawnFoundationUnits } from "@web-rts/game-data";
-import type { EntityId, World } from "@web-rts/simulation";
+import { spawnFoundationUnits, type EntityId, type World } from "@web-rts/simulation";
 
 /**
  * Technical index: server-derived playerId → primitive unit entityId.

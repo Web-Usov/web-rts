@@ -1,12 +1,17 @@
-import type { World } from "@web-rts/simulation";
+import { readWorldSnapshot, type World, type WorldEntitySnapshot } from "@web-rts/simulation";
 import {
-  projectWorldToGameStateView as projectSharedWorld,
+  GAME_DATA_VERSION,
+  PROTOCOL_VERSION,
+  type EntityView,
   type GameStateView,
   type MatchPhase,
-  type ReplicationPlayerSlot,
+  type PlayerSlotView,
 } from "@web-rts/protocol";
 
-export type { ReplicationPlayerSlot };
+export type ReplicationPlayerSlot = {
+  playerId: number;
+  connected: boolean;
+};
 
 export type ReplicationAdapterInput = {
   world: World | null;
@@ -18,11 +23,38 @@ export type ReplicationAdapterInput = {
 };
 
 /**
- * Projects simulation World → protocol GameStateView.
- * The projection itself is shared with LocalGameTransport via `@web-rts/protocol`
- * so remote and local clients receive the same DTO. This module stays the
- * multiplayer call site and does not import Colyseus or Babylon (ADR-007).
+ * Projects a transport-neutral world snapshot into GameStateView.
+ * The World walk stays in simulation. This adapter only adds the protocol envelope
+ * and does not import Colyseus or Babylon (ADR-007).
  */
 export function projectWorldToGameStateView(input: ReplicationAdapterInput): GameStateView {
-  return projectSharedWorld(input);
+  const snapshot = input.world ? readWorldSnapshot(input.world) : null;
+  const players: PlayerSlotView[] = input.players.map((slot) => ({
+    playerId: slot.playerId,
+    connected: slot.connected,
+  }));
+
+  return {
+    protocolVersion: PROTOCOL_VERSION,
+    gameDataVersion: GAME_DATA_VERSION,
+    roomId: input.roomId,
+    tick: snapshot?.tick ?? 0,
+    phase: input.phase,
+    localPlayerId: input.localPlayerId,
+    players,
+    entities: (snapshot?.entities ?? []).map(toEntityView),
+  };
+}
+
+function toEntityView(entity: WorldEntitySnapshot): EntityView {
+  return {
+    entityId: entity.entityId,
+    kind: entity.kind,
+    x: entity.x,
+    y: entity.y,
+    ownerPlayerId: entity.ownerPlayerId,
+    controllerPlayerId: entity.controllerPlayerId,
+    objectiveType: entity.objectiveType,
+    objectiveState: entity.objectiveState,
+  };
 }

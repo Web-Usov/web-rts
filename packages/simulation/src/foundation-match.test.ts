@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { createWorld } from "@web-rts/simulation";
+import { foundationUnitSpawnPosition } from "@web-rts/game-data";
 import {
   assessFoundationMove,
   placeFoundationObjective,
   spawnFoundationUnits,
 } from "./foundation-match.js";
-import { foundationUnitSpawnPosition } from "./foundation-map.js";
+import { readWorldSnapshot } from "./snapshot.js";
+import { createWorld } from "./world.js";
 
 describe("foundation match layout", () => {
   it("spawns one controlled unit per player and one Sacred Site", () => {
@@ -37,6 +38,35 @@ describe("foundation match layout", () => {
     expect(assessFoundationMove(world, 0, [own], { x: 100, y: 0 })).toEqual({
       ok: false,
       reason: "out_of_bounds",
+    });
+  });
+
+  it("reads a plain snapshot without component stores", () => {
+    const world = createWorld({ seed: 1 });
+    const units = spawnFoundationUnits(world, [0]);
+    placeFoundationObjective(world);
+
+    const snapshot = readWorldSnapshot(world);
+    expect(snapshot.tick).toBe(0);
+    expect(snapshot).not.toHaveProperty("positions");
+    expect(snapshot).not.toHaveProperty("movements");
+    expect(snapshot.entities.find((entity) => entity.kind === "unit")).toEqual({
+      entityId: units.get(0),
+      kind: "unit",
+      ...foundationUnitSpawnPosition(0),
+      ownerPlayerId: 0,
+      controllerPlayerId: 0,
+      objectiveType: null,
+      objectiveState: null,
+    });
+    expect(snapshot.entities.find((entity) => entity.kind === "objective")).toMatchObject({
+      kind: "objective",
+      x: 0,
+      y: 0,
+      ownerPlayerId: null,
+      controllerPlayerId: null,
+      objectiveType: "SACRED_SITE",
+      objectiveState: "ACTIVE",
     });
   });
 });

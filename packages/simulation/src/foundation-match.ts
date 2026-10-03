@@ -1,14 +1,15 @@
-import { canIssueMove, type EntityId, type World } from "@web-rts/simulation";
 import {
   FOUNDATION_OBJECTIVE_POSITION,
   foundationUnitSpawnPosition,
   isWithinFoundationBounds,
   type GroundPoint,
-} from "./foundation-map.js";
+} from "@web-rts/game-data";
+import type { EntityId } from "./types.js";
+import { canIssueMove, type World } from "./world.js";
 
 /**
- * Shared foundation match layout used by the multiplayer host and the local worker.
- * Spawn slots, the Sacred Site, and MOVE permission stay in one place.
+ * Shared foundation match layout for the multiplayer host and the local worker.
+ * Map constants stay in game-data; applying them to a World lives with simulation.
  */
 
 export type FoundationMoveRefusal = "out_of_bounds" | "not_your_unit";
