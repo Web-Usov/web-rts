@@ -808,7 +808,7 @@ path to node
 
 Новая явная команда игрока заменяет текущую Worker task.
 
-Command queue / Shift-orders в #002 отсутствуют.
+Per-entity queued/Shift-orders в #002 отсутствуют: новая явная Worker command заменяет текущую task. Runtime per-player ingress queues из §8.8 — отдельный transport/runtime scheduling mechanism и не являются gameplay Shift-order queue.
 
 Если доступного owned drop-off нет **при применении GATHER**, command отклоняется с machine-readable reason `no_dropoff`.
 
@@ -1742,7 +1742,7 @@ Public GameCommand не содержит authoritative identity:
 Remote host выводит PlayerId из server session/slot.
 Local host назначает Local PlayerId внутри trusted local runtime.
 
-В simulation queue actor context отделён от gameplay intent концептуально:
+В shared per-player simulation command queues actor context отделён от gameplay intent концептуально:
 
 ```text
 QueuedCommand
@@ -2014,7 +2014,7 @@ derive trusted PlayerId     derive trusted PlayerId
     │                             │
     └──── trusted command ────────┘
                   ↓
-        shared gameplay command queue
+     shared bounded per-player command queues
                   ↓
               World.step
                   ↓
@@ -2411,7 +2411,7 @@ Presentation не хранит независимый gameplay map size врод
 - raw task objects;
 - raw attack cooldown implementation;
 - RNG state;
-- command queue;
+- command queues / scheduler internals;
 - component stores.
 
 Если UI нужен coarse activity state, он добавляется как dedicated presentation projection, а не экспорт internal state machine.
@@ -2695,7 +2695,7 @@ derive trusted PlayerId       derive trusted PlayerId
                  ↓
             MatchRuntime
                  ↓
-          simulation queue
+     bounded per-player queues + fair scheduler
                  ↓
         tick-boundary validation
 ```
@@ -2965,7 +2965,7 @@ simulation = как это ведёт себя
 - world↔cell conversion;
 - navigation / A* / approach goal sets;
 - breach-aware path planning;
-- command queue + semantic validation;
+- bounded per-player command queues + fair scheduling + semantic validation;
 - economy / Worker tasks;
 - construction;
 - combat / targeting / death;
