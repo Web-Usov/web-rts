@@ -161,90 +161,315 @@ RemoteGameTransport → authoritative server → shared simulation
 - gameplay не использует `Math.random()`;
 - public gameplay semantics не зависят от transport mode.
 
-## 7. Spatial/Grid contract — draft
+## 7. Spatial/Grid contract — APPROVED
 
-Фиксированная карта получает logical navigation/build grid.
+Статус архитектурного решения: **APPROVED 2026-10-04**.
 
-Каждая cell концептуально имеет:
+### 7.1 Continuous world + discrete grid
 
-```text
-walkable
-buildable
-static terrain
-building occupancy
-```
+Web RTS не становится клеточной simulation.
 
-Grid — simulation abstraction; визуально игра не обязана выглядеть тайловой.
-
-World ↔ grid coordinate mapping должен быть deterministic.
-
-Для #002 navigation graph использует только:
+Gameplay position остаётся непрерывной:
 
 ```text
-N / S / E / W
+Position { x, y }
+movement speed
+attack range
+click target
 ```
 
-Диагональный pathfinding не входит в scope.
+Grid является отдельным дискретным spatial layer для:
 
-### Building occupancy
+- navigation;
+- buildability;
+- solid footprint occupancy;
+- construction placement.
 
-Building footprint занимает grid cells.
-
-Начальные footprints:
+Инвариант:
 
 ```text
-Wall  = 1x1
-Tower = 1x1
+grid = где можно идти/строить
+world coordinates = где entity фактически находится
 ```
 
-Town Hall и Sacred Site могут иметь отдельные configurable footprints.
+Babylon boundary остаётся прежней: simulation ground `(x, y)` отображается в Babylon ground `(x, z)`.
 
-Construction site блокирует navigation сразу после принятия BUILD.
+### 7.2 Spatial scale and map bounds
 
-Placement запрещён:
-
-- вне карты;
-- на non-buildable terrain;
-- поверх building footprint;
-- поверх текущей позиции unit.
-
-Moving units не считаются permanent navigation obstacles.
-
-> **Architecture review:** нужно окончательно определить semantics временной unit occupancy,
-> world/grid mapping, path execution между cell centers и interaction нескольких moving units.
-
-## 8. Navigation — draft
-
-Используется deterministic A*.
-
-Требование:
+Для #002:
 
 ```text
-same world state + same command
-→ same chosen path
+1 navigation cell = 1 simulation world unit
 ```
 
-Tie-breaking должен быть стабильным.
+Это game-wide spatial scale, а не индивидуальный tuning каждой карты.
 
-Path должен пересчитываться, если building occupancy делает текущий маршрут недействительным.
-
-### Полностью заблокированный путь
-
-Если PvE enemy не может построить путь к Sacred Site, он должен выбрать доступное hostile building,
-разрушение которого позволяет продолжить objective path:
+Declarative map definition должна задавать минимум:
 
 ```text
-Sacred Site unreachable
-→ choose blocking building
-→ path to attack position
-→ destroy
-→ retry Sacred Site path
+originX
+originY
+widthCells
+heightCells
+static walkability/buildability
+spawn regions
+starting placements
+resource placements
 ```
 
-При равных кандидатах выбор deterministic.
+Gameplay bounds выводятся из grid и используют half-open semantics:
 
-> **Architecture review:** требуется формально определить blocker-selection algorithm.
-> Нельзя оставлять это как эвристику, которую разные implementation tasks поймут по-разному.
+```text
+[minX, maxX)
+[minY, maxY)
+```
+
+Преобразование должно быть deterministic:
+
+```text
+worldToCell:
+floor((world - origin) / cellSize)
+
+cellToWorldCenter:
+origin + (cell + 0.5) * cellSize
+```
+
+Presentation не должна владеть отдельным hardcoded gameplay map extent. Размер карты имеет один source of truth через map definition.
+
+### 7.3 Package boundary
+
+`@web-rts/game-data` хранит декларативные map definitions и spatial constants.
+
+`@web-rts/simulation`:
+
+- создаёт runtime grid;
+- применяет occupancy;
+- валидирует gameplay placement;
+- выполняет navigation/pathfinding;
+- меняет occupancy в результате gameplay.
+
+A*, occupancy mutation и placement rules не должны жить в `game-data`.
+
+### 7.4 Generic solid occupancy
+
+Runtime grid не должен иметь building-specific occupancy.
+
+Cell концептуально содержит:
+
+```text
+staticWalkable
+staticBuildable
+solidOccupantEntityId | null
+```
+
+Entity, физически занимающая пространство, имеет generic spatial footprint concept:
+
+```text
+SpatialFootprint
+├─ anchorCell
+├─ width
+├─ height
+├─ blocksMovement
+└─ blocksBuilding
+```
+
+Конкретная TypeScript representation определяется implementation issue, но semantics generic.
+
+Одна модель должна поддерживать минимум:
+
+- Wall;
+- Tower;
+- Town Hall;
+- Sacred Site;
+- Resource Node;
+- Construction Site.
+
+Не допускается spatial logic вида `if building ... else if resource ...` как основной архитектурный механизм.
+
+### 7.5 Units are not navigation blockers in #002
+
+Units не входят в A* occupancy и не резервируют cells.
+
+Следствия #002:
+
+- units могут находиться в одной navigation cell;
+- units могут визуально пересекаться;
+- unit-vs-unit collision avoidance отсутствует;
+- reservation/deadlock/yielding/RVO/flow-field находятся вне scope.
+
+Это сознательное ограничение vertical slice.
+
+При BUILD текущие unit positions всё равно участвуют в placement validation: новый solid footprint нельзя разместить поверх cell, в которой сейчас находится unit.
+
+### 7.6 Construction occupancy timing
+
+После принятия валидной BUILD-команды:
+
+```text
+resources spent
+→ construction entity created
+→ footprint registered as solid
+→ navigation sees new blocker
+```
+
+Construction Site блокирует movement/building **с того же simulation tick**, не после completion.
+
+System-order invariant:
+
+```text
+tick
+├─ apply commands / occupancy changes
+├─ validate or replan navigation
+├─ continuous movement
+└─ remaining gameplay systems
+```
+
+Если новый footprint блокирует следующий waypoint движущегося entity, path должен быть пересчитан до movement этого tick.
+
+## 8. Navigation — APPROVED
+
+Статус архитектурного решения: **APPROVED 2026-10-04**.
+
+### 8.1 MOVE remains world-space intent
+
+Public MOVE остаётся world-space command:
+
+```text
+MOVE target = { x, y }
+```
+
+Client не отправляет navigation cell как authoritative intent.
+
+Simulation:
+
+```text
+world target
+→ worldToCell
+→ navigation
+→ path waypoints
+→ continuous movement
+```
+
+Это сохраняет protocol независимым от navigation resolution.
+
+### 8.2 Path execution
+
+A* строит последовательность cells.
+
+Movement идёт через центры промежуточных path cells, но финальная точка остаётся исходной точной world-space целью MOVE.
+
+Пример:
+
+```text
+click exact world point
+→ A* cell path
+→ intermediate cell centers
+→ exact clicked destination
+```
+
+Текущий continuous movement layer не должен заменяться grid teleport/snapping.
+
+Архитектурное разделение:
+
+```text
+Move intent / destination
+        ↓
+Navigation system
+        ↓
+NavigationPath
+        ↓
+next world-space waypoint
+        ↓
+continuous movement system
+```
+
+### 8.3 Blocked direct MOVE target
+
+Если world-space MOVE target попадает в:
+
+- solid footprint;
+- non-walkable cell;
+- другую недопустимую navigation cell;
+
+обычный MOVE отклоняется явной gameplay reason вроде `blocked_target`.
+
+Simulation не ищет магически ближайшую свободную клетку для обычного MOVE.
+
+Semantic interactions используют отдельные intents:
+
+- `GATHER` для Resource Node;
+- `GARRISON` для Tower;
+- `BUILD` для construction.
+
+### 8.4 Goal sets / approach cells
+
+Navigation API не должно ограничиваться моделью `findPath(start, oneGoalCell)`.
+
+Resource Nodes, Buildings, combat targets и garrison targets сами занимают blocked footprint.
+
+Pathfinding должен поддерживать **набор допустимых approach goal cells** вокруг target footprint.
+
+Концептуально:
+
+```text
+target footprint
+████
+
+valid approach cells
+····
+·██·
+·██·
+····
+```
+
+Navigation выбирает deterministic reachable goal из допустимого goal set.
+
+Этот contract должен использоваться Worker gathering/construction, melee engagement, blocker attack и garrison approach без отдельных pathfinding special cases.
+
+### 8.5 Deterministic A*
+
+Для #002 фиксируются:
+
+| Свойство | Решение |
+|---|---|
+| Graph | 4-neighbor |
+| Edge cost | 1 |
+| Heuristic | Manhattan |
+| RNG | отсутствует |
+| Cell identity | stable row-major index |
+| Tie-break | `f`, затем `h`, затем stable cell id |
+| Neighbor enumeration | fixed order |
+| Blockers | static terrain + solid footprint occupancy |
+| Units | игнорируются |
+| No path | explicit failure |
+
+Одинаковые map/occupancy/start/goal должны всегда давать один и тот же выбранный path в одинаковом runtime/version.
+
+### 8.6 Lazy path invalidation / replan
+
+Постройка нового Wall не должна глобально пересчитывать paths всех moving entities.
+
+Перед использованием следующего navigation waypoint:
+
+```text
+next path cell still traversable?
+├─ yes → continue
+└─ no  → replan
+```
+
+Это базовая invalidation policy #002.
+
+### 8.7 Separate unresolved blocker-selection rule
+
+Обычная navigation определяет только факт:
+
+```text
+no path to objective
+```
+
+Она **не выбирает автоматически**, какое hostile building нужно разрушить.
+
+Алгоритм blocker selection является отдельным PvE/navigation architecture decision и проходит следующим architecture pass.
 
 ## 9. Economy
 
@@ -911,19 +1136,39 @@ Walls            │
 
 ## 30. Обязательный следующий architecture review
 
-Перед созданием implementation issues необходимо пройти документ минимум по следующим вопросам:
+Общий tracking issue #50 остаётся **DRAFT** до завершения всего review.
 
-1. world/grid coordinate model;
-2. static vs dynamic occupancy;
-3. movement semantics нескольких units;
-4. deterministic A* и replan;
-5. blocker-selection algorithm;
-6. generic garrison representation;
-7. team/hostility representation;
-8. command schemas и validation;
-9. replication/view contract;
-10. shared Local/Remote host abstractions;
-11. package boundaries;
-12. безопасная параллельная issue breakdown.
+### Уже одобрено
 
-До завершения этого review tracking issue #50 остаётся **DRAFT**.
+- [x] continuous world + discrete navigation/build grid;
+- [x] game-wide spatial scale: 1 cell = 1 simulation world unit для #002;
+- [x] half-open grid-derived map bounds;
+- [x] declarative MapDefinition в game-data, runtime spatial logic в simulation;
+- [x] generic solid footprint occupancy;
+- [x] units не являются A* blockers в #002;
+- [x] BUILD запрещён поверх текущей unit cell;
+- [x] Construction Site блокирует клетки с tick принятия BUILD;
+- [x] occupancy/navigation обновляются до movement;
+- [x] MOVE остаётся world-space intent;
+- [x] intermediate cell-center waypoints + exact final MOVE target;
+- [x] blocked direct MOVE target отклоняется;
+- [x] navigation поддерживает approach goal sets;
+- [x] deterministic 4-neighbor A* + Manhattan + stable tie-breaking;
+- [x] lazy replan при invalid next waypoint;
+- [x] continuous movement остаётся отдельным нижним слоем;
+- [x] presentation не владеет отдельным hardcoded gameplay map size.
+
+Этот блок является основой будущего **ADR-008: Grid, occupancy and deterministic navigation**.
+
+### Ещё требуется review
+
+1. blocker-selection algorithm для PvE при полном перекрытии пути;
+2. generic garrison representation;
+3. team/hostility representation;
+4. command schemas и runtime validation;
+5. replication/view contract;
+6. shared Local/Remote host abstractions;
+7. package boundaries после добавления gameplay systems;
+8. финальная dependency graph и безопасная параллельная issue breakdown.
+
+До завершения этих пунктов tracking issue #50 остаётся **DRAFT**, ADR-008 не считается финализированным, а implementation issues не запускаются.
