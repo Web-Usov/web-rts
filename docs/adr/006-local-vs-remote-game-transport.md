@@ -1,7 +1,8 @@
 # ADR-006: local vs remote GameTransport
 
 Статус: **Accepted**  
-Дата: **2026-09-24**
+Дата: **2026-09-24**  
+Уточнение client/session contract: **2026-10-04**
 
 ## Контекст
 
@@ -11,23 +12,34 @@ Web client должен одинаково работать в Solo и Multiplay
 
 Ввести клиентскую boundary `GameTransport`.
 
-Примерный контракт:
+Актуальный client/session contract:
 
 ```ts
 interface GameTransport {
   connect(options: ConnectOptions): Promise<void>;
+  resumePreviousSession(options?: ResumeSessionOptions): Promise<ResumeSessionResult>;
+
   sendCommand(command: GameCommand): void;
   subscribeState(listener: StateListener): Unsubscribe;
   subscribeEvent(listener: EventListener): Unsubscribe;
+  subscribeConnection(listener: ConnectionListener): Unsubscribe;
+
+  startMatch(): void;
+  readonly connectedRoomId: string | null;
+  hasResumeToken(): boolean;
+  readRoundTripMs(): number | null;
+
   disconnect(): Promise<void>;
 }
 ```
 
+Technical Vision §15 является canonical current interface description; конкретные TypeScript types живут в `@web-rts/protocol`.
+
 Реализации:
 
 ```text
-RemoteGameTransport -> Colyseus SDK -> authoritative server
-LocalGameTransport  -> WebWorker -> shared simulation
+RemoteGameTransport -> Colyseus SDK -> server shell -> shared MatchRuntime
+LocalGameTransport  -> WebWorker shell -> shared MatchRuntime
 ```
 
 Presentation и UI работают через этот контракт и не должны знать, где физически исполняется simulation.
@@ -67,4 +79,6 @@ Presentation и UI работают через этот контракт и не
 - presentation зависит от `GameTransport`, а не напрямую от Colyseus Room;
 - local и remote transports используют общий protocol/state semantics;
 - игровые правила не дублируются в client;
-- transport boundary должна существовать до полноценной Solo gameplay реализации.
+- transport boundary должна существовать до полноценной Solo gameplay реализации;
+- Local/Remote execution behind transports shares MatchRuntime according to ADR-009;
+- LOBBY/reconnect/room lifecycle могут различаться внутри adapters/shells, но observable gameplay semantics остаются parity-tested.
