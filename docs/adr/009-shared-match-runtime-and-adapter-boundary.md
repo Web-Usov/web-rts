@@ -26,7 +26,7 @@ Framework-agnostic `MatchRuntime` живёт в `@web-rts/simulation` и явл�
 
 - World;
 - shared match bootstrap/setup;
-- command queue;
+- bounded per-player command queues + deterministic fair scheduler;
 - tick-boundary semantic validation;
 - gameplay systems/economy/waves/result;
 - transport-neutral snapshot/events/metrics.
@@ -112,6 +112,8 @@ Remote и Local используют один shared projector. Production app s
 - one shared MatchRuntime gameplay semantics;
 - trusted actor identity не приходит из client payload;
 - gameplay semantic validation at tick boundary;
+- command admission bounded per player; overflow uses transport-neutral `queue_full`;
+- cross-player command scheduling deterministic/fair and independent from raw packet arrival order;
 - event drain every tick;
 - Local/Remote command/state/event adapters shared;
 - simulation does not import protocol/framework APIs;
