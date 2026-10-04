@@ -2470,6 +2470,246 @@ transport/session shell
 Foundation multiplayer/reconnect/browser regressions должны сохраняться.
 
 
+### 26.18 Package boundaries / system ownership — APPROVED
+
+Статус архитектурного решения: **APPROVED 2026-10-04**.
+
+#002 сохраняет существующие core packages и добавляет ровно один production bridge package:
+
+```text
+@web-rts/match-adapter
+```
+
+Новые packages для navigation/economy/combat/garrison/AI не создаются.
+
+#### Dependency direction
+
+Целевой production graph:
+
+```text
+@web-rts/game-data
+        │
+        ▼
+@web-rts/simulation
+
+@web-rts/protocol      @web-rts/simulation
+        \                 /
+         \               /
+          @web-rts/match-adapter
+             /           \
+            /             \
+   apps/game-server      apps/web worker
+```
+
+Инварианты:
+
+```text
+simulation ─X→ protocol
+protocol   ─X→ simulation
+
+match-adapter → simulation
+match-adapter → protocol
+```
+
+Циклические зависимости запрещены.
+
+#### @web-rts/game-data
+
+`game-data` остаётся declarative-only package и хранит:
+
+- map definitions / terrain/buildability/spawn/resource placement;
+- unit definitions;
+- building definitions;
+- resource definitions;
+- costs/build times/footprints;
+- combat balance values;
+- garrison capability/profile mapping;
+- wave definitions/timing/composition.
+
+`game-data` не содержит:
+
+- A*;
+- occupancy mutation;
+- combat resolution;
+- construction progression;
+- AI;
+- target selection;
+- placement validation.
+
+Смысл boundary:
+
+```text
+game-data = что существует и с какими параметрами
+simulation = как это ведёт себя
+```
+
+#### @web-rts/simulation
+
+Вся gameplay truth остаётся в `@web-rts/simulation`.
+
+Именно здесь живут:
+
+- `MatchRuntime`;
+- World / entity registry / components;
+- grid / occupancy / topology revision;
+- world↔cell conversion;
+- navigation / A* / approach goal sets;
+- breach-aware path planning;
+- command queue + semantic validation;
+- economy / Worker tasks;
+- construction;
+- combat / targeting / death;
+- garrison / containment / ejection;
+- teams / relationships;
+- PvE AI;
+- waves;
+- objectives/result;
+- transport-neutral MatchSnapshot;
+- transport-neutral RuntimeEvents;
+- RuntimeMetrics.
+
+Не создаются отдельные production packages `navigation`, `combat`, `economy`, `garrison`, `ai` без нового доказанного use case.
+
+`MatchRuntime` является production facade Simulation Core.
+
+Production application code должно использовать public facade вроде:
+
+```text
+createMatchRuntime
+MatchSetup
+MatchRuntime
+SimulationCommand
+RuntimeEvent
+MatchSnapshot
+RuntimeMetrics
+```
+
+и не зависеть от arbitrary internal component stores/system functions.
+
+Low-level simulation tests могут обращаться к World/internal modules по разрешённому package API.
+
+#### @web-rts/protocol
+
+`@web-rts/protocol` владеет только wire/client contracts:
+
+- Zod GameCommand schemas;
+- GameEvent schemas;
+- GameStateView schemas;
+- GameTransport;
+- protocol/game-data compatibility versions;
+- parse helpers.
+
+Protocol не импортирует simulation и не содержит gameplay algorithms.
+
+#### @web-rts/match-adapter
+
+Новый package оправдан тем, что он является единственной integration boundary между protocol и simulation и используется одновременно Remote и Local execution paths.
+
+Он владеет тремя pure-direction adapters:
+
+```text
+GameCommand
+→ internal SimulationCommand
+
+MatchSnapshot + RecipientContext + SessionViewContext
+→ GameStateView
+
+RuntimeEvent
+→ GameEvent
+```
+
+Он:
+
+- удаляет transport-only metadata из commands;
+- не выполняет gameplay validation;
+- строит recipient-specific protocol projection;
+- маппит transport-neutral runtime events в wire events;
+- не хранит authoritative gameplay state;
+- не становится вторым gameplay/runtime layer.
+
+#### apps/game-server
+
+Server app владеет:
+
+- Colyseus server/Room;
+- auth;
+- slots;
+- join/leave/reconnect;
+- tick scheduler;
+- network/logging context;
+- lifecycle MatchRuntime;
+- вызовами match-adapter.
+
+Server app не содержит:
+
+- gameplay command validators;
+- economy/combat/navigation rules;
+- direct component-store access для production logic;
+- собственную entity/GameStateView projection.
+
+#### apps/web
+
+Browser main thread владеет:
+
+- React UI;
+- Babylon presentation;
+- ClientGameState;
+- input/selection;
+- LocalGameTransport;
+- RemoteGameTransport.
+
+WebWorker shell владеет:
+
+- Worker messaging;
+- local session identity;
+- scheduler;
+- lifecycle MatchRuntime;
+- вызовами match-adapter.
+
+Web app не содержит отдельный local gameplay bootstrap, local gameplay validation или independent GameStateView projection.
+
+#### @web-rts/testkit and scenario runner
+
+`@web-rts/testkit` может предоставлять:
+
+- match/world builders;
+- scenario helpers;
+- command helpers;
+- snapshot assertions;
+- Local/Remote parity fixtures.
+
+Production packages/apps не зависят от testkit.
+
+`tools/scenario-runner` должен по возможности запускать gameplay непосредственно через `MatchRuntime`, без Colyseus/browser protocol path.
+
+#### Client access to game-data
+
+Browser имеет право читать `game-data` для static presentation metadata:
+
+```text
+definitionId / mapId
+→ static definitions
+→ presentation
+```
+
+Но dynamic/effective runtime values всегда берутся из `GameStateView`.
+
+Static definition не может переопределять replicated authoritative state.
+
+#### ADR consequences
+
+После architecture review должны быть оформлены:
+
+```text
+ADR-008 — Grid, occupancy and deterministic navigation
+ADR-009 — Shared MatchRuntime and protocol/simulation adapter boundary
+```
+
+ADR-009 развивает ADR-006, а не заменяет его.
+
+Technical Vision package structure должна быть обновлена добавлением `packages/match-adapter` и явным описанием этой bridge responsibility.
+
+
 ## 27. Automated testing direction
 
 ### Simulation
@@ -2696,13 +2936,23 @@ Walls            │
 - [x] startMatch становится частью GameTransport interface;
 - [x] gameplay finish определяется runtime, session shell отражает FINISHED;
 - [x] Local/Remote parity tests обязательны;
-- [x] Colyseus/WebWorker internals не абстрагируются в gameplay runtime.
+- [x] Colyseus/WebWorker internals не абстрагируются в gameplay runtime;
+- [x] MatchRuntime и gameplay systems остаются в `@web-rts/simulation`;
+- [x] `@web-rts/game-data` остаётся declarative-only;
+- [x] `@web-rts/protocol` остаётся wire-contract-only и не зависит от simulation;
+- [x] добавляется один bridge package `@web-rts/match-adapter`;
+- [x] match-adapter зависит от protocol + simulation и владеет command/state/event mapping;
+- [x] отдельные packages для navigation/economy/combat/garrison/AI не создаются;
+- [x] production apps используют MatchRuntime facade и не читают World/component stores напрямую;
+- [x] game-server остаётся transport/session shell;
+- [x] web worker остаётся local transport/session shell;
+- [x] testkit/scenario-runner переиспользуют MatchRuntime, не создавая gameplay path;
+- [x] ADR-008 и ADR-009 должны формализовать approved architecture.
 
 Этот блок является основой будущего **ADR-008: Grid, occupancy and deterministic navigation**.
 
 ### Ещё требуется review
 
-1. package boundaries после добавления gameplay systems;
-2. финальная dependency graph и безопасная параллельная issue breakdown.
+1. финальная dependency graph и безопасная параллельная issue breakdown.
 
 До завершения этих пунктов tracking issue #50 остаётся **DRAFT**, ADR-008 не считается финализированным, а implementation issues не запускаются.
