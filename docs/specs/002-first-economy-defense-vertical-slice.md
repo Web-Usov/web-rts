@@ -459,17 +459,154 @@ next path cell still traversable?
 
 Это базовая invalidation policy #002.
 
-### 8.7 Separate unresolved blocker-selection rule
+### 8.7 PvE blocker selection / breach-aware planning — APPROVED
 
-Обычная navigation определяет только факт:
+Статус архитектурного решения: **APPROVED 2026-10-04**.
+
+Обычный navigation сначала всегда пытается построить normal path до approach cells Sacred Site.
 
 ```text
-no path to objective
+normal A*
+↓
+path found?
+├─ yes → use normal path
+└─ no  → breach-aware planning
 ```
 
-Она **не выбирает автоматически**, какое hostile building нужно разрушить.
+Breach-aware planning использует тот же grid, но для planning query может виртуально проходить через
+некоторые hostile destructible solid footprints. Runtime occupancy при этом не меняется и blocker не становится
+реально walkable до разрушения.
 
-Алгоритм blocker selection является отдельным PvE/navigation architecture decision и проходит следующим architecture pass.
+#### Breachable vs non-breachable blockers
+
+Spatial/gameplay data должно позволять отличить solid footprint, которое PvE может разрушить ради прохода.
+
+Для #002:
+
+```text
+Wall              breachable
+Tower             breachable
+Town Hall         breachable
+Construction Site breachable
+
+Resource Node     non-breachable
+static rock       non-breachable
+water/terrain     non-breachable
+```
+
+Sacred Site является objective target; path строится к его approach cells, поэтому его footprint не используется как
+промежуточный breach target.
+
+Архитектура не должна зашивать список через `if entity is Wall/Tower`; breachability является gameplay capability/data.
+
+#### Route optimization
+
+Breach-aware route оценивается лексикографически:
+
+```text
+(breachCount, pathLength, deterministicTieBreak)
+```
+
+Приоритет:
+
+1. минимальное число разрушенных solid entities;
+2. среди таких маршрутов — минимальная длина пути;
+3. затем deterministic tie-break.
+
+Не используется произвольный magic cost вроде `wallCost = 100`.
+
+Для multi-cell footprint breach считается **по entity**, а не по количеству её cells:
+
+```text
+free → same blocker entity = +1 breach
+inside same blocker footprint → +0
+leave blocker footprint → +0
+enter another blocker entity → +1
+```
+
+Поэтому разрушение одного Town Hall остаётся одним breach, даже если footprint занимает несколько cells.
+
+#### Target selection from breach route
+
+После выбора breach-aware route PvE AI берёт **первый breachable occupant entity** вдоль этого route.
+
+Enemy не пытается войти в blocked footprint. Для атаки blocker используются обычные approach goal cells:
+
+```text
+selected blocker
+→ compute valid attack approach cells
+→ normal A* to approach cell
+→ melee attack blocker
+```
+
+Таким образом navigation выбирает route/blocker, combat наносит damage, а AI связывает эти systems.
+
+#### Blocker target stickiness
+
+После выбора blocker target enemy сохраняет его, пока target:
+
+- существует;
+- остаётся hostile/breachable;
+- доступен для атаки.
+
+Target не пересчитывается каждый tick.
+
+Если blocker уничтожен этим или другим unit:
+
+```text
+blocker invalid
+→ retry normal path to Sacred Site
+→ if still no path, run breach-aware planning again
+```
+
+Полный список будущих breaches заранее не кэшируется, потому что topology может измениться во время боя.
+
+#### Multiple enemies
+
+В #002 enemies принимают blocker decision независимо.
+
+Несколько enemies могут выбрать один и тот же Wall/Building и сфокусировать его.
+Распределение attackers, squad coordination и anti-overkill находятся вне scope.
+
+#### Impossible route and topology revision
+
+Handcrafted #002 map обязана удовлетворять invariant:
+
+> Без player-created breachable structures каждый PvE spawn region имеет normal navigation route к Sacred Site.
+
+Это проверяется map/scenario test.
+
+Если runtime state всё же не имеет ни normal route, ни breach-aware route:
+
+```text
+enemy → STALLED/BLOCKED
+```
+
+Телепортация, проход сквозь terrain или destruction non-breachable terrain запрещены.
+
+Runtime spatial topology должна иметь monotonic `topologyRevision`, которая меняется при добавлении/удалении
+solid footprint. Enemy после полного planning failure не повторяет дорогой поиск каждый tick; retry допускается после
+изменения topology revision (либо другого явного invalidation event).
+
+#### Responsibility boundary
+
+```text
+Navigation
+├─ normal path query
+└─ breach-aware route query
+        ↓
+      blocker entity
+        ↓
+PvE AI selects/holds gameplay target
+        ↓
+Combat destroys blocker
+        ↓
+Navigation reevaluates objective route
+```
+
+Navigation не наносит damage и не принимает combat decisions.
+Combat не знает, почему target был выбран.
+PvE AI не реализует собственную геометрию стен поверх navigation layer.
 
 ## 9. Economy
 
@@ -800,7 +937,9 @@ Enemy не должен уходить через половину карты з
 
 После завершения локального боя возвращается к objective behavior.
 
-Если путь к Sacred Site невозможен, применяется blocker behavior из navigation contract.
+Если normal path к Sacred Site невозможен, применяется утверждённый breach-aware blocker-selection contract из §8.7:
+enemy выбирает первый breachable blocker на deterministic minimal-breach route, подходит к его attack approach cell,
+держит blocker target до invalidation/destruction и после разрушения заново проверяет normal objective path.
 
 Behavior tree framework в #002 не требуется.
 
@@ -1156,19 +1295,29 @@ Walls            │
 - [x] deterministic 4-neighbor A* + Manhattan + stable tie-breaking;
 - [x] lazy replan при invalid next waypoint;
 - [x] continuous movement остаётся отдельным нижним слоем;
-- [x] presentation не владеет отдельным hardcoded gameplay map size.
+- [x] presentation не владеет отдельным hardcoded gameplay map size;
+- [x] normal A* имеет приоритет перед breach planning;
+- [x] breach-aware route минимизирует `(breachCount, pathLength, deterministicTieBreak)`;
+- [x] breach считается по solid occupant entity, а не по footprint cells;
+- [x] blocker target — первый breachable entity на выбранном route;
+- [x] blocker attack использует обычные approach goal cells;
+- [x] blocker target stickiness сохраняется до invalidation/destruction;
+- [x] после destruction objective path вычисляется заново;
+- [x] enemies могут независимо focus один blocker;
+- [x] impossible route даёт STALLED, без teleport/non-breachable destruction;
+- [x] retry после полного failure привязан к topology revision;
+- [x] map invariant требует baseline spawn→Sacred Site route без player fortifications.
 
 Этот блок является основой будущего **ADR-008: Grid, occupancy and deterministic navigation**.
 
 ### Ещё требуется review
 
-1. blocker-selection algorithm для PvE при полном перекрытии пути;
-2. generic garrison representation;
-3. team/hostility representation;
-4. command schemas и runtime validation;
-5. replication/view contract;
-6. shared Local/Remote host abstractions;
-7. package boundaries после добавления gameplay systems;
-8. финальная dependency graph и безопасная параллельная issue breakdown.
+1. generic garrison representation;
+2. team/hostility representation;
+3. command schemas и runtime validation;
+4. replication/view contract;
+5. shared Local/Remote host abstractions;
+6. package boundaries после добавления gameplay systems;
+7. финальная dependency graph и безопасная параллельная issue breakdown.
 
 До завершения этих пунктов tracking issue #50 остаётся **DRAFT**, ADR-008 не считается финализированным, а implementation issues не запускаются.
