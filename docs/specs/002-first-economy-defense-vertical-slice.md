@@ -628,9 +628,19 @@ Priority per tick:
 3. autonomous AI planning
 ```
 
-Внутри категории — stable FIFO/entityId order. Group command не применяется частично: если budget недостаточен для всех требуемых path queries, command остаётся pending до следующего tick. Autonomous entity при exhausted budget ждёт следующий tick.
+Внутри категории — stable FIFO/entityId order. Group command не применяется частично.
 
-Resumable A*, worker-thread pathfinding и flow fields вне #002.
+Чтобы group MOVE не мог зависнуть навсегда из-за запроса, который больше полного tick budget, обязателен cross-config invariant:
+
+```text
+MAX_MOVE_ENTITY_IDS <= maxPathQueriesPerTick
+```
+
+Точное числовое значение определяется implementation/config, но relationship проверяется startup/config assertion и regression test. Protocol `entityIds[]` bounded; simulation также не должна принимать group MOVE, который нарушает допустимый per-command path cap.
+
+Если оставшегося budget текущего tick недостаточно, но command **может полностью поместиться в один fresh tick**, command остаётся pending до следующего tick. Autonomous entity при exhausted budget ждёт следующий tick.
+
+Resumable A*, накопление частично рассчитанного group path state между ticks, worker-thread pathfinding и flow fields вне #002.
 
 ## 9. Economy
 
@@ -2342,6 +2352,22 @@ Gameplay terminal result определяется runtime/simulation.
 
 Например Sacred Site destruction создаёт DEFEAT result, после чего shell отражает `FINISHED`.
 
+### 26.6.1 Audit #53 H1 interpretation
+
+Audit #53 предлагал общий модуль в том числе для match phases. #002 намеренно **не централизует transport/session lifecycle целиком**:
+
+```text
+LOBBY / join / reconnect / room lock
+→ shell-owned session state
+
+gameplay bootstrap / RUNNING gameplay / terminal result
+→ shared MatchRuntime semantics
+```
+
+Это deliberate deviation от буквальной формулировки H1, а не незакрытый architecture gap.
+
+Обязательное требование вместо shared session manager: Local и Remote имеют одинаковые **observable gameplay lifecycle semantics** для START → RUNNING → FINISHED и одинаковую gameplay projection/rejection behavior. Это покрывается parity/integration tests.
+
 ### 26.7 Shared trusted command ingress
 
 После protocol/schema/session checks оба path сходятся в один ingress:
@@ -2769,16 +2795,9 @@ Static definition не может переопределять replicated author
 
 #### ADR consequences
 
-После architecture review должны быть оформлены:
+Эти package/runtime решения уже формализованы в **ADR-008** и **ADR-009** в текущем architecture PR.
 
-```text
-ADR-008 — Grid, occupancy and deterministic navigation
-ADR-009 — Shared MatchRuntime and protocol/simulation adapter boundary
-```
-
-ADR-009 развивает ADR-006, а не заменяет его.
-
-Technical Vision package structure должна быть обновлена добавлением `packages/match-adapter` и явным описанием этой bridge responsibility.
+ADR-009 развивает ADR-006, а не заменяет его. Technical Vision в этом же PR синхронизирован с `packages/match-adapter` и shared MatchRuntime boundary.
 
 
 ### 26.19 Foundation hardening invariants — RECONCILED FROM #53
@@ -2806,7 +2825,7 @@ Room lock/rate limit/reconnect остаются Remote shell concerns.
 
 ### Simulation / scenario
 
-Покрыть ResourceNode/gather/depletion, BUILD atomicity, construction/occupancy, deterministic A*/budget/replan/breach planning, Team/Health/combat, generic Objective, Soldier behavior, Tower/garrison/ejection, PvE/STALLED, wave/WAVE_CLEARED/DEFEAT и repeatability.
+Покрыть ResourceNode/gather/depletion, BUILD atomicity, construction/occupancy, deterministic A*/budget/replan/breach planning, включая assertion `MAX_MOVE_ENTITY_IDS <= maxPathQueriesPerTick` и отсутствие forever-pending oversized group MOVE, Team/Health/combat, generic Objective, Soldier behavior, Tower/garrison/ejection, PvE/STALLED, wave/WAVE_CLEARED/DEFEAT и repeatability.
 
 ### MatchRuntime / Local-Remote parity
 
@@ -2891,7 +2910,7 @@ G14 Full Local/Remote E2E + acceptance
 #002 DONE
 ```
 
-G0 финализирует spec/ADR/TV. G1 закрывает shared host/event drain/tick validation. G2 — rate/size/room lock/full GameTransport. G3 — kinds/definitionId/generic Objective/Map/grid/occupancy. G4 — deterministic A*/budget/breach. G5 Economy и G6 Combat могут идти параллельно. G7 construction, затем G8 Garrison и G9 PvE параллельно; G10 после G9; G11 ждёт G8+G10; G12 UI/presentation; G13 representative visual target; G14 final E2E.
+G0 финализирует spec/ADR/TV. G1 закрывает shared host/event drain/tick validation. G2 — rate/size/room lock/full GameTransport и bounded `entityIds[]`. G3 — kinds/definitionId/generic Objective/Map/grid/occupancy. G4 — deterministic A*/budget/breach + assertion, что max group MOVE помещается в fresh tick budget. G5 Economy и G6 Combat могут идти параллельно. G7 construction, затем G8 Garrison и G9 PvE параллельно; G10 после G9; G11 ждёт G8+G10; G12 UI/presentation; G13 representative visual target; G14 final E2E.
 
 Практический максимум — 2 Coding Agents одновременно.
 
