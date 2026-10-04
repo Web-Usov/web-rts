@@ -1,13 +1,13 @@
 # Gameplay Spec #002 — First Economy & Defense Vertical Slice
 
-Статус: **DRAFT / architecture review pending**  
-Дата: **2026-10-03**  
+Статус: **DRAFT / architecture reconciled — implementation blocked until merge**  
+Дата: **2026-10-04**  
 Проект: **Web RTS**  
 Tracking issue: **#50**
 
-> Этот документ намеренно фиксирует уже принятые продуктовые решения до завершения архитектурного review.
-> Он не является разрешением начинать implementation. До снятия DRAFT должны быть проверены grid/navigation,
-> blocker selection, garrison, team/hostility и protocol/replication contracts.
+> Архитектурный проход по #002 завершён и дополнительно reconciled с merged Art Direction (#48/#49, PR #51)
+> и техническим аудитом #53. Этот PR остаётся documentation/architecture gate: implementation issues
+> создаются и запускаются только после merge PR #52 в `main`, чтобы Coding Agents стартовали от одного source of truth.
 
 ## 1. Цель
 
@@ -40,18 +40,16 @@ RemoteGameTransport → authoritative server → shared simulation
 Реализация должна соответствовать:
 
 - `docs/game-vision.md`;
+- `docs/art-direction.md` — visual direction/readability target; он не расширяет gameplay scope сам по себе;
 - `docs/technical-vision.md`;
 - Foundation Spec #001;
-- ADR-001 — authoritative server and shared simulation;
-- ADR-002 — Babylon.js renderer;
-- ADR-003 — Colyseus multiplayer layer;
-- ADR-004 — fixed timestep and repeatable simulation;
-- ADR-005 — data-oriented entity model;
-- ADR-006 — local vs remote GameTransport;
-- ADR-007 — replication boundary and visibility.
+- ADR-001…007;
+- ADR-008 — grid, occupancy and deterministic navigation;
+- ADR-009 — shared MatchRuntime and protocol/simulation adapter boundary.
 
-Ожидается отдельное архитектурное решение по grid/occupancy/navigation (рабочее обозначение: **ADR-008**),
-но его финальная форма должна быть определена архитектурным review этого draft.
+Технический аудит #53 является review input, а не отдельным уровнем source of truth. Его подтверждённые H1–H4 и релевантные M1–M6 встроены в эту spec/ADR/implementation graph.
+
+Art Direction задаёт долгосрочный visual target. Наличие на concept references дорог, полей, ворот, quarry, outposts, weather, большого числа props или иных объектов не добавляет их в #002 автоматически.
 
 Если implementation требует изменить существующий архитектурный инвариант, работа сначала возвращается на уровень spec/ADR.
 
@@ -110,6 +108,7 @@ RemoteGameTransport → authoritative server → shared simulation
 - wave lifecycle `PREPARING → WARNING → ACTIVE → CLEARED`;
 - Sacred Site HP и defeat;
 - необходимые protocol/replication/UI изменения;
+- representative Babylon.js visual target после gameplay integration: Wall/Tower/Sacred Site/human unit/environment, normal + strategic zoom;
 - Local и Remote verification.
 
 ## 5. Non-goals
@@ -142,7 +141,12 @@ RemoteGameTransport → authoritative server → shared simulation
 - save/load;
 - procedural maps;
 - victory condition;
-- production graphics/audio.
+- production-ready graphics/audio и массовое производство финальных assets;
+- финальная visual identity PvE;
+- дороги/поля/ворота/quarry/outposts только потому, что они присутствуют на concept art;
+- weather/day-night implementation;
+- обязательный camera redesign/rotation;
+- persistent gameplay ruins/loot без отдельной gameplay spec.
 
 ## 6. Архитектурные инварианты
 
@@ -608,6 +612,26 @@ Navigation не наносит damage и не принимает combat decision
 Combat не знает, почему target был выбран.
 PvE AI не реализует собственную геометрию стен поверх navigation layer.
 
+### 8.8 Deterministic pathfinding work budget — RECONCILED
+
+Technical Vision требует bounded pathfinding work per tick. Для #002 используется deterministic query budget без resumable A*:
+
+```text
+SimulationConfig.maxPathQueriesPerTick
+```
+
+Priority per tick:
+
+```text
+1. queued player commands
+2. already-moving entities requiring replan
+3. autonomous AI planning
+```
+
+Внутри категории — stable FIFO/entityId order. Group command не применяется частично: если budget недостаточен для всех требуемых path queries, command остаётся pending до следующего tick. Autonomous entity при exhausted budget ждёт следующий tick.
+
+Resumable A*, worker-thread pathfinding и flow fields вне #002.
+
 ## 9. Economy
 
 В #002 существует только:
@@ -789,6 +813,12 @@ single target
 ```
 
 Точные значения находятся в game-data и не являются частью архитектурного контракта.
+
+### Art-direction semantics
+
+Base Tower не должна визуально читаться как необъяснимая магическая автоматика. Даже когда gameplay не моделирует отдельный crew entity, presentation может подразумевать встроенный расчёт, механизм/лебёдку или другую human-side physical operation.
+
+Явный garrison Soldier меняет боевой профиль Tower как дополнительный combatant.
 
 ## 15. Garrison — APPROVED
 
@@ -1392,26 +1422,30 @@ Match = RUNNING
 Wave = CLEARED
 ```
 
-## 21. Sacred Site / defeat
+## 21. Sacred Site / generic Objective / defeat
 
-Sacred Site становится destructible objective с Health.
-
-Если:
+Sacred Site — concrete world/entity identity, а Objective — generic gameplay role.
 
 ```text
-Sacred Site health <= 0
+Entity:
+  definitionId = "sacred_site"
+  Health
+  Team = player/shared Team
+  Owner = null
+  Controller = null
+
+Objective:
+  type = PROTECT
+  entityId = sacredSiteEntityId
+  teamId = player/shared Team
+  required = true
 ```
 
-то:
+Engine не использует `ObjectiveType = SACRED_SITE` как фундаментальную модель. Future objectives могут назначать `PROTECT / DESTROY / CAPTURE` другим entities.
 
-```text
-phase = FINISHED
-result = DEFEAT
-```
+При `Sacred Site health <= 0` shared runtime устанавливает `DEFEAT(playerTeam)`, а session shell отражает `FINISHED`.
 
-Это единственное match-ending condition #002.
-
-Victory condition отсутствует.
+Это единственное match-ending condition #002. Victory отсутствует; `WAVE_CLEARED` не victory.
 
 ## 22. Protocol / command validation — APPROVED
 
@@ -1717,6 +1751,33 @@ derive trusted PlayerId     derive trusted PlayerId
 
 Breaking wire changes требуют `PROTOCOL_VERSION` bump по существующему contract.
 
+
+### 22.13 Foundation input/session hardening — RECONCILED FROM #53
+
+Remote Room задаёт explicit message-rate limit (`maxMessagesPerSecond` или equivalent mechanism). Точное число — implementation/config decision.
+
+Client-controlled fields bounded: `commandId`, identifiers, `entityIds[]`, numeric domains и payload shape.
+
+После START Remote Room блокирует новые joins:
+
+```text
+LOBBY → joins allowed
+STARTING/RUNNING/FINISHED → new joins locked
+reserved reconnect → allowed по reconnect policy
+```
+
+### 22.14 Complete GameTransport session boundary — RECONCILED FROM #53
+
+UI не зависит от concrete `PageGameTransport`. Target `GameTransport` включает gameplay/state/event methods плюс:
+
+```text
+startMatch()
+connectedRoomId
+hasResumeToken()
+readRoundTripMs()
+```
+
+Local естественно не имеет remote resume token. START остаётся session control, не gameplay command.
 
 ## 23. Replication / GameStateView — APPROVED
 
@@ -2084,52 +2145,62 @@ Replay прошлых gameplay events для восстановления state 
 Breaking wire changes требуют `PROTOCOL_VERSION` bump.
 
 
+### 23.23 Concrete replication strategy for #002 — RECONCILED FROM #53
+
+```text
+runtime.readSnapshot() once per simulation tick
+→ shared per-recipient projection
+→ full GameStateView message
+→ GameTransport
+```
+
+Один transport-neutral MatchSnapshot вычисляется один раз на tick. Full snapshots — current-stage baseline. Delta/patch/Colyseus Schema/binary encoding вводятся только после profiling и не меняют simulation model.
+
 ## 24. Presentation / UI minimum
 
-Developer art допустим.
+Developer/proxy art допустим и не фиксирует финальный visual design.
 
-#002 должен быть играем без Inspector/debug console.
+#002 должен быть играем без Inspector/debug console: Wood, Worker/GATHER, BUILD Wall/Tower, placement feedback, construction progress, Soldier MOVE, GARRISON/UNGARRISON, HP, wave state, WAVE_CLEARED и DEFEAT.
 
-Минимум:
+### Player-color semantics
 
-- Wood counter;
-- Worker selection;
-- GATHER interaction;
-- BUILD Wall/Tower;
-- placement valid/invalid feedback;
-- construction progress;
-- Soldier selection + MOVE;
-- GARRISON / UNGARRISON interaction;
-- basic HP feedback;
-- wave warning/state;
-- WAVE_CLEARED indication;
-- DEFEAT state.
+```text
+Owner / explicit shared-team visual policy → player/team color
+Controller → command authority only
+```
 
-React по-прежнему не хранит per-frame entity transforms.
+Temporary loss/transfer of Controller не должен сам по себе перекрашивать owned entity.
+
+### Single spatial-transform owner
+
+Authoritative snapshots обновляют ClientGameState. Babylon spatial transform обновляется одним per-frame interpolation/render path. Snapshot-arrival path не должен быть вторым writer'ом per-frame position/rotation.
+
+React не хранит per-frame transforms.
+
+### Representative Art Direction target
+
+После gameplay integration, но до массового production art, нужен небольшой Babylon target:
+
+- representative human unit;
+- Town Hall / Wall / Tower;
+- Sacred Site proxy/hero asset;
+- environment patch;
+- player-color accents;
+- normal gameplay zoom;
+- strategic overview;
+- небольшая defense scene для density/readability.
+
+Это не production-art gate для ранних gameplay stages. Final PvE identity остаётся отдельной art task; basic melee enemy — gameplay archetype. Concept references не добавляют mechanics в scope.
+
+Camera rewrite не требуется автоматически: сначала проверяется фактическая читаемость target.
 
 ## 25. Determinism
 
-Обязательны:
+Обязательны fixed timestep, seeded RNG, no gameplay `Math.random()`, no simulation wall-clock, deterministic A*/budget/targets/blockers/garrison ejection и stable processing order.
 
-- fixed timestep;
-- seeded RNG;
-- no gameplay `Math.random()`;
-- no simulation wall-clock;
-- deterministic A* tie-breaking;
-- deterministic target tie-breaking;
-- deterministic blocker selection;
-- deterministic garrison ejection;
-- stable processing order.
+Для одинаковых seed/map/participants/ordered commands/tick count simulation даёт одинаковый gameplay result.
 
-Для одинаковых:
-
-```text
-seed
-map
-commands
-```
-
-simulation scenario должен давать одинаковый gameplay result.
+Repository lint/config должен автоматически запрещать в `packages/simulation` gameplay `Math.random`, `Date.now`/`performance.now` и framework imports, где это практически возможно.
 
 ## 26. Shared Local / Remote Match Runtime — APPROVED
 
@@ -2710,249 +2781,128 @@ ADR-009 развивает ADR-006, а не заменяет его.
 Technical Vision package structure должна быть обновлена добавлением `packages/match-adapter` и явным описанием этой bridge responsibility.
 
 
+### 26.19 Foundation hardening invariants — RECONCILED FROM #53
+
+Shared MatchRuntime закрывает foundation divergence до новых gameplay commands:
+
+- drains runtime events каждый tick;
+- Remote/Local имеют одинаковые rejection/failure semantics;
+- trusted actor identity доходит до tick-boundary validation;
+- control loss между enqueue/apply может инвалидировать command;
+- shells не владеют отдельными gameplay validators;
+- one snapshot per tick строится до recipient projections.
+
+Required regression:
+
+```text
+enqueue MOVE while controlled
+→ release Controller before apply
+→ rejected at tick boundary
+```
+
+Room lock/rate limit/reconnect остаются Remote shell concerns.
+
 ## 27. Automated testing direction
 
-### Simulation
+### Simulation / scenario
 
-Нужны tests/scenarios для:
+Покрыть ResourceNode/gather/depletion, BUILD atomicity, construction/occupancy, deterministic A*/budget/replan/breach planning, Team/Health/combat, generic Objective, Soldier behavior, Tower/garrison/ejection, PvE/STALLED, wave/WAVE_CLEARED/DEFEAT и repeatability.
 
-- ResourceNode depletion;
-- Worker gather → carry → deposit;
-- Worker IDLE after depletion;
-- BUILD validation;
-- resource spending;
-- construction pause/resume;
-- footprint occupancy;
-- deterministic A*;
-- path invalidation/replan;
-- Wall blocking;
-- Health/damage/death;
-- hostility;
-- Soldier aggro/chase;
-- target stickiness;
-- explicit MOVE overrides combat;
-- Tower automatic attack;
-- Tower profile change after garrison;
-- garrison/ungarrison;
-- Tower destruction ejection;
-- enemy objective pathing;
-- enemy breaks blocked path;
-- wave lifecycle;
-- WAVE_CLEARED;
-- Sacred Site destruction → DEFEAT;
-- repeatability.
+### MatchRuntime / Local-Remote parity
 
-### Server integration
+- same setup/commands/ticks → equivalent gameplay snapshot;
+- same invalid command → same machine-readable rejection;
+- runtime drains events every tick;
+- remote simulation rejection не теряется;
+- enqueue → Controller loss before apply → rejection;
+- one MatchSnapshot per tick then recipient projections.
 
-Минимально:
+### Server integration / security
 
-- invalid ownership commands rejected;
-- insufficient Wood rejected;
-- invalid placement rejected;
-- economy authority;
-- combat authority;
-- wave progresses without client authority;
-- malformed gameplay messages do not crash room.
+- invalid ownership/control rejected;
+- malformed message does not crash room;
+- bounded commandId/entityIds/identifiers;
+- explicit room message-rate limit;
+- new joins locked after START, reserved reconnect still works;
+- economy/combat/wave remain authoritative.
+
+### Client/presentation
+
+- player color independent from transient Controller;
+- WORLD↔CONTAINED resets interpolation history;
+- one path owns per-frame mesh transforms;
+- map bounds from mapId + game-data.
 
 ### Browser E2E
 
-Нужен Local gameplay smoke и Remote authoritative gameplay smoke.
+Local + Remote full-flow smoke. Проверить `WAVE_CLEARED + RUNNING` и `DEFEAT + FINISHED`. Test timing можно ускорить при неизменных rules.
 
-Browser E2E не обязан ждать реальные 5–10 минут: test data/timing допускается ускорить,
-если gameplay rules остаются теми же.
+## 28. Definition of Done
 
-## 28. Definition of Done — draft
+Playable flow: start → gather Wood → build Wall/Tower → Soldier/garrison → warning → PvE wave → WAVE_CLEARED/RUNNING либо Sacred Site destroyed → FINISHED/DEFEAT.
 
-#002 может считаться завершённым, когда player-visible flow позволяет:
+Дополнительно:
 
-```text
-start
-→ gather Wood
-→ build Wall
-→ build Tower
-→ position Soldier / garrison
-→ receive wave warning
-→ fight PvE wave
-```
+- one shared MatchRuntime;
+- H1–H4 #53 закрыты regressions;
+- rate/size/join-after-start hardening;
+- generic Objective не hardcode Sacred Site;
+- deterministic bounded pathfinding;
+- physical construction and routing Walls;
+- Tower base + garrison profile;
+- player color не следует transient Controller;
+- one snapshot/tick + recipient full GameStateView;
+- representative Babylon Art Direction target normal/strategic zoom;
+- Foundation regressions + CI green.
 
-и получить:
-
-```text
-WAVE_CLEARED + Match still RUNNING
-```
-
-либо:
+## 29. Final implementation graph
 
 ```text
-Sacred Site destroyed
-→ FINISHED / DEFEAT
+G0  Architecture/docs finalization
+ ▼
+G1  Shared MatchRuntime / Foundation host hardening
+ ▼
+G2  Session / input hardening
+ ▼
+G3  Entity / Objective / Map spatial foundation
+ ▼
+G4  Navigation / MOVE / breach planning
+ ├──────────────┐
+ ▼              ▼
+G5 Economy      G6 Combat / Teams / Soldier
+ └──────┬───────┘
+        ▼
+G7 Construction / Wall / Tower
+ ├──────────────┐
+ ▼              ▼
+G8 Garrison     G9 PvE AI
+                 ▼
+               G10 Wave / Defeat
+G8 ──────────────┤
+                 ▼
+G11 Protocol / Replication final shape
+ ▼
+G12 Client gameplay/UI + presentation cleanup
+ ▼
+G13 Representative Art Direction target
+ ▼
+G14 Full Local/Remote E2E + acceptance
+ ▼
+#002 DONE
 ```
 
-При этом:
+G0 финализирует spec/ADR/TV. G1 закрывает shared host/event drain/tick validation. G2 — rate/size/room lock/full GameTransport. G3 — kinds/definitionId/generic Objective/Map/grid/occupancy. G4 — deterministic A*/budget/breach. G5 Economy и G6 Combat могут идти параллельно. G7 construction, затем G8 Garrison и G9 PvE параллельно; G10 после G9; G11 ждёт G8+G10; G12 UI/presentation; G13 representative visual target; G14 final E2E.
 
-- Local и Remote используют одну simulation;
-- remote multiplayer остаётся server-authoritative;
-- pathfinding deterministic;
-- Walls реально влияют на routing;
-- construction физическое и tick-based;
-- Tower работает без Soldier и меняет style при garrison;
-- Foundation regression green;
-- CI green;
-- premature optimization не вводится.
+Практический максимум — 2 Coding Agents одновременно.
 
-## 29. Предварительный implementation graph
+## 30. Architecture review conclusion
 
-Это **не финальная issue breakdown** до архитектурного review.
+Architecture pass завершён и reconciled с merged Art Direction #48/#49 и audit #53.
 
-```text
-G0  Spec #002 + architecture decisions / ADR
- │
-G1  Grid / fixed map / occupancy
- │
-G2  Deterministic A* + path-follow movement
- │
- ├───────────────┐
- ↓               ↓
-G3 Economy       G5 Combat foundation
-Worker/Gather    Health/Teams/Soldier
- │               │
- ↓               │
-G4 Construction  │
-Walls            │
- │               │
- └───────┬───────┘
-         ↓
-    G6 Tower + Garrison
-         │
-         ↓
-    G7 PvE AI
-         │
-         ↓
-    G8 Wave + Sacred Site defeat
-         │
-         ↓
-    G9 Gameplay browser E2E
-         │
-         ↓
-      #002 DONE
-```
+Сохраняются approved решения: continuous world + grid, deterministic navigation/breach planning, generic garrison, Owner/Controller/Team separation, tick-boundary validation, projection-oriented GameStateView, shared MatchRuntime, `@web-rts/match-adapter`, declarative game-data.
 
-После G2 Economy и Combat foundation потенциально могут идти параллельно,
-если архитектурный review подтвердит отсутствие конфликтующего shared surface.
+Дополнительно зафиксированы generic Objective vs Sacred Site identity, stable player-color semantics, event drain/parity, rate+size limits, room lock, full GameTransport session boundary, one MatchSnapshot/tick + full recipient GameStateView, bounded pathfinding work и representative Babylon target.
 
-## 30. Обязательный следующий architecture review
+До merge PR #52 implementation не запускается. После merge создаются отдельные implementation issues G1–G14; каждый проходит Task Chat → Coding Agent → PR → independent review → user manual merge.
 
-Общий tracking issue #50 остаётся **DRAFT** до завершения всего review.
-
-### Уже одобрено
-
-- [x] continuous world + discrete navigation/build grid;
-- [x] game-wide spatial scale: 1 cell = 1 simulation world unit для #002;
-- [x] half-open grid-derived map bounds;
-- [x] declarative MapDefinition в game-data, runtime spatial logic в simulation;
-- [x] generic solid footprint occupancy;
-- [x] units не являются A* blockers в #002;
-- [x] BUILD запрещён поверх текущей unit cell;
-- [x] Construction Site блокирует клетки с tick принятия BUILD;
-- [x] occupancy/navigation обновляются до movement;
-- [x] MOVE остаётся world-space intent;
-- [x] intermediate cell-center waypoints + exact final MOVE target;
-- [x] blocked direct MOVE target отклоняется;
-- [x] navigation поддерживает approach goal sets;
-- [x] deterministic 4-neighbor A* + Manhattan + stable tie-breaking;
-- [x] lazy replan при invalid next waypoint;
-- [x] continuous movement остаётся отдельным нижним слоем;
-- [x] presentation не владеет отдельным hardcoded gameplay map size;
-- [x] normal A* имеет приоритет перед breach planning;
-- [x] breach-aware route минимизирует `(breachCount, pathLength, deterministicTieBreak)`;
-- [x] breach считается по solid occupant entity, а не по footprint cells;
-- [x] blocker target — первый breachable entity на выбранном route;
-- [x] blocker attack использует обычные approach goal cells;
-- [x] blocker target stickiness сохраняется до invalidation/destruction;
-- [x] после destruction objective path вычисляется заново;
-- [x] enemies могут независимо focus один blocker;
-- [x] impossible route даёт STALLED, без teleport/non-breachable destruction;
-- [x] retry после полного failure привязан к topology revision;
-- [x] map invariant требует baseline spawn→Sacred Site route без player fortifications;
-- [x] garrison моделируется generic `GarrisonHost` + authoritative occupant-side `ContainedIn` relation;
-- [x] occupants derived from `ContainedIn`, без дублируемой mutable relation;
-- [x] contained entity остаётся living, но не имеет `Position`;
-- [x] Owner/Controller/Health сохраняются при garrison;
-- [x] GARRISON — task с физическим approach и повторной validation, не teleport;
-- [x] UNGARRISON выбирает deterministic valid exit, при отсутствии exit отклоняется;
-- [x] host destruction сначала снимает occupancy и deterministic eject'ит occupant;
-- [x] contained occupant не является отдельной combat target в #002;
-- [x] Tower combat profile derived data-driven из host + occupant capability;
-- [x] snapshot/replication обязаны поддержать living entity без Position;
-- [x] Owner / Controller / Team — независимые concepts;
-- [x] Team хранится entity-level, Player→Team assignment — match-level;
-- [x] hostility не определяется через разные `teamId`;
-- [x] relationship resolver возвращает FRIENDLY / NEUTRAL / HOSTILE;
-- [x] relationship policy является match-level и симметрична в #002;
-- [x] entities без Team считаются neutral;
-- [x] combat использует hostility отдельно от targetability/destructibility;
-- [x] Sacred Site имеет shared player Team без Owner/Controller;
-- [x] PvE имеет отдельную Team без Owner/Controller;
-- [x] disconnect/control transfer/garrison не меняют Team автоматически;
-- [x] protocol/schema/session validation отделены от gameplay semantic validation;
-- [x] gameplay validation выполняется на simulation tick boundary;
-- [x] trusted PlayerId выводится host'ом и не приходит в client payload;
-- [x] public command set #002: MOVE / GATHER / BUILD / GARRISON / UNGARRISON;
-- [x] MOVE world-space, BUILD grid-anchored, interactions ссылаются на entity IDs;
-- [x] simulation command queue FIFO; clientSequence не задаёт gameplay ordering;
-- [x] COMMAND_REJECTED отделён от позднего ACTION_FAILED;
-- [x] BUILD application atomic относительно resources/entity/occupancy/task;
-- [x] GATHER/GARRISON поддерживают повторную validation на момент interaction;
-- [x] schemas strict и bounded; client отправляет только intent;
-- [x] failure reasons machine-readable;
-- [x] Local/Remote должны сходиться в shared gameplay command-validation path;
-- [x] GameStateView является projection, а не serialized World;
-- [x] #002 использует full snapshots, без premature delta replication;
-- [x] static entity semantics идут через definitionId + game-data;
-- [x] entity view использует broad kind + capability/composition state;
-- [x] location discriminated: WORLD | CONTAINED;
-- [x] living entity без Position остаётся в snapshot/view;
-- [x] recipient получает authoritative relationToLocal;
-- [x] Health передаётся current/max, construction — normalized progress, ResourceNode — remaining;
-- [x] garrison relation не дублируется Tower.occupants[] как второй source;
-- [x] interpolation только WORLD→WORLD, location transition сбрасывает pose history;
-- [x] contained selected entity может оставаться selected без world mesh;
-- [x] PlayerSlotView получает teamId, economy отделена и recipient-filtered;
-- [x] wave/result — persistent top-level replicated state;
-- [x] mapId входит в GameStateView и убирает hardcoded presentation map extent;
-- [x] internal navigation/AI/task/component state не реплицируется;
-- [x] reconnect восстанавливается fresh snapshot без replay events;
-- [x] Local и Remote используют один shared MatchRuntime boundary;
-- [x] gameplay bootstrap один для обоих execution paths;
-- [x] transport/session shells остаются отдельными и владеют scheduler/lifecycle;
-- [x] MatchRuntime не имеет timers/wall-clock;
-- [x] trusted commands сходятся в один runtime ingress;
-- [x] protocol→internal command mapper имеет одну shared pure implementation;
-- [x] runtime events transport-neutral и адресуются recipientPlayerId;
-- [x] GameStateView projection shared для Local/Remote;
-- [x] runtime snapshot/events не являются wire DTO;
-- [x] production app shells не читают World/component stores напрямую;
-- [x] disconnect control release — trusted host operation, не GameCommand;
-- [x] startMatch становится частью GameTransport interface;
-- [x] gameplay finish определяется runtime, session shell отражает FINISHED;
-- [x] Local/Remote parity tests обязательны;
-- [x] Colyseus/WebWorker internals не абстрагируются в gameplay runtime;
-- [x] MatchRuntime и gameplay systems остаются в `@web-rts/simulation`;
-- [x] `@web-rts/game-data` остаётся declarative-only;
-- [x] `@web-rts/protocol` остаётся wire-contract-only и не зависит от simulation;
-- [x] добавляется один bridge package `@web-rts/match-adapter`;
-- [x] match-adapter зависит от protocol + simulation и владеет command/state/event mapping;
-- [x] отдельные packages для navigation/economy/combat/garrison/AI не создаются;
-- [x] production apps используют MatchRuntime facade и не читают World/component stores напрямую;
-- [x] game-server остаётся transport/session shell;
-- [x] web worker остаётся local transport/session shell;
-- [x] testkit/scenario-runner переиспользуют MatchRuntime, не создавая gameplay path;
-- [x] ADR-008 и ADR-009 должны формализовать approved architecture.
-
-Этот блок является основой будущего **ADR-008: Grid, occupancy and deterministic navigation**.
-
-### Ещё требуется review
-
-1. финальная dependency graph и безопасная параллельная issue breakdown.
-
-До завершения этих пунктов tracking issue #50 остаётся **DRAFT**, ADR-008 не считается финализированным, а implementation issues не запускаются.
+Issue #53 остаётся audit record; findings закрываются stage'ами #002, а не отдельной конкурирующей архитектурой.
