@@ -65,23 +65,34 @@ Static/non-breachable terrain не разрушается. Если нет norma
 
 ### Bounded pathfinding work
 
-Simulation имеет deterministic `maxPathQueriesPerTick`.
-
-Priority:
-
-1. queued player commands;
-2. required movement replans;
-3. autonomous AI planning.
-
-Stable FIFO/entity ordering обязателен. Group command не применяется частично из-за исчерпанного budget.
-
-Чтобы command не мог остаться pending навсегда, configuration обязана удовлетворять:
+Simulation использует deterministic lane budgets:
 
 ```text
-MAX_MOVE_ENTITY_IDS <= maxPathQueriesPerTick
+commandBudget
+activeTaskBudget
+aiBudget
+
+commandBudget + activeTaskBudget + aiBudget
+<= maxPathQueriesPerTick
 ```
 
-Protocol/input layer ограничивает `entityIds[]`, а startup/integration assertion проверяет согласованность command cap и simulation path budget. Если command помещается в полный fresh-tick budget, но не помещается в остаток текущего tick, он переносится целиком. Oversized request не разрешается превращать в forever-pending command.
+В #002 unused budget между lane не заимствуется.
+
+Каждый законченный A*/breach-search invocation расходует одну query своего lane.
+
+`commandBudget` обслуживает initial path/reachability work player commands. Обязательный invariant:
+
+```text
+MAX_MOVE_ENTITY_IDS <= commandBudget
+```
+
+Player command queue strict FIFO. Если head command помещается в fresh command budget, но не помещается в остаток текущего tick, command переносится целиком и later player commands в этом tick не обгоняют её.
+
+`activeTaskBudget` обслуживает replans и path transitions уже принятых tasks. Если replan нужен, а budget исчерпан, entity **не входит в blocked/unknown next cell** и ждёт следующий tick.
+
+`aiBudget` обслуживает autonomous PvE objective/breach/blocker planning. Player spam не может расходовать этот lane.
+
+Multi-stage AI planning может переносить следующую целую query между ticks, но partial A* open/closed state не сохраняется.
 
 ## Последствия
 
@@ -110,4 +121,6 @@ Flow fields/navmesh/RVO/resumable A* добавляются только пос�
 - no gameplay RNG in A*;
 - same topology/start/goal → same path;
 - pathfinding work per tick bounded deterministically;
-- maximum accepted group MOVE fits within a fresh tick path-query budget.
+- player command spam не может starvation active-task replans или PvE AI;
+- maximum accepted group MOVE fits within a fresh command lane budget;
+- entity, ожидающая replan budget, не проходит в invalidated blocked cell.
