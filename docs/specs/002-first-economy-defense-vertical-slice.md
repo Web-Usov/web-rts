@@ -1,6 +1,6 @@
 # Gameplay Spec #002 — First Economy & Defense Vertical Slice
 
-Статус: **DRAFT / architecture reconciled — implementation blocked until merge**  
+Статус: **ACCEPTED — implementation starts after merge to main**  
 Дата: **2026-10-04**  
 Проект: **Web RTS**  
 Tracking issue: **#50**
@@ -612,35 +612,85 @@ Navigation не наносит damage и не принимает combat decision
 Combat не знает, почему target был выбран.
 PvE AI не реализует собственную геометрию стен поверх navigation layer.
 
-### 8.8 Deterministic pathfinding work budget — RECONCILED
+### 8.8 Deterministic pathfinding work budget — APPROVED
 
-Technical Vision требует bounded pathfinding work per tick. Для #002 используется deterministic query budget без resumable A*:
+Pathfinding work per tick bounded и deterministic, но player command spam не должен замораживать active tasks или PvE.
 
-```text
-SimulationConfig.maxPathQueriesPerTick
-```
-
-Priority per tick:
+Для #002 общий cap делится на **три независимых lane**:
 
 ```text
-1. queued player commands
-2. already-moving entities requiring replan
-3. autonomous AI planning
+SimulationConfig.pathQueriesPerTick:
+  commandBudget
+  activeTaskBudget
+  aiBudget
+
+commandBudget + activeTaskBudget + aiBudget
+<= maxPathQueriesPerTick
 ```
 
-Внутри категории — stable FIFO/entityId order. Group command не применяется частично.
+В #002 **unused budget между lane не заимствуется**. Это сознательно менее эффективно, но даёт простой deterministic anti-starvation contract.
 
-Чтобы group MOVE не мог зависнуть навсегда из-за запроса, который больше полного tick budget, обязателен cross-config invariant:
+Каждый законченный A* / breach-search invocation расходует одну query соответствующего lane.
+
+#### Command lane
+
+`commandBudget` используется для initial path/reachability work, необходимой для применения player commands:
+
+- MOVE — одна query на каждую entity в `entityIds[]`;
+- GATHER — initial route к ResourceNode;
+- BUILD NEW — reachability/approach validation builder;
+- BUILD EXISTING — route к existing construction;
+- GARRISON — route к host approach cells.
+
+Обязательный cross-config invariant:
 
 ```text
-MAX_MOVE_ENTITY_IDS <= maxPathQueriesPerTick
+MAX_MOVE_ENTITY_IDS <= commandBudget
 ```
 
-Точное числовое значение определяется implementation/config, но relationship проверяется startup/config assertion и regression test. Protocol `entityIds[]` bounded; simulation также не должна принимать group MOVE, который нарушает допустимый per-command path cap.
+Protocol `entityIds[]` bounded; startup/config assertion и tests проверяют relationship.
 
-Если оставшегося budget текущего tick недостаточно, но command **может полностью поместиться в один fresh tick**, command остаётся pending до следующего tick. Autonomous entity при exhausted budget ждёт следующий tick.
+Player command queue остаётся strict FIFO. Если **head command** помещается в fresh `commandBudget`, но не помещается в оставшийся budget текущего tick:
 
-Resumable A*, накопление частично рассчитанного group path state между ticks, worker-thread pathfinding и flow fields вне #002.
+```text
+defer entire head command
+→ stop processing later player commands for this tick
+→ retry head on next tick
+```
+
+Command не применяется частично и не может быть обойдена более поздними commands.
+
+#### Active-task lane
+
+`activeTaskBudget` используется уже принятыми gameplay tasks:
+
+- movement replan после topology change;
+- Worker node → drop-off → node continuation;
+- construction/garrison task replan;
+- другие path transitions уже accepted task.
+
+Если entity нуждается в новом path, но `activeTaskBudget` исчерпан:
+
+> **entity не двигается в blocked/unknown next cell и ждёт следующий tick.**
+
+Valid existing path может продолжать movement без новой query.
+
+#### AI lane
+
+`aiBudget` используется autonomous PvE planning:
+
+- normal objective path;
+- breach-aware search;
+- path к выбранному blocker/attack approach;
+- retry после topology invalidation.
+
+Если `aiBudget` исчерпан, AI ждёт следующий tick; combat, уже не требующий нового path query, не обязан останавливаться.
+
+Multi-stage AI planning может перенести **следующую целую query** на следующий tick и хранить только high-level planner phase/target context. Partial A* open/closed state между ticks в #002 не сохраняется.
+
+Таким образом continuous player input не может выбрать budget, зарезервированный под active-task replans или PvE AI.
+
+Resumable A*, worker-thread pathfinding, flow fields и dynamic borrowing между budget lanes вне #002.
 
 ## 9. Economy
 
@@ -702,48 +752,96 @@ path to node
 
 Command queue / Shift-orders в #002 отсутствуют.
 
-Если доступного drop-off нет, Worker не может завершить deposit loop и не создаёт ресурсы из ничего.
+Если доступного owned drop-off нет **при применении GATHER**, command отклоняется с machine-readable reason `no_dropoff`.
+
+Если drop-off существовал при старте task, но позже уничтожен/стал unavailable:
+
+```text
+current gather loop
+→ ACTION_FAILED(no_dropoff)
+→ Worker IDLE
+```
+
+Wood, уже находящийся в carry Worker, сохраняется у Worker и не создаётся/не исчезает автоматически. После появления нового valid drop-off/новой gameplay возможности игрок должен выдать новую явную command; бесконечный auto-search отсутствует.
 
 ## 11. Construction
 
-Intent:
+Одна public command `BUILD` обслуживает создание новой стройки и продолжение уже существующей.
+
+Conceptual intent:
 
 ```text
-BUILD
-builderEntityId
-buildingType
-targetCell
+BUILD {
+  builderEntityId
+
+  target:
+    | NEW {
+        buildingTypeId
+        anchorCell { x, y }
+      }
+    | EXISTING {
+        constructionEntityId
+      }
+}
 ```
+
+### BUILD NEW
 
 Simulation валидирует минимум:
 
-- controller/ownership permission;
-- building type;
+- Controller permission;
+- builder capability;
+- building definition;
 - Wood availability;
-- footprint;
-- buildable cells;
-- occupancy;
-- возможность Worker добраться до build position/range.
+- footprint/buildability/occupancy;
+- valid build approach/reachability.
 
-После принятия BUILD:
+После принятия:
 
 ```text
 Wood списывается
 → создаётся building entity
 → state = UNDER_CONSTRUCTION
 → footprint сразу занимает grid
-→ Worker идёт к build range
+→ Worker получает construction task
 → progress растёт по simulation ticks
 → state = COMPLETED
 ```
 
-Если Worker получает другую задачу:
+Spend + entity creation + occupancy registration + task start атомарны относительно command application.
 
-- building остаётся;
+### BUILD EXISTING
+
+Используется, чтобы продолжить paused Construction Site.
+
+Simulation валидирует минимум:
+
+- Controller permission;
+- builder capability;
+- `constructionEntityId` существует;
+- target остаётся `UNDER_CONSTRUCTION`;
+- site доступен по #002 ownership/access policy;
+- site не имеет другого active builder;
+- Worker может добраться до valid build approach.
+
+Successful `BUILD EXISTING`:
+
+- **не списывает Wood повторно**;
+- не создаёт новую entity;
+- не меняет footprint;
+- сохраняет существующий progress;
+- назначает Worker construction task для этой site.
+
+В #002 одновременно одну Construction Site строит максимум **один active Worker**. Попытка второго Worker продолжить site, пока первый реально строит её, отклоняется с reason вроде `construction_busy`. Multi-builder acceleration вне #002.
+
+Если Worker получает MOVE/GATHER/другую несовместимую явную task:
+
+- construction остаётся;
 - progress сохраняется;
+- active builder освобождается;
 - construction pauses.
 
-Модель не должна навечно связывать construction с одним Worker: другой допустимый Worker должен архитектурно иметь возможность продолжить стройку.
+Позже тот же или другой допустимый Worker может получить `BUILD EXISTING` и продолжить site.
 
 Недостроенное building имеет Health и может быть уничтожено.
 
@@ -886,7 +984,7 @@ Garrisoned unit остаётся living gameplay entity, но перестаёт
 
 > living entity больше не обязана иметь Position; отсутствие Position не означает destruction/absence entity.
 
-Replication/view shape для non-spatial living entities определяется отдельным architecture pass.
+Утверждённая representation находится в §23: living entity остаётся в GameStateView и использует `location = CONTAINED { containerEntityId, slotIndex }` вместо WORLD position.
 
 ### 15.3 GARRISON is a task, not teleport
 
@@ -1032,20 +1130,22 @@ Effective combat profile должен быть derived из host definition + cu
 
 ### 15.10 Presentation / replication consequence
 
-Client должен иметь возможность узнать:
+Client видит approved §23 representation:
 
 ```text
 Soldier:
-  containedIn = Tower #N
-  position = null
+  location = CONTAINED {
+    containerEntityId = Tower #N
+    slotIndex = 0
+  }
 
 Tower:
-  occupant relation visible/derivable
+  occupant relation derived from contained entities
 ```
 
-Presentation не рисует отдельный world mesh entity без Position, но entity остаётся доступной для UI/state.
+Presentation не рисует отдельный world mesh entity с `location = CONTAINED`, но entity остаётся доступной для UI/state/selection.
 
-Конкретная protocol/view representation определяется отдельным replication architecture pass.
+Dynamic `Tower.occupants[]` не вводится как второй authoritative/view source.
 
 ### 15.11 Lifecycle invariants
 
@@ -1217,8 +1317,15 @@ Friendly fire в #002 отсутствует.
 Owner      = null
 Controller = null
 Team       = player/shared Team
-Objective  = SACRED_SITE
+
+Objective:
+  type     = PROTECT
+  entityId = Sacred Site entity
+  teamId   = player/shared Team
+  required = true
 ```
+
+`Sacred Site` остаётся concrete entity/definition identity; generic Objective role — `PROTECT`, согласно §21.
 
 Это сохраняет objective как team-level protected target и не привязывает его к конкретному player.
 
@@ -1567,14 +1674,22 @@ Client не передаёт resource position/type/remaining amount как auth
 
 ```text
 builderEntityId
-buildingTypeId
-anchorCell { x, y }
+
+target:
+  | NEW {
+      buildingTypeId
+      anchorCell { x, y }
+    }
+  | EXISTING {
+      constructionEntityId
+    }
 ```
 
-BUILD использует grid anchor, потому что placement/grid occupancy являются gameplay contract.
+`NEW` использует grid anchor, потому что placement/grid occupancy являются gameplay contract. `buildingTypeId` — bounded data identifier, а не обязательный protocol enum для каждого будущего building definition.
 
-`buildingTypeId` — bounded data identifier, а не обязательный protocol enum для каждого будущего building definition.
-Simulation валидирует, существует ли definition и разрешён ли он в текущем game mode/slice.
+`EXISTING` адресует уже созданную `UNDER_CONSTRUCTION` entity и позволяет тому же или другому допустимому Worker продолжить paused construction без повторной оплаты.
+
+Simulation валидирует definition/access/state/reachability в зависимости от variant.
 
 #### GARRISON
 
@@ -1662,9 +1777,11 @@ ACTION_FAILED
 
 Нормальное завершение lifecycle не считается failure. Например истощение ResourceNode → final deposit → Worker IDLE.
 
-### 22.7 BUILD atomicity
+### 22.7 BUILD lifecycle and atomicity
 
-BUILD применяется только если на tick одновременно валидны минимум:
+#### NEW
+
+`BUILD NEW` применяется только если на tick одновременно валидны минимум:
 
 - Controller permission;
 - builder capability;
@@ -1684,6 +1801,19 @@ spend Wood
 ```
 
 После этого поздняя невозможность продолжить construction не возвращает ресурсы и не отменяет созданный site.
+
+#### EXISTING
+
+`BUILD EXISTING` валидирует existing Construction Site и builder, но:
+
+- не списывает Wood;
+- не создаёт entity;
+- не регистрирует footprint повторно;
+- не сбрасывает progress.
+
+Successful application только назначает/возобновляет construction task для existing site.
+
+Если site уничтожена/завершена/занята другим active builder до command application, command отклоняется соответствующей machine-readable reason.
 
 ### 22.8 Two-phase task validation
 
@@ -1757,7 +1887,11 @@ derive trusted PlayerId     derive trusted PlayerId
              systems/tasks
 ```
 
-Точное shared host/runtime размещение определяется отдельным Local/Remote architecture pass.
+Shared placement уже утверждён §26 / ADR-009:
+
+- `MatchRuntime` живёт в `@web-rts/simulation`;
+- protocol↔simulation command/state/event mapping живёт в `@web-rts/match-adapter`;
+- Remote Colyseus Room и Local WebWorker остаются thin session/scheduler shells.
 
 Breaking wire changes требуют `PROTOCOL_VERSION` bump по существующему contract.
 
@@ -2035,6 +2169,15 @@ Replication policy определяет, какие allied/opponent economies р
 
 ### 23.16 Wave is persistent replicated state
 
+GameStateView top-level содержит effective runtime tick rate:
+
+```text
+tick
+tickRateHz
+```
+
+`tickRateHz` immutable для текущего match runtime и не должен hardcode'иться client'ом.
+
 Wave lifecycle реплицируется top-level persistent state:
 
 ```text
@@ -2046,6 +2189,12 @@ wave {
 ```
 
 Simulation source of truth — ticks, а не wall-clock seconds.
+
+UI рассчитывает countdown:
+
+```text
+max(0, phaseEndsAtTick - tick) / tickRateHz
+```
 
 `WAVE_CLEARED` является state, а не единственным one-shot event.
 
@@ -2403,7 +2552,7 @@ Mapper:
 
 Remote и Local не содержат два независимых `switch(command.type)`.
 
-Физический package/module mapper определяется package-boundary architecture pass.
+Mapper находится в утверждённом `@web-rts/match-adapter` согласно §26.18 / ADR-009.
 
 ### 26.9 Runtime events carry recipient identity
 
@@ -2825,7 +2974,7 @@ Room lock/rate limit/reconnect остаются Remote shell concerns.
 
 ### Simulation / scenario
 
-Покрыть ResourceNode/gather/depletion, BUILD atomicity, construction/occupancy, deterministic A*/budget/replan/breach planning, включая assertion `MAX_MOVE_ENTITY_IDS <= maxPathQueriesPerTick` и отсутствие forever-pending oversized group MOVE, Team/Health/combat, generic Objective, Soldier behavior, Tower/garrison/ejection, PvE/STALLED, wave/WAVE_CLEARED/DEFEAT и repeatability.
+Покрыть ResourceNode/gather/depletion/no-dropoff failure, BUILD NEW/EXISTING atomicity/resume/busy-site, construction/occupancy, deterministic A*/lane budgets/replan/breach planning, включая `MAX_MOVE_ENTITY_IDS <= commandBudget`, отсутствие forever-pending oversized group MOVE, отсутствие AI/replan starvation при player spam и stop-before-blocked-cell при exhausted active-task budget, Team/Health/combat, generic Objective, Soldier behavior, Tower/garrison/ejection, PvE/STALLED, wave/WAVE_CLEARED/DEFEAT и repeatability.
 
 ### MatchRuntime / Local-Remote parity
 
@@ -2850,7 +2999,8 @@ Room lock/rate limit/reconnect остаются Remote shell concerns.
 - player color independent from transient Controller;
 - WORLD↔CONTAINED resets interpolation history;
 - one path owns per-frame mesh transforms;
-- map bounds from mapId + game-data.
+- map bounds from mapId + game-data;
+- wave countdown derives seconds from replicated `tickRateHz`, без hardcoded 10 Hz.
 
 ### Browser E2E
 
@@ -2910,9 +3060,11 @@ G14 Full Local/Remote E2E + acceptance
 #002 DONE
 ```
 
-G0 финализирует spec/ADR/TV. G1 закрывает shared host/event drain/tick validation. G2 — rate/size/room lock/full GameTransport и bounded `entityIds[]`. G3 — kinds/definitionId/generic Objective/Map/grid/occupancy. G4 — deterministic A*/budget/breach + assertion, что max group MOVE помещается в fresh tick budget. G5 Economy и G6 Combat могут идти параллельно. G7 construction, затем G8 Garrison и G9 PvE параллельно; G10 после G9; G11 ждёт G8+G10; G12 UI/presentation; G13 representative visual target; G14 final E2E.
+G0 финализирует spec/ADR/TV. G1 закрывает shared host/event drain/tick validation. G2 — rate/size/room lock/full GameTransport и bounded `entityIds[]`. G3 — kinds/definitionId/generic Objective/Map/grid/occupancy. G4 — deterministic A*/separate command-activeTask-AI budgets/breach + starvation regressions. G5 Economy и G6 Combat могут идти параллельно. G7 construction, затем G8 Garrison и G9 PvE параллельно; G10 после G9; G11 ждёт G8+G10; G12 UI/presentation; G13 representative visual target; G14 final E2E.
 
 Практический максимум — 2 Coding Agents одновременно.
+
+Каждый implementation issue G1–G14 обязан содержать **Required reading** с конкретными разделами этой Spec и ADR, а не только общей ссылкой на почти 3000-строчный документ. Issue должен повторять локальные acceptance criteria, но не дублировать/переопределять архитектурный contract.
 
 ## 30. Architecture review conclusion
 
@@ -2920,7 +3072,7 @@ Architecture pass завершён и reconciled с merged Art Direction #48/#49
 
 Сохраняются approved решения: continuous world + grid, deterministic navigation/breach planning, generic garrison, Owner/Controller/Team separation, tick-boundary validation, projection-oriented GameStateView, shared MatchRuntime, `@web-rts/match-adapter`, declarative game-data.
 
-Дополнительно зафиксированы generic Objective vs Sacred Site identity, stable player-color semantics, event drain/parity, rate+size limits, room lock, full GameTransport session boundary, one MatchSnapshot/tick + full recipient GameStateView, bounded pathfinding work и representative Babylon target.
+Дополнительно зафиксированы generic Objective vs Sacred Site identity, stable player-color semantics, event drain/parity, rate+size limits, room lock, full GameTransport session boundary, one MatchSnapshot/tick + full recipient GameStateView, starvation-free separated pathfinding budgets, resumable Construction Site через BUILD EXISTING, replicated tickRateHz и representative Babylon target.
 
 До merge PR #52 implementation не запускается. После merge создаются отдельные implementation issues G1–G14; каждый проходит Task Chat → Coding Agent → PR → independent review → user manual merge.
 
