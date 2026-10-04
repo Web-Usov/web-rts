@@ -47,14 +47,53 @@ GitHub Issues остаются источником implementation scope и acce
 
 ## Gameplay Spec #002 checkpoint
 
-Следующий milestone после Foundation — **Gameplay Spec #002: First Economy & Defense Vertical Slice** (#50).
+Текущий milestone — **Gameplay Spec #002: First Economy & Defense Vertical Slice** (#50).
 
-Architecture review завершён и reconciled с merged Art Direction #48/#49 и technical audit #53. Архитектурные решения формализованы в ADR-008 (grid/occupancy/navigation) и ADR-009 (shared MatchRuntime + match-adapter).
+Architecture/spec phase завершена: Art Direction #48/#49 и Gameplay Spec #002/ADR changes из PR #52 уже merged в `main`. Статус #002 — **ACCEPTED / implementation in progress**.
 
-До merge spec/ADR PR implementation не запускается. После merge работа режется на G1–G14: foundation host/session hardening → spatial/navigation → economy/combat → construction/garrison/PvE/wave → protocol/client → representative Art Direction target → full Local/Remote acceptance.
+GitHub epic #50 является актуальным tracker implementation decomposition. Архитектурные G4 и G12 остаются логическими stages в Spec, но фактическая реализация разделена на небольшие reviewable PR:
 
-Audit #53 остаётся review record; его H1–H4 и релевантные M1–M6 закрываются stage'ами #002, а не отдельной конкурирующей архитектурой.
+```text
+#54 G1 Shared MatchRuntime / host hardening
+ ├─ #55 G2 Session/input hardening
+ └─ #56 G3 Entity/Objective/Map spatial foundation
+       ↓
+     #57 G4a Navigation / MOVE core
+       ├─ #68 G4b Fair scheduling / path budgets
+       └─ #69 G4c Breach-aware planner
+            ↓
+       #58 G5 Economy  ||  #59 G6 Combat
+            ↓
+          #60 G7 Construction
+          ├─ #61 G8 Garrison
+          └─ #62 G9 PvE AI (также требует #69)
+               ↓
+             #63 G10 Wave / Defeat
+               ↓
+             #64 G11 Protocol / Replication
+               ↓
+             #65 G12a Presentation cleanup
+               ↓
+             #70 G12b Interaction controls
+               ↓
+             #71 G12c HUD / state feedback
+               ↓
+             #66 G13 Art Direction target
+               ↓
+             #67 G14 Full Local/Remote E2E
+```
 
+После #54 задачи #55 и #56 могут идти параллельно. После #57 — #68 и #69. После #68 — #58 и #59. Практический максимум остаётся **2 Coding Agents одновременно**.
+
+Критические границы decomposition:
+
+- G1 создаёт shared MatchRuntime и только **структуру** per-player queues;
+- G2 добавляет ingress caps, `maxPendingCommandsPerPlayer`, `queue_full`, rate/size hardening и room lock;
+- G4b добавляет deterministic fair scheduling и path budgets;
+- LOBBY / join / reconnect / room lock остаются shell-owned согласно ADR-009; общий session manager не вводится;
+- Local/Remote parity касается gameplay bootstrap/execution/projection и observable `START → RUNNING → FINISHED` semantics.
+
+Audit #53 остаётся review/verification record. Его исходный текст фиксирует состояние Foundation на момент аудита; текущий implementation contract задают accepted Spec/ADR и child issues #54–#71.
 
 ## Устойчивые архитектурные опорные точки
 
