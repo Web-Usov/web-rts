@@ -1,7 +1,8 @@
 # ADR-003: Colyseus multiplayer layer
 
 Статус: **Accepted**  
-Дата: **2026-09-24**
+Дата: **2026-09-24**  
+Уточнение integration boundary: **2026-10-04**
 
 ## Контекст
 
@@ -17,23 +18,28 @@ Colyseus отвечает за:
 - WebSocket transport;
 - player sessions;
 - reconnect;
-- room lifecycle;
-- первую реализацию state replication;
+- room lifecycle / room lock;
+- transport-level rate/phase checks;
+- delivery of protocol state/event messages;
 - возможный будущий lobby/matchmaking layer.
 
-Colyseus **не является simulation engine** и не содержит самостоятельных игровых правил.
+Colyseus **не является simulation engine** и не содержит самостоятельных gameplay rules.
+
+Актуальная integration boundary после ADR-009:
 
 ```text
-Colyseus Room
-   ↓ commands / session lifecycle
-SimulationHost
-   ↓
-Simulation World
-   ↓
-ReplicationAdapter
-   ↓
-Colyseus Network State
+Colyseus Room shell
+   ↓ validated wire command + trusted session actor
+@web-rts/match-adapter
+   ↓ internal SimulationCommand
+MatchRuntime (@web-rts/simulation)
+   ↓ MatchSnapshot / RuntimeEvent
+@web-rts/match-adapter
+   ↓ recipient GameStateView / GameEvent
+Colyseus transport
 ```
+
+Current baseline использует full `GameStateView` messages. Colyseus Schema/delta synchronization может быть добавлена позже как measured transport optimization и не является canonical world model.
 
 ## Последствия
 
@@ -41,13 +47,13 @@ Colyseus Network State
 
 - меньше собственного networking boilerplate;
 - готовая room/session abstraction;
-- reconnect и state synchronization доступны на foundation-этапе;
+- reconnect и room/session primitives доступны на foundation-этапе;
 - хорошо сочетается с TypeScript/Node.js.
 
 Минусы:
 
 - появляется framework dependency в server/network layer;
-- Schema replication может потребовать замены/оптимизации при большом числе entities;
+- full-view replication может потребовать delta/Schema/binary optimization при большом числе entities;
 - часть поведения reconnect/replication зависит от API Colyseus.
 
 ## Альтернативы
@@ -69,4 +75,6 @@ Colyseus Network State
 - Colyseus types не проникают в `packages/simulation`;
 - Room не является world state;
 - замена replication strategy не должна требовать переписывания gameplay rules;
+- Room/session shell не выполняет gameplay semantic validation;
+- shared MatchRuntime + match-adapter boundary определяется ADR-009;
 - public game commands описываются в `packages/protocol`, а не неявно внутри Room handlers.
