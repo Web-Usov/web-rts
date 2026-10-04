@@ -790,33 +790,242 @@ single target
 
 Точные значения находятся в game-data и не являются частью архитектурного контракта.
 
-## 15. Garrison — draft
+## 15. Garrison — APPROVED
 
-Добавляются intents:
+Статус архитектурного решения: **APPROVED 2026-10-04**.
+
+Garrison моделируется как generic containment relation между gameplay entities, а не как Tower/Soldier special-case.
+
+### 15.1 Authoritative relation
+
+Container entity имеет host capability/component:
 
 ```text
-GARRISON
-UNGARRISON
+GarrisonHost
+└─ capacity
 ```
 
-Soldier должен физически добраться до Tower до входа.
+Occupant entity имеет authoritative relation:
 
-После garrison:
+```text
+ContainedIn
+├─ containerEntityId
+└─ slotIndex
+```
 
-- Soldier остаётся gameplay entity;
-- Owner/Controller сохраняются;
-- Soldier не pathfind'ится и не атакует как отдельный world unit;
-- Tower получает occupant relation;
-- combat profile Tower меняется согласно occupant capability.
+Список occupants host является derived query/view из `ContainedIn`; две независимые mutable копии relation не хранятся.
 
-После UNGARRISON Soldier появляется на deterministic valid cell рядом с Tower.
+При capacity > 1 свободный slot выбирается deterministic: lowest free `slotIndex`.
 
-Если Tower уничтожена, occupant deterministic eject'ится на ближайшую допустимую cell.
+### 15.2 Spatial presence vs containment
 
-В #002 Soldier при уничтожении Tower не погибает автоматически и не получает дополнительный damage.
+Ключевой invariant:
 
-> **Architecture review:** representation должна быть generic и не превращаться в hardcoded
-> `if Tower + Soldier`. Нужно определить relation/component и capability/data contract.
+```text
+ContainedIn(entity) → entity MUST NOT have Position
+Position(entity)    → entity MUST NOT have ContainedIn
+```
+
+Garrisoned unit остаётся living gameplay entity, но перестаёт быть отдельной spatial entity.
+
+При входе снимаются spatial/runtime transient state, минимум:
+
+- `Position`;
+- Movement/NavPath;
+- CombatTarget.
+
+Сохраняются:
+
+- entity id;
+- Owner;
+- Controller;
+- Health;
+- остальные не-spatial gameplay data.
+
+Это означает evolution Foundation snapshot contract:
+
+> living entity больше не обязана иметь Position; отсутствие Position не означает destruction/absence entity.
+
+Replication/view shape для non-spatial living entities определяется отдельным architecture pass.
+
+### 15.3 GARRISON is a task, not teleport
+
+Intent:
+
+```text
+GARRISON {
+  unitEntityId
+  containerEntityId
+}
+```
+
+После initial validation unit получает garrison task и физически движется к valid approach cell container.
+
+При достижении interaction range выполняется повторная validation, потому что за время движения:
+
+- host мог быть уничтожен;
+- slot мог быть занят;
+- control/ownership/access policy могла измениться;
+- host мог стать unavailable.
+
+Только после successful entry создаётся `ContainedIn` и снимается spatial state.
+
+Explicit player MOVE до actual entry отменяет pending garrison task.
+
+### 15.4 Access / permissions
+
+Для #002:
+
+- issuer должен контролировать unit;
+- container должен существовать и иметь GarrisonHost;
+- Tower должна быть `COMPLETED`;
+- должен существовать свободный slot;
+- occupant должен удовлетворять allowed capability/tag contract;
+- Soldier и Tower в #002 принадлежат одному player.
+
+Same-owner rule #002 не является фундаментальным ограничением containment model.
+Future Coop может разрешить allied garrison через access policy без изменения relation representation.
+
+### 15.5 Commands while contained
+
+Owner и Controller сохраняются.
+
+Controller означает право отдавать команды entity, но не означает, что любая command допустима в любом entity state.
+
+Для contained Soldier:
+
+```text
+MOVE → rejected (entity_not_spatial или эквивалентная reason)
+UNGARRISON → allowed при valid permission/state
+```
+
+### 15.6 UNGARRISON
+
+Intent:
+
+```text
+UNGARRISON {
+  unitEntityId
+}
+```
+
+Container определяется через `ContainedIn`; container id не обязан дублироваться в payload.
+
+Flow:
+
+```text
+validate controller/state
+→ resolve container
+→ find deterministic valid exit cell
+→ remove ContainedIn
+→ restore Position at cell center
+```
+
+Обычный UNGARRISON использует valid cells вокруг host footprint.
+
+При нескольких допустимых cells выбирается deterministic stable cell order.
+
+Если свободного exit нет:
+
+```text
+UNGARRISON rejected: no_exit
+```
+
+Unit остаётся contained; teleport через blocked topology запрещён.
+
+### 15.7 Host destruction / forced ejection
+
+При destruction Tower occupants должны быть разрешены до окончательного удаления host relation.
+
+Для #002 sequence:
+
+```text
+capture occupants + former footprint
+→ remove host solid occupancy
+→ deterministic forced ejection
+→ destroy host entity
+```
+
+Для 1x1 Tower бывшая anchor cell является первым естественным fallback после снятия occupancy; далее допускается deterministic nearby search.
+
+В #002 forced ejection:
+
+- не наносит Soldier дополнительный damage;
+- не убивает occupant;
+- удаляет `ContainedIn`;
+- восстанавливает `Position`.
+
+### 15.8 Combat semantics for contained units
+
+Garrisoned Soldier не является отдельной targetable spatial combat entity.
+
+Enemy атакует Tower, а не occupant внутри.
+
+Damage Tower не прокидывается occupant в #002.
+
+После destruction Soldier eject'ится с сохранённым current Health.
+
+### 15.9 Host combat profile from occupant capability
+
+Tower combat behavior не должен содержать core logic вида:
+
+```text
+if Tower && occupant is Soldier
+```
+
+Game-data/capability contract определяет interaction между host и occupant.
+
+Концептуально:
+
+```text
+Tower definition:
+  baseAttackProfile = tower_empty
+
+garrison mode:
+  occupant capability/tag = infantry
+  → effectiveAttackProfile = tower_infantry
+```
+
+Для #002 реально существуют только empty Tower и Tower с Soldier/infantry occupant, но mechanism generic.
+
+Effective combat profile должен быть derived из host definition + current occupants, а не храниться как независимая authoritative mutable копия, пока profiling не докажет необходимость cache.
+
+### 15.10 Presentation / replication consequence
+
+Client должен иметь возможность узнать:
+
+```text
+Soldier:
+  containedIn = Tower #N
+  position = null
+
+Tower:
+  occupant relation visible/derivable
+```
+
+Presentation не рисует отдельный world mesh entity без Position, но entity остаётся доступной для UI/state.
+
+Конкретная protocol/view representation определяется отдельным replication architecture pass.
+
+### 15.11 Lifecycle invariants
+
+Минимальные scenario-testable invariants:
+
+```text
+ContainedIn → no Position
+Position → no ContainedIn
+
+ContainedIn.containerEntityId
+→ existing living entity
+→ host has GarrisonHost
+
+slotIndex
+→ within host capacity
+→ unique among occupants of same host
+```
+
+Host destruction не может оставить dangling `ContainedIn` relation.
+
 
 ## 16. Teams / hostility — draft
 
@@ -1306,18 +1515,27 @@ Walls            │
 - [x] enemies могут независимо focus один blocker;
 - [x] impossible route даёт STALLED, без teleport/non-breachable destruction;
 - [x] retry после полного failure привязан к topology revision;
-- [x] map invariant требует baseline spawn→Sacred Site route без player fortifications.
+- [x] map invariant требует baseline spawn→Sacred Site route без player fortifications;
+- [x] garrison моделируется generic `GarrisonHost` + authoritative occupant-side `ContainedIn` relation;
+- [x] occupants derived from `ContainedIn`, без дублируемой mutable relation;
+- [x] contained entity остаётся living, но не имеет `Position`;
+- [x] Owner/Controller/Health сохраняются при garrison;
+- [x] GARRISON — task с физическим approach и повторной validation, не teleport;
+- [x] UNGARRISON выбирает deterministic valid exit, при отсутствии exit отклоняется;
+- [x] host destruction сначала снимает occupancy и deterministic eject'ит occupant;
+- [x] contained occupant не является отдельной combat target в #002;
+- [x] Tower combat profile derived data-driven из host + occupant capability;
+- [x] snapshot/replication обязаны поддержать living entity без Position.
 
 Этот блок является основой будущего **ADR-008: Grid, occupancy and deterministic navigation**.
 
 ### Ещё требуется review
 
-1. generic garrison representation;
-2. team/hostility representation;
-3. command schemas и runtime validation;
-4. replication/view contract;
-5. shared Local/Remote host abstractions;
-6. package boundaries после добавления gameplay systems;
-7. финальная dependency graph и безопасная параллельная issue breakdown.
+1. team/hostility representation;
+2. command schemas и runtime validation;
+3. replication/view contract;
+4. shared Local/Remote host abstractions;
+5. package boundaries после добавления gameplay systems;
+6. финальная dependency graph и безопасная параллельная issue breakdown.
 
 До завершения этих пунктов tracking issue #50 остаётся **DRAFT**, ADR-008 не считается финализированным, а implementation issues не запускаются.
