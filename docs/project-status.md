@@ -45,16 +45,16 @@ Coding Agent, получивший handoff, следует `AGENTS.md` и пра
 
 GitHub Issues остаются источником implementation scope и acceptance criteria. Этот список нужен только как быстрый navigation checkpoint.
 
-## Следующий gameplay milestone — DRAFT
+## Gameplay Spec #002 checkpoint
 
-Следующее продуктовое направление зафиксировано как draft, но **ещё не готово к implementation**:
+Следующий milestone после Foundation — **Gameplay Spec #002: First Economy & Defense Vertical Slice** (#50).
 
-- [Gameplay Spec #002 — First Economy & Defense Vertical Slice](./specs/002-first-economy-defense-vertical-slice.md);
-- tracking issue: [#50 — DRAFT Gameplay Vertical Slice #002](https://github.com/Web-Usov/web-rts/issues/50).
+Architecture review завершён и reconciled с merged Art Direction #48/#49 и technical audit #53. Архитектурные решения формализованы в ADR-008 (grid/occupancy/navigation) и ADR-009 (shared MatchRuntime + match-adapter).
 
-Draft фиксирует уже согласованные продуктовые решения: Wood gathering, Worker loop, стартовый Town Hall, physical construction, grid/occupancy, deterministic pathfinding, Wall, Soldier combat, hybrid automatic/garrison Tower, basic PvE AI, одну wave, `WAVE_CLEARED` и Sacred Site defeat.
+До merge spec/ADR PR implementation не запускается. После merge работа режется на G1–G14: foundation host/session hardening → spatial/navigation → economy/combat → construction/garrison/PvE/wave → protocol/client → representative Art Direction target → full Local/Remote acceptance.
 
-Перед созданием implementation issues обязателен отдельный architecture review. Минимум нужно закрыть grid/world semantics, blocker selection, generic garrison representation, team/hostility, protocol/replication contracts и безопасную dependency graph для параллельной разработки.
+Audit #53 остаётся review record; его H1–H4 и релевантные M1–M6 закрываются stage'ами #002, а не отдельной конкурирующей архитектурой.
+
 
 ## Устойчивые архитектурные опорные точки
 
