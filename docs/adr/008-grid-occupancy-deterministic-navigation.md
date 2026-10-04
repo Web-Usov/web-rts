@@ -63,11 +63,14 @@ AI выбирает первый breachable entity на route, подходит 
 
 Static/non-breachable terrain не разрушается. Если нет normal или breach route, enemy STALLED и retry делает после topology change.
 
-### Bounded pathfinding work
+### Bounded pathfinding work and fair command scheduling
 
-Simulation использует deterministic lane budgets:
+Simulation использует deterministic bounded scheduler:
 
 ```text
+maxPendingCommandsPerPlayer
+maxCommandsPerTick
+
 commandBudget
 activeTaskBudget
 aiBudget
@@ -76,23 +79,58 @@ commandBudget + activeTaskBudget + aiBudget
 <= maxPathQueriesPerTick
 ```
 
-В #002 unused budget между lane не заимствуется.
+В #002 unused path budget между lane не заимствуется.
 
-Каждый законченный A*/breach-search invocation расходует одну query своего lane.
+#### Command ingress / fairness
 
-`commandBudget` обслуживает initial path/reachability work player commands. Обязательный invariant:
+MatchRuntime хранит отдельную strict-FIFO queue на каждого player.
+
+Если queue достигла `maxPendingCommandsPerPlayer`, новая command не enqueue'ится и получает `COMMAND_REJECTED(queue_full)`.
+
+Remote transport rate limit дополняет, но не заменяет shared runtime queue cap.
+
+Между player queues используется deterministic round-robin по stable ascending `playerId` с persistent cursor.
+
+За round scheduler рассматривает максимум одну head command каждого player. Later command этого player не может обогнать head. Scheduler прекращает работу при `maxCommandsPerTick`, исчерпании schedulable `commandBudget` или отсутствии schedulable heads.
+
+Start cursor следующего tick сдвигается, чтобы scarce budget не давал постоянный приоритет одному player.
+
+Deterministic path-cost reservation:
+
+```text
+MOVE(entityIds[]) → entityIds.length
+GATHER            → 1
+BUILD NEW         → 1
+BUILD EXISTING    → 1
+GARRISON          → 1
+UNGARRISON        → 0
+```
+
+Reserved cost не возвращается в текущем tick при раннем semantic rejection.
+
+Обязательный invariant:
 
 ```text
 MAX_MOVE_ENTITY_IDS <= commandBudget
 ```
 
-Player command queue strict FIFO. Если head command помещается в fresh command budget, но не помещается в остаток текущего tick, command переносится целиком и later player commands в этом tick не обгоняют её.
+Если head одного player не помещается в остаток текущего command budget, она остаётся head; scheduler может обслужить других players, чьи head commands помещаются. Raw cross-player packet arrival order не является authoritative gameplay order.
 
-`activeTaskBudget` обслуживает replans и path transitions уже принятых tasks. Если replan нужен, а budget исчерпан, entity **не входит в blocked/unknown next cell** и ждёт следующий tick.
+#### Active-task lane
 
-`aiBudget` обслуживает autonomous PvE objective/breach/blocker planning. Player spam не может расходовать этот lane.
+`activeTaskBudget` обслуживает replans/path transitions уже accepted tasks.
 
-Multi-stage AI planning может переносить следующую целую query между ticks, но partial A* open/closed state не сохраняется.
+Requests сортируются по ascending `entityId`; максимум одна active-task path query на entity за tick.
+
+Если replan нужен, но budget недоступен, entity не входит в blocked/unknown cell и ждёт следующий tick.
+
+#### AI lane
+
+`aiBudget` обслуживает autonomous PvE objective/breach/blocker planning.
+
+AI entities сортируются по ascending `entityId`; максимум одна expensive path query на AI entity за tick.
+
+Multi-stage planner хранит только deterministic high-level phase; следующая query участвует в обычном entityId-order следующего tick. Partial A* state между ticks не сохраняется.
 
 ## Последствия
 
@@ -122,5 +160,9 @@ Flow fields/navmesh/RVO/resumable A* добавляются только пос�
 - same topology/start/goal → same path;
 - pathfinding work per tick bounded deterministically;
 - player command spam не может starvation active-task replans или PvE AI;
+- per-player pending command memory bounded;
+- один player не может неограниченно задерживать command ingress остальных;
+- cross-player command ordering deterministic и fair;
 - maximum accepted group MOVE fits within a fresh command lane budget;
+- active-task/AI requests имеют stable ascending entityId order и max one query/entity/tick;
 - entity, ожидающая replan budget, не проходит в invalidated blocked cell.
