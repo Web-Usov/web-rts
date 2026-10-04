@@ -12,6 +12,7 @@
 ## Specs
 
 - [`specs/001-foundation-network-vertical-slice.md`](./specs/001-foundation-network-vertical-slice.md) — Foundation Spec #001: первый authoritative multiplayer vertical slice, tooling, simulation kernel, transport, client/server integration, tests, CI и LAN startup.
+- [`specs/002-first-economy-defense-vertical-slice.md`](./specs/002-first-economy-defense-vertical-slice.md) — Gameplay Spec #002: first economy/defense slice, foundation hardening, deterministic navigation, Wood/construction/combat/PvE wave и Art Direction integration.
 - [`docker-lan.md`](./docker-lan.md) — Docker Compose startup: порты, LAN URL, env, smoke и ручной checklist со второго устройства.
 
 Корневой [`AGENTS.md`](../AGENTS.md) содержит обязательные правила для coding agents: source-of-truth hierarchy, архитектурные инварианты, scope discipline и требования к PR/tests.
@@ -26,6 +27,8 @@
 - [`adr/005-data-oriented-entity-model.md`](./adr/005-data-oriented-entity-model.md) — data-oriented system-driven entity model без обязательного ECS framework на старте.
 - [`adr/006-local-vs-remote-game-transport.md`](./adr/006-local-vs-remote-game-transport.md) — единая GameTransport boundary для локального Solo и remote multiplayer.
 - [`adr/007-replication-boundary-and-visibility.md`](./adr/007-replication-boundary-and-visibility.md) — отделение simulation state от network state и server-owned visibility/fog.
+- [`adr/008-grid-occupancy-deterministic-navigation.md`](./adr/008-grid-occupancy-deterministic-navigation.md) — continuous world + discrete grid, generic occupancy, deterministic A*/breach planning и bounded pathfinding work.
+- [`adr/009-shared-match-runtime-and-adapter-boundary.md`](./adr/009-shared-match-runtime-and-adapter-boundary.md) — один MatchRuntime для Local/Remote и bridge `match-adapter` между simulation и protocol.
 
 ## Как развиваем документацию
 

@@ -16,10 +16,11 @@ description: >
 Перед изменением кода читать в таком порядке:
 
 1. `docs/game-vision.md`
-2. `docs/technical-vision.md`
-3. `docs/adr/`
-4. `docs/specs/`
-5. GitHub Issue
+2. `docs/art-direction.md` — для visual/player-facing задач; не расширяет gameplay scope самостоятельно
+3. `docs/technical-vision.md`
+4. `docs/adr/`
+5. `docs/specs/`
+6. GitHub Issue
 
 ## Архитектурный stack
 
@@ -37,6 +38,8 @@ description: >
 - Simulation Core не зависит от Babylon.js, React, Colyseus, DOM или Node-specific API.
 - Multiplayer authoritative.
 - Client отправляет intents/commands, а не authoritative state.
+- Для visual/player-facing задач учитывать `docs/art-direction.md`; concept references не добавляют mechanics/features в scope автоматически.
+- `@web-rts/match-adapter` — одобренный ADR-009 bridge между protocol и simulation; не создавать параллельный integration path.
 - Не предлагать замену Babylon.js на Three.js, Phaser, Godot, Unity или Unreal без отдельного ADR.
 
 ## Выбор skills

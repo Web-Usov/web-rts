@@ -45,6 +45,17 @@ Coding Agent, получивший handoff, следует `AGENTS.md` и пра
 
 GitHub Issues остаются источником implementation scope и acceptance criteria. Этот список нужен только как быстрый navigation checkpoint.
 
+## Gameplay Spec #002 checkpoint
+
+Следующий milestone после Foundation — **Gameplay Spec #002: First Economy & Defense Vertical Slice** (#50).
+
+Architecture review завершён и reconciled с merged Art Direction #48/#49 и technical audit #53. Архитектурные решения формализованы в ADR-008 (grid/occupancy/navigation) и ADR-009 (shared MatchRuntime + match-adapter).
+
+До merge spec/ADR PR implementation не запускается. После merge работа режется на G1–G14: foundation host/session hardening → spatial/navigation → economy/combat → construction/garrison/PvE/wave → protocol/client → representative Art Direction target → full Local/Remote acceptance.
+
+Audit #53 остаётся review record; его H1–H4 и релевантные M1–M6 закрываются stage'ами #002, а не отдельной конкурирующей архитектурой.
+
+
 ## Устойчивые архитектурные опорные точки
 
 - multiplayer server authoritative;

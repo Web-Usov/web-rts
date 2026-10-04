@@ -120,37 +120,44 @@ CI не должен зависеть от наличия WebGPU на runner.
 │              Client Game State                                  │
 │                     │                                           │
 │               GameTransport                                     │
-│              /             \\                                    │
+│              /             \                                    │
 │   LocalGameTransport      RemoteGameTransport                   │
 │        │                       │                                 │
-│    WebWorker                Colyseus SDK                        │
-│        │                       │                                 │
-└────────┼───────────────────────┼─────────────────────────────────┘
-         │                       │ WebSocket
-         │                       ▼
-         │              ┌──────────────────┐
-         │              │ Colyseus Room    │
-         │              │ / Game Session   │
-         │              └────────┬─────────┘
-         │                       │
-         │                       ▼
-         └────────────────► Simulation Core
-                                 │
-                    ┌────────────┼─────────────┐
-                    │            │             │
-                  rules       AI/waves     pathfinding
-                    │            │             │
-                    └────────────┴─────────────┘
-                                 │
-                         Replication Adapter
-                                 │
-                                 ▼
-                         Network State View
+│   WebWorker shell           Colyseus SDK                        │
+└───────┼───────────────────────┼─────────────────────────────────┘
+        │                       │ WebSocket
+        │                       ▼
+        │                Colyseus Room shell
+        │                       │
+        └──────────┬────────────┘
+                   │ typed GameCommand / session context
+                   ▼
+          @web-rts/match-adapter
+                   │
+                   ▼
+               MatchRuntime
+          (@web-rts/simulation)
+                   │
+       ┌───────────┼────────────┐
+       │           │            │
+     rules      AI/waves    navigation
+       │           │            │
+       └───────────┴────────────┘
+                   │
+           MatchSnapshot/events
+                   │
+                   ▼
+          @web-rts/match-adapter
+                   │
+                   ▼
+      GameStateView / GameEvent
 ```
 
 Критическое правило:
 
-> **Simulation Core — единственный источник истины для игровых правил и состояния матча.**
+> **MatchRuntime / Simulation Core — единственный источник истины для gameplay rules и authoritative match state.**
+
+Local WebWorker и Remote Colyseus Room — session/scheduler/transport shells. Они не содержат самостоятельных gameplay validators/projection rules.
 
 Babylon.js, React и Colyseus не содержат самостоятельной бизнес-логики игры.
 
@@ -158,7 +165,7 @@ Babylon.js, React и Colyseus не содержат самостоятельно
 
 ## 6. Структура monorepo
 
-Начальная структура должна быть небольшой.
+Структура остаётся компактной, но после Foundation добавляется один bridge package для общей Local/Remote integration boundary.
 
 ```text
 apps/
@@ -169,103 +176,39 @@ packages/
   simulation/
   protocol/
   game-data/
+  match-adapter/
   testkit/
 
 tools/
   bot-client/
   scenario-runner/
-
-docs/
-  game-vision.md
-  technical-direction.md
-  technical-vision.md
-  specs/
-  adr/
 ```
 
-Monorepo использует:
+Monorepo по-прежнему использует `pnpm workspaces + Turborepo`. Корневые `pnpm dev/build/test/typecheck/lint` остаются единым interface для человека, CI и agents; runtime-код игры от Turborepo не зависит.
+
+`apps/web`: React UI, Babylon presentation, ClientGameState, input/selection/interpolation, Local/Remote GameTransport. Local WebWorker остаётся session/scheduler shell и не владеет отдельными gameplay rules/projection.
+
+`apps/game-server`: Colyseus Room/session/reconnect, room lock/rate limit, tick scheduler, logs и lifecycle shared MatchRuntime. Server app не владеет отдельными gameplay validators и не читает World stores для production gameplay decisions.
+
+`packages/simulation`: framework-agnostic gameplay truth — MatchRuntime, world/components, command queue + tick-boundary semantic validation, navigation/economy/construction/combat/teams/objectives/garrison/AI/waves, RNG, transport-neutral snapshot/events/metrics. Не импортирует renderer/network framework/DOM/Node/`@web-rts/protocol`.
+
+`packages/protocol`: wire/client contracts — GameCommand/GameEvent/GameStateView, GameTransport, versions и runtime parse schemas. Не импортирует simulation.
+
+`packages/game-data`: typed/versioned declarative definitions и balance/map data; gameplay algorithms здесь не живут.
+
+`packages/match-adapter`: единственная bridge boundary между protocol и simulation:
 
 ```text
-pnpm workspaces
-      +
-Turborepo
+GameCommand → SimulationCommand
+MatchSnapshot + recipient/session context → GameStateView
+RuntimeEvent → GameEvent
 ```
 
-Корневые scripts должны давать человеку, CI и coding agents единый интерфейс (`pnpm dev`, `pnpm build`, `pnpm test`, `pnpm typecheck`, `pnpm lint`), а Turborepo отвечает за task graph и cache. Runtime-код игры не зависит от Turborepo.
+Package не хранит authoritative gameplay state и не выполняет semantic gameplay validation.
 
-### `apps/web`
+`packages/testkit`: builders/fixtures/scenario/parity helpers; production code от него не зависит.
 
-Содержит:
-
-- Vite entrypoint;
-- React UI;
-- Babylon scene/presentation;
-- input mapping;
-- selection;
-- local/remote transport adapters;
-- interpolation client state.
-
-### `apps/game-server`
-
-Содержит:
-
-- Colyseus server;
-- Room lifecycle;
-- connection/reconnection;
-- anonymous player session;
-- command intake;
-- simulation host;
-- replication adapter;
-- health endpoint.
-
-### `packages/simulation`
-
-Содержит:
-
-- world state;
-- entities/components;
-- systems;
-- movement;
-- combat;
-- economy;
-- objectives;
-- visibility;
-- AI/waves;
-- pathfinding;
-- deterministic RNG abstraction.
-
-`simulation` не импортирует Babylon.js, React, Colyseus, DOM или Node-specific API.
-
-### `packages/protocol`
-
-Содержит:
-
-- command definitions;
-- protocol version;
-- runtime validation schemas;
-- DTO/type contracts, не зависящие от renderer.
-
-### `packages/game-data`
-
-Содержит declarative definitions:
-
-- unit types;
-- buildings;
-- resources;
-- costs;
-- map metadata;
-- balance constants.
-
-### `packages/testkit`
-
-Содержит:
-
-- test world builders;
-- fixtures;
-- command helpers;
-- deterministic scenario helpers.
-
-Не создаём отдельный package для каждого понятия заранее. `ai`, `map`, `pathfinding` выносятся из `simulation` только если появится реальная причина.
+Не создаём package для каждого gameplay понятия заранее. `ai`, `map`, `pathfinding`, `combat`, `economy` остаются внутри simulation до реального use case.
 
 ---
 
@@ -404,40 +347,38 @@ Floating point разрешён.
 
 Клиент отправляет **intent**, а не новое состояние.
 
-Примеры:
+Wire command содержит `type`, `commandId`, `clientSequence` и command-specific intent, но **не authoritative player identity**.
+
+Remote server выводит trusted `PlayerId` из session/slot. Local runtime назначает trusted local PlayerId.
 
 ```text
-MOVE
-ATTACK
-BUILD
-TRAIN
-TRANSFER_UNITS
-TRANSFER_BUILDING
-TRANSFER_RESOURCE
+untrusted payload
+→ strict/bounded schema validation
+→ session/phase/rate checks
+→ trusted actor + typed command
+→ shared MatchRuntime admission
+   ├─ bounded per-player FIFO queue
+   └─ queue_full on overflow
+→ deterministic fair scheduler
+→ semantic gameplay validation at simulation tick boundary
+→ apply or COMMAND_REJECTED
 ```
 
-Каждая команда содержит минимум:
+Command ingress shared для Local/Remote:
 
-```ts
-{
-  type: string;
-  commandId: string;
-  playerId: number;
-  clientSequence: number;
-  payload: unknown;
-}
-```
+- `maxPendingCommandsPerPlayer` ограничивает memory per player;
+- `maxCommandsPerTick` ограничивает command processing work;
+- внутри player сохраняется FIFO;
+- между players используется deterministic round-robin с persistent cursor;
+- raw packet arrival order между разными players не определяет gameplay winner;
+- path-heavy commands расходуют command path budget по approved Spec/ADR-008;
+- permanent leave/timeout очищает not-yet-applied pending queue player без создания stale rejection events; reconnect grace этого не делает.
 
-Server:
+Gameplay permissions/control, costs, placement, reachability и entity state проверяются shared simulation против текущего world state на tick boundary.
 
-1. принимает сообщение;
-2. валидирует schema;
-3. проверяет permissions;
-4. добавляет command в queue;
-5. применяет её на границе simulation tick;
-6. возвращает rejection event, если действие невозможно.
+`queue_full` является admission/backpressure rejection до semantic validation. Long-running task может позже получить `ACTION_FAILED`, если world изменился; это не retroactive rejection.
 
-Client никогда не сообщает серверу фактические HP, ресурсы или итоговую позицию.
+Client никогда не сообщает authoritative HP/resources/team/damage/construction/path/final position.
 
 ---
 
@@ -472,69 +413,70 @@ Colyseus используется для:
 - join/create room;
 - client sessions;
 - reconnect;
-- state replication первой версии;
+- room lock / input-rate enforcement;
+- delivery of protocol messages;
 - будущего lobby/matchmaking при необходимости.
 
-Но Colyseus Room **не является simulation**.
+Colyseus Room **не является simulation** и не владеет gameplay semantic validation.
 
-Правильное направление:
+Target flow:
 
 ```text
-Colyseus Room
+Colyseus Room shell
      │
-     ├─ connections
-     ├─ session lifecycle
-     ├─ command validation
-     │
-     ▼
-SimulationHost
+     ├─ connections / session lifecycle
+     ├─ strict schema / phase / rate checks
+     ├─ derive trusted PlayerId
      │
      ▼
-Simulation World
+@web-rts/match-adapter
+     │ GameCommand → SimulationCommand
+     ▼
+MatchRuntime
+     │
+     ├─ tick-boundary gameplay validation
+     ├─ authoritative systems
+     └─ MatchSnapshot / RuntimeEvents
      │
      ▼
-ReplicationAdapter
+@web-rts/match-adapter
+     │ recipient projection / event mapping
+     ▼
+GameStateView / GameEvent messages
      │
      ▼
-Colyseus Network State
+Colyseus transport
 ```
 
-Это позволяет при необходимости заменить стратегию state replication, не переписывая игровые правила.
+Для текущего gameplay stage full `GameStateView` messages являются baseline. Colyseus Schema/delta transport остаются optimization option после profiling и не определяют simulation structure.
+
+Это позволяет менять strategy serialization/replication без переписывания gameplay rules.
 
 ---
 
 ## 13. State replication
 
-Первая версия использует Colyseus Schema/state synchronization.
+Simulation state и replicated state — **разные структуры**.
 
-Persistent state, который нужен клиентам постоянно:
+Current gameplay-stage strategy:
 
-- player slots;
-- entity transforms;
-- HP/state flags;
-- objective state;
-- необходимые building/unit fields;
-- match phase.
+```text
+MatchRuntime
+→ one transport-neutral MatchSnapshot per simulation tick
+→ per-recipient projection
+→ full GameStateView message
+→ GameTransport / ClientGameState
+```
 
-One-shot события передаются messages/events:
+Full snapshots — простой baseline. Colyseus Schema/state synchronization, deltas, dirty masks, binary encoding и lower patch rate остаются допустимыми optimizations после profiling и не определяют simulation model.
 
-- command rejected;
-- attack impact VFX hint;
-- notification;
-- match announcement;
-- UI event.
+Persistent view содержит только нужную client/presentation информацию. Top-level view включает authoritative `tick` и effective immutable `tickRateHz`, чтобы UI не hardcode'ил simulation frequency при countdown/timing presentation.
 
-Simulation state и replicated state — **не одна и та же структура**.
+One-shot messages/events используются для command rejection, async action failure и transient notices/VFX hints.
 
-Это намеренная boundary.
+Per-recipient visibility остаётся server-owned policy: hidden gameplay-sensitive state не отправляется client только ради renderer-side hiding.
 
-### Replication frequency
-
-Стартовое значение:
-
-**10 updates/sec**, синхронно с simulation tick.
-
-Позже patch rate может быть уменьшен независимо от simulation rate.
+Стартово state view публикуется до 10 updates/sec, синхронно с simulation tick. Frequency/serialization strategy может меняться отдельно после measurement.
 
 ---
 
@@ -564,30 +506,37 @@ rendered position:      smooth interpolation
 
 ## 15. GameTransport abstraction
 
-Web client не должен знать, работает матч локально или удалённо.
+Web UI/presentation не должны знать, работает матч локально или удалённо.
 
-Интерфейс уровня клиента:
+Target boundary:
 
 ```ts
 interface GameTransport {
   connect(options: ConnectOptions): Promise<void>;
   resumePreviousSession(options?: ResumeSessionOptions): Promise<ResumeSessionResult>;
+
   sendCommand(command: GameCommand): void;
   subscribeState(listener: StateListener): Unsubscribe;
   subscribeEvent(listener: EventListener): Unsubscribe;
   subscribeConnection(listener: ConnectionListener): Unsubscribe;
+
+  startMatch(): void;
+  readonly connectedRoomId: string | null;
+  hasResumeToken(): boolean;
+  readRoundTripMs(): number | null;
+
   disconnect(): Promise<void>;
 }
 ```
 
-Реализации:
+Session token/SDK internals остаются adapter concern. Local transport естественно не имеет remote resume token; RTT может быть `null`.
 
 ```text
-RemoteGameTransport -> Colyseus SDK
-LocalGameTransport  -> WebWorker / local simulation
+RemoteGameTransport → Colyseus SDK
+LocalGameTransport  → WebWorker → shared MatchRuntime
 ```
 
-Это ключевой механизм объединения Solo и Multiplayer.
+Lobby/session actions не должны требовать concrete `PageGameTransport` extension поверх GameTransport.
 
 ---
 
@@ -656,9 +605,7 @@ Permissions могут вычисляться системой, а не обяз
 
 Все условия победы/поражения строятся через обобщённую objective model.
 
-Нельзя привязывать engine к конкретному Sacred Tree.
-
-Например:
+Нельзя привязывать engine к конкретному Sacred Site/Tree.
 
 ```ts
 type Objective = {
@@ -669,6 +616,8 @@ type Objective = {
   required: boolean;
 };
 ```
+
+`Sacred Site` — concrete entity/definition identity. `protect` — gameplay objective role, назначенная этой entity.
 
 Первая gameplay реализация использует `protect` для Sacred Site.
 
@@ -728,19 +677,17 @@ Renderer terrain mesh не должен быть источником gameplay c
 
 Fog of war — server-owned gameplay information.
 
-Client не должен получать скрытые enemy entities только затем, чтобы спрятать их renderer'ом.
+Client не должен получать hidden enemy entities только затем, чтобы спрятать их renderer'ом.
 
-Simulation/visibility layer определяет, что команда/игрок может видеть.
+Gameplay/simulation layer определяет visibility semantics. Transport-neutral MatchSnapshot содержит только данные, необходимые shared projector'у для authoritative recipient filtering.
 
-Replication adapter преобразует это в network visibility.
-
-Для Colyseus первая реализация может использовать StateView или другую поддерживаемую per-client/team projection.
+`@web-rts/match-adapter` строит recipient-specific `GameStateView` и не придумывает собственные gameplay visibility rules.
 
 Для Coop желательно использовать общую team visibility.
 
 Для PvP — отдельную visibility per player/team.
 
-Поскольку per-client filtering может стать дорогим при большом числе entities, его производительность должна измеряться. Boundary `ReplicationAdapter` позволяет позже заменить способ фильтрации/serialization.
+Поскольку per-recipient filtering может стать дорогим при большом числе entities, его производительность должна измеряться. Boundary `MatchSnapshot → match-adapter → GameStateView` позволяет позже заменить serialization/delta strategy без изменения gameplay model.
 
 ---
 
@@ -1142,15 +1089,19 @@ Performance benchmark сначала сохраняется как diagnostic ou
 Server authoritative означает:
 
 - клиенту нельзя доверять итоговое состояние;
-- команды проверяются на ownership/control;
+- trusted PlayerId выводится server/session, а не command payload;
+- ownership/control и gameplay semantics проверяются на simulation tick boundary;
 - resource costs считаются сервером;
-- hidden enemy state не должен отправляться клиенту;
-- room input имеет rate/size limits;
-- malformed commands отклоняются runtime validation.
+- hidden enemy state не отправляется client;
+- remote room input имеет explicit rate limit;
+- shared MatchRuntime имеет bounded per-player pending command queues;
+- overflow отклоняется machine-readable `queue_full`, без вытеснения уже queued commands;
+- deterministic fair scheduling не позволяет одному player неограниченно блокировать command ingress остальных;
+- client-controlled strings/arrays/ids/coordinates bounded;
+- malformed commands отклоняются runtime validation без падения Room;
+- после START новые joins в текущий match блокируются, reserved reconnect остаётся отдельным разрешённым path.
 
-В MVP игроки анонимные.
-
-Полноценная account security не входит в scope.
+В MVP игроки анонимные. Полноценная account security вне scope.
 
 ---
 
