@@ -120,37 +120,44 @@ CI не должен зависеть от наличия WebGPU на runner.
 │              Client Game State                                  │
 │                     │                                           │
 │               GameTransport                                     │
-│              /             \\                                    │
+│              /             \                                    │
 │   LocalGameTransport      RemoteGameTransport                   │
 │        │                       │                                 │
-│    WebWorker                Colyseus SDK                        │
-│        │                       │                                 │
-└────────┼───────────────────────┼─────────────────────────────────┘
-         │                       │ WebSocket
-         │                       ▼
-         │              ┌──────────────────┐
-         │              │ Colyseus Room    │
-         │              │ / Game Session   │
-         │              └────────┬─────────┘
-         │                       │
-         │                       ▼
-         └────────────────► Simulation Core
-                                 │
-                    ┌────────────┼─────────────┐
-                    │            │             │
-                  rules       AI/waves     pathfinding
-                    │            │             │
-                    └────────────┴─────────────┘
-                                 │
-                         Replication Adapter
-                                 │
-                                 ▼
-                         Network State View
+│   WebWorker shell           Colyseus SDK                        │
+└───────┼───────────────────────┼─────────────────────────────────┘
+        │                       │ WebSocket
+        │                       ▼
+        │                Colyseus Room shell
+        │                       │
+        └──────────┬────────────┘
+                   │ typed GameCommand / session context
+                   ▼
+          @web-rts/match-adapter
+                   │
+                   ▼
+               MatchRuntime
+          (@web-rts/simulation)
+                   │
+       ┌───────────┼────────────┐
+       │           │            │
+     rules      AI/waves    navigation
+       │           │            │
+       └───────────┴────────────┘
+                   │
+           MatchSnapshot/events
+                   │
+                   ▼
+          @web-rts/match-adapter
+                   │
+                   ▼
+      GameStateView / GameEvent
 ```
 
 Критическое правило:
 
-> **Simulation Core — единственный источник истины для игровых правил и состояния матча.**
+> **MatchRuntime / Simulation Core — единственный источник истины для gameplay rules и authoritative match state.**
+
+Local WebWorker и Remote Colyseus Room — session/scheduler/transport shells. Они не содержат самостоятельных gameplay validators/projection rules.
 
 Babylon.js, React и Colyseus не содержат самостоятельной бизнес-логики игры.
 
@@ -393,34 +400,44 @@ Colyseus используется для:
 - join/create room;
 - client sessions;
 - reconnect;
-- state replication первой версии;
+- room lock / input-rate enforcement;
+- delivery of protocol messages;
 - будущего lobby/matchmaking при необходимости.
 
-Но Colyseus Room **не является simulation**.
+Colyseus Room **не является simulation** и не владеет gameplay semantic validation.
 
-Правильное направление:
+Target flow:
 
 ```text
-Colyseus Room
+Colyseus Room shell
      │
-     ├─ connections
-     ├─ session lifecycle
-     ├─ command validation
-     │
-     ▼
-SimulationHost
+     ├─ connections / session lifecycle
+     ├─ strict schema / phase / rate checks
+     ├─ derive trusted PlayerId
      │
      ▼
-Simulation World
+@web-rts/match-adapter
+     │ GameCommand → SimulationCommand
+     ▼
+MatchRuntime
+     │
+     ├─ tick-boundary gameplay validation
+     ├─ authoritative systems
+     └─ MatchSnapshot / RuntimeEvents
      │
      ▼
-ReplicationAdapter
+@web-rts/match-adapter
+     │ recipient projection / event mapping
+     ▼
+GameStateView / GameEvent messages
      │
      ▼
-Colyseus Network State
+Colyseus transport
 ```
 
-Это позволяет при необходимости заменить стратегию state replication, не переписывая игровые правила.
+Для текущего gameplay stage full `GameStateView` messages являются baseline. Colyseus Schema/delta transport остаются optimization option после profiling и не определяют simulation structure.
+
+Это позволяет менять strategy serialization/replication без переписывания gameplay rules.
 
 ---
 
@@ -440,7 +457,9 @@ MatchRuntime
 
 Full snapshots — простой baseline. Colyseus Schema/state synchronization, deltas, dirty masks, binary encoding и lower patch rate остаются допустимыми optimizations после profiling и не определяют simulation model.
 
-Persistent view содержит только нужную client/presentation информацию. One-shot messages/events используются для command rejection, async action failure и transient notices/VFX hints.
+Persistent view содержит только нужную client/presentation информацию. Top-level view включает authoritative `tick` и effective immutable `tickRateHz`, чтобы UI не hardcode'ил simulation frequency при countdown/timing presentation.
+
+One-shot messages/events используются для command rejection, async action failure и transient notices/VFX hints.
 
 Per-recipient visibility остаётся server-owned policy: hidden gameplay-sensitive state не отправляется client только ради renderer-side hiding.
 
@@ -645,19 +664,17 @@ Renderer terrain mesh не должен быть источником gameplay c
 
 Fog of war — server-owned gameplay information.
 
-Client не должен получать скрытые enemy entities только затем, чтобы спрятать их renderer'ом.
+Client не должен получать hidden enemy entities только затем, чтобы спрятать их renderer'ом.
 
-Simulation/visibility layer определяет, что команда/игрок может видеть.
+Gameplay/simulation layer определяет visibility semantics. Transport-neutral MatchSnapshot содержит только данные, необходимые shared projector'у для authoritative recipient filtering.
 
-Replication adapter преобразует это в network visibility.
-
-Для Colyseus первая реализация может использовать StateView или другую поддерживаемую per-client/team projection.
+`@web-rts/match-adapter` строит recipient-specific `GameStateView` и не придумывает собственные gameplay visibility rules.
 
 Для Coop желательно использовать общую team visibility.
 
 Для PvP — отдельную visibility per player/team.
 
-Поскольку per-client filtering может стать дорогим при большом числе entities, его производительность должна измеряться. Boundary `ReplicationAdapter` позволяет позже заменить способ фильтрации/serialization.
+Поскольку per-recipient filtering может стать дорогим при большом числе entities, его производительность должна измеряться. Boundary `MatchSnapshot → match-adapter → GameStateView` позволяет позже заменить serialization/delta strategy без изменения gameplay model.
 
 ---
 
