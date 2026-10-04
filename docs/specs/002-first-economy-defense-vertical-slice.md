@@ -614,11 +614,15 @@ PvE AI не реализует собственную геометрию сте�
 
 ### 8.8 Deterministic pathfinding work budget — APPROVED
 
-Pathfinding work per tick bounded и deterministic, но player command spam не должен замораживать active tasks или PvE.
+Pathfinding work per tick bounded и deterministic. Ни player spam, ни один конкретный player не должны starvation'ить active tasks, PvE AI или commands других players.
 
-Для #002 общий cap делится на **три независимых lane**:
+Для #002 MatchRuntime использует:
 
 ```text
+RuntimeConfig:
+  maxPendingCommandsPerPlayer
+  maxCommandsPerTick
+
 SimulationConfig.pathQueriesPerTick:
   commandBudget
   activeTaskBudget
@@ -628,37 +632,69 @@ commandBudget + activeTaskBudget + aiBudget
 <= maxPathQueriesPerTick
 ```
 
-В #002 **unused budget между lane не заимствуется**. Это сознательно менее эффективно, но даёт простой deterministic anti-starvation contract.
+В #002 unused path budget между lane не заимствуется.
 
 Каждый законченный A* / breach-search invocation расходует одну query соответствующего lane.
 
-#### Command lane
+#### Per-player command admission
 
-`commandBudget` используется для initial path/reachability work, необходимой для применения player commands:
+MatchRuntime хранит **отдельную FIFO queue на каждого player**.
 
-- MOVE — одна query на каждую entity в `entityIds[]`;
-- GATHER — initial route к ResourceNode;
-- BUILD NEW — reachability/approach validation builder;
-- BUILD EXISTING — route к existing construction;
-- GARRISON — route к host approach cells.
+Если trusted command поступает, когда:
 
-Обязательный cross-config invariant:
+```text
+pendingCommands(playerId) >= maxPendingCommandsPerPlayer
+```
+
+command **не enqueue'ится** и получает transport-neutral rejection:
+
+```text
+COMMAND_REJECTED(queue_full)
+```
+
+Это admission/backpressure rejection, а не gameplay semantic validation: world state для неё не читается.
+
+Таким образом память command ingress bounded одинаково для Local и Remote. Remote Room rate limit остаётся дополнительным transport-level guard и не заменяет runtime queue cap.
+
+#### Fair command scheduling
+
+Внутри каждой player queue сохраняется strict FIFO.
+
+Между players используется deterministic round-robin по stable ascending `playerId` с persistent `nextCommandPlayerCursor`.
+
+Scheduler работает rounds:
+
+1. начинает round с cursor;
+2. посещает каждого participant player максимум один раз за round;
+3. рассматривает **только head command** его queue;
+4. later command того же player никогда не обгоняет head;
+5. после полного round следующий round снова идёт cyclic order, пока не исчерпан `maxCommandsPerTick`, `commandBudget` или не осталось schedulable heads;
+6. start cursor следующего tick сдвигается на следующего player, чтобы scarce budget не давал постоянный first-player advantage.
+
+Количество processed commands за tick всегда ограничено `maxCommandsPerTick`.
+
+Для scheduling каждая command имеет deterministic upper-bound path cost:
+
+```text
+MOVE(entityIds[]) → entityIds.length
+GATHER            → 1
+BUILD NEW         → 1
+BUILD EXISTING    → 1
+GARRISON          → 1
+UNGARRISON        → 0
+```
+
+Scheduler **резервирует этот cost целиком** перед command application. Если semantic validation завершилась раньше и фактический A* не понадобился, зарезервированный cost в этом tick не возвращается. Это делает fairness/order независимыми от текущего gameplay state.
+
+Cross-config invariant:
 
 ```text
 MAX_MOVE_ENTITY_IDS <= commandBudget
 ```
 
-Protocol `entityIds[]` bounded; startup/config assertion и tests проверяют relationship.
+Если head command конкретного player помещается в fresh `commandBudget`, но не помещается в остаток текущего tick, она остаётся head этой player queue. Scheduler **может продолжить обслуживание других players**, чьи head commands помещаются в остаток budget; внутри очереди заблокированного player обгона нет.
 
-Player command queue остаётся strict FIFO. Если **head command** помещается в fresh `commandBudget`, но не помещается в оставшийся budget текущего tick:
-
-```text
-defer entire head command
-→ stop processing later player commands for this tick
-→ retry head on next tick
-```
-
-Command не применяется частично и не может быть обойдена более поздними commands.
+Raw network arrival order между разными players **не является authoritative gameplay order**. Для same-tick conflicts authoritative order задаёт deterministic fair scheduler.
 
 #### Active-task lane
 
@@ -668,6 +704,10 @@ Command не применяется частично и не может быть
 - Worker node → drop-off → node continuation;
 - construction/garrison task replan;
 - другие path transitions уже accepted task.
+
+Entities, которым нужна path query, обрабатываются в **ascending entityId**.
+
+Для одной entity допускается максимум **одна active-task path query за tick**. Active task state должна представлять максимум один pending navigation request на entity.
 
 Если entity нуждается в новом path, но `activeTaskBudget` исчерпан:
 
@@ -684,15 +724,33 @@ Valid existing path может продолжать movement без новой q
 - path к выбранному blocker/attack approach;
 - retry после topology invalidation.
 
-Если `aiBudget` исчерпан, AI ждёт следующий tick; combat, уже не требующий нового path query, не обязан останавливаться.
+AI entities обслуживаются в **ascending entityId**.
 
-Multi-stage AI planning может перенести **следующую целую query** на следующий tick и хранить только high-level planner phase/target context. Partial A* open/closed state между ticks в #002 не сохраняется.
+Одна AI entity может выполнить максимум **одну expensive path query за tick**.
 
-Таким образом continuous player input не может выбрать budget, зарезервированный под active-task replans или PvE AI.
+Multi-stage planner хранит deterministic high-level phase:
+
+```text
+NORMAL_OBJECTIVE
+BREACH_SEARCH
+APPROACH_BLOCKER
+```
+
+Если для решения требуется следующая query, она участвует в обычном entityId-order следующего tick. Partial A* open/closed state между ticks в #002 не сохраняется.
+
+Если `aiBudget` исчерпан, AI ждёт следующий tick; combat, уже не требующий новой path query, не обязан останавливаться.
+
+Таким образом:
+
+- player spam не может выбрать active-task/AI budget;
+- один player не может бесконечно блокировать command ingress остальных;
+- queue memory bounded;
+- replan/AI ordering deterministic;
+- один entity не может съесть весь lane budget серией sequential searches.
 
 Resumable A*, worker-thread pathfinding, flow fields и dynamic borrowing между budget lanes вне #002.
 
-## 9. Economy
+## 9. Economy## 9. Economy
 
 В #002 существует только:
 
@@ -804,15 +862,24 @@ Wood списывается
 → state = UNDER_CONSTRUCTION
 → footprint сразу занимает grid
 → Worker получает construction task
-→ progress растёт по simulation ticks
+→ site сразу считается busy этим Worker
+→ progress растёт по simulation ticks после достижения build range
 → state = COMPLETED
 ```
 
-Spend + entity creation + occupancy registration + task start атомарны относительно command application.
+Spend + entity creation + occupancy registration + task assignment атомарны относительно command application.
 
 ### BUILD EXISTING
 
 Используется, чтобы продолжить paused Construction Site.
+
+В #002 construction access policy — **same Owner**:
+
+```text
+builder.Owner == constructionSite.Owner
+```
+
+Friendly/Team relationship недостаточно. Allied construction в Coop может быть разрешена отдельной будущей policy без изменения command shape.
 
 Simulation валидирует минимум:
 
@@ -820,8 +887,8 @@ Simulation валидирует минимум:
 - builder capability;
 - `constructionEntityId` существует;
 - target остаётся `UNDER_CONSTRUCTION`;
-- site доступен по #002 ownership/access policy;
-- site не имеет другого active builder;
+- builder и site имеют одного Owner;
+- site не занята другим active builder;
 - Worker может добраться до valid build approach.
 
 Successful `BUILD EXISTING`:
@@ -830,24 +897,60 @@ Successful `BUILD EXISTING`:
 - не создаёт новую entity;
 - не меняет footprint;
 - сохраняет существующий progress;
-- назначает Worker construction task для этой site.
+- сразу назначает Worker construction task;
+- сразу резервирует site за этим Worker, включая время approach.
 
-В #002 одновременно одну Construction Site строит максимум **один active Worker**. Попытка второго Worker продолжить site, пока первый реально строит её, отклоняется с reason вроде `construction_busy`. Multi-builder acceleration вне #002.
+### Active builder semantics
 
-Если Worker получает MOVE/GATHER/другую несовместимую явную task:
+Worker считается **active builder с момента успешного применения BUILD NEW/EXISTING**, а не только после входа в build range.
 
-- construction остаётся;
+Canonical source busy-state — current Worker construction task:
+
+```text
+WorkerTask {
+  type = BUILD
+  constructionEntityId
+}
+```
+
+Отдельный mutable `ConstructionSite.activeBuilderId` не является вторым authoritative source. Implementation может иметь derived/index cache, если он не меняет semantics.
+
+В #002 одна Construction Site имеет максимум одного active Worker.
+
+Если другой Worker пытается `BUILD EXISTING` для уже reserved site:
+
+```text
+COMMAND_REJECTED(construction_busy)
+```
+
+Если тот же Worker повторно посылает `BUILD EXISTING` на site, которую уже строит:
+
+```text
+COMMAND_REJECTED(already_building)
+```
+
+Reservation освобождается, когда:
+
+- Worker получает MOVE/GATHER/другую несовместимую explicit task;
+- Worker погибает/удаляется;
+- construction task получает terminal `ACTION_FAILED`, например окончательный `path_blocked`;
+- site уничтожена;
+- site завершена.
+
+Временное ожидание `activeTaskBudget` **не освобождает reservation**: Worker просто ждёт path query.
+
+После release:
+
+- construction entity остаётся, если не уничтожена;
 - progress сохраняется;
-- active builder освобождается;
-- construction pauses.
-
-Позже тот же или другой допустимый Worker может получить `BUILD EXISTING` и продолжить site.
+- footprint сохраняется;
+- site становится paused/free для нового `BUILD EXISTING`.
 
 Недостроенное building имеет Health и может быть уничтожено.
 
 Refund отсутствует.
 
-## 12. Town Hall
+## 12. Town Hall## 12. Town Hall
 
 В #002 существует **только стартовый Town Hall**.
 
@@ -1568,9 +1671,9 @@ Engine не использует `ObjectiveType = SACRED_SITE` как фунда
 
 Статус архитектурного решения: **APPROVED 2026-10-04**.
 
-### 22.1 Validation layers
+### 22.1 Validation / admission layers
 
-Untrusted client payload проходит три разных уровня:
+Untrusted client payload проходит разные boundary:
 
 ```text
 unknown payload
@@ -1578,45 +1681,56 @@ unknown payload
 → typed GameCommand
 → session/transport validation
 → trusted actor context + command
-→ simulation queue
-→ gameplay semantic validation at tick boundary
+→ shared runtime admission
+   ├─ per-player queue cap
+   └─ COMMAND_REJECTED(queue_full) if full
+→ bounded per-player FIFO queues
+→ deterministic fair scheduler on simulation tick
+→ gameplay semantic validation against current world
 → apply / reject
 ```
 
 Transport/application boundary отвечает за schema/session/match-phase/transport limits.
 
-Simulation отвечает за gameplay semantics:
+MatchRuntime admission отвечает только за bounded command ingress; `queue_full` не читает gameplay world state.
+
+Simulation tick-boundary validation отвечает за gameplay semantics:
 
 - Controller permission;
 - entity existence/state;
 - resource availability;
 - placement;
 - path/reachability;
-- garrison conditions;
+- construction/garrison conditions;
 - другие gameplay rules.
 
-Gameplay validation не должна дублироваться отдельными Local и Remote implementations.
+Gameplay validation/admission semantics не должны дублироваться отдельными Local и Remote implementations.
 
 ### 22.2 Semantic validation happens on tick boundary
 
-Команда не должна считаться gameplay-valid только потому, что была valid в момент network receive.
+Команда не считается gameplay-valid только потому, что была valid в момент network receive.
 
-Host после schema/session checks enqueue'ит trusted command. На simulation tick команды обрабатываются FIFO и каждая проверяется против **текущего world state**, уже учитывающего предыдущие команды этого же tick.
+После schema/session checks и успешного bounded admission trusted command попадает в FIFO queue своего player.
 
-Пример конфликтов:
+На simulation tick deterministic fair scheduler выбирает commands из per-player queues согласно §8.8. Каждая scheduled command проверяется против **текущего world state**, уже учитывающего ранее применённые commands этого tick.
+
+Пример conflict:
 
 ```text
-BUILD A cell X → accepted, occupancy changes
-BUILD B cell X → rejected: invalid_placement
+scheduler chooses Player A BUILD cell X
+→ accepted, occupancy changes
 
-Wood = 100
-BUILD A cost 80 → accepted, Wood = 20
-BUILD B cost 80 → rejected: insufficient_resources
+later same tick scheduler chooses Player B BUILD cell X
+→ rejected: invalid_placement
 ```
 
-Gameplay mutation одной применяемой команды должна быть atomic относительно command application.
+Same-tick winner определяется scheduler order, а не raw network arrival order между players.
 
-### 22.3 Trusted actor context
+Gameplay mutation одной применяемой command должна быть atomic относительно command application.
+
+`queue_full` — единственная из описанных здесь backpressure reasons, которая может возникнуть до tick-boundary semantic validation, потому что command вообще не попала в pending queue.
+
+### 22.3 Trusted actor context### 22.3 Trusted actor context
 
 Public GameCommand не содержит authoritative identity:
 
@@ -1714,13 +1828,31 @@ Container определяется через approved `ContainedIn` relation.
 
 `clientSequence` является client/transport metadata и **не задаёт authoritative gameplay ordering между players**.
 
-Authoritative order #002 — FIFO order trusted commands в simulation queue.
+Authoritative ordering #002:
 
-При одинаковой последовательности queued commands simulation должна давать одинаковый result.
+```text
+within one player:
+  trusted enqueue order → strict FIFO
+
+between players:
+  deterministic round-robin scheduler
+  with persistent player cursor
+```
+
+Raw cross-player packet arrival timing не определяет winner same-tick gameplay conflicts.
+
+При одинаковых:
+
+- participant/player IDs;
+- per-player queued command sequences;
+- scheduler cursor/config;
+- initial world state;
+
+simulation должна давать одинаковый ordering/result.
 
 Replay/deduplication protocol поверх `clientSequence` находится вне #002.
 
-### 22.6 Command rejection vs later task failure
+### 22.6 Command rejection vs later task failure### 22.6 Command rejection vs later task failure
 
 Нужно различать два lifecycle.
 
@@ -1733,6 +1865,7 @@ Replay/deduplication protocol поверх `clientSequence` находится �
 ```text
 invalid_schema
 not_running
+queue_full
 not_controller
 entity_not_found
 entity_not_spatial
@@ -1740,8 +1873,11 @@ blocked_target
 insufficient_resources
 invalid_placement
 no_path
+no_dropoff
 no_garrison_slot
 no_exit
+construction_busy
+already_building
 ```
 
 #### ACTION_FAILED
@@ -1900,7 +2036,23 @@ Breaking wire changes требуют `PROTOCOL_VERSION` bump по существ
 
 Remote Room задаёт explicit message-rate limit (`maxMessagesPerSecond` или equivalent mechanism). Точное число — implementation/config decision.
 
-Client-controlled fields bounded: `commandId`, identifiers, `entityIds[]`, numeric domains и payload shape.
+Client-controlled fields bounded:
+
+- `commandId` / identifier lengths;
+- `entityIds[]` max length;
+- numeric domains / finite coordinates;
+- payload shape.
+
+Shared MatchRuntime дополнительно имеет:
+
+```text
+maxPendingCommandsPerPlayer
+maxCommandsPerTick
+```
+
+Per-player pending queue cap обязателен **и для Local, и для Remote**. Remote message-rate limit не считается заменой queue cap.
+
+При заполненной player queue новая trusted command отклоняется `queue_full`, не вытесняя старые commands.
 
 После START Remote Room блокирует новые joins:
 
@@ -1910,7 +2062,19 @@ STARTING/RUNNING/FINISHED → new joins locked
 reserved reconnect → allowed по reconnect policy
 ```
 
-### 22.14 Complete GameTransport session boundary — RECONCILED FROM #53
+Required security/fairness regression:
+
+```text
+Player A continuously submits max-cost MOVE within allowed rate
+Player B submits valid command
+→ A pending queue never exceeds cap
+→ B command receives service within deterministic bounded number of ticks
+→ AI/replan lanes continue making progress
+```
+
+Exact bound выводится из configured participant count, `maxCommandsPerTick`, round-robin scheduler и command/path budgets; test обязан фиксировать конкретную config и ожидаемый upper bound.
+
+### 22.14 Complete GameTransport session boundary### 22.14 Complete GameTransport session boundary — RECONCILED FROM #53
 
 UI не зависит от concrete `PageGameTransport`. Target `GameTransport` включает gameplay/state/event methods плюс:
 
@@ -2390,7 +2554,7 @@ Colyseus Room            WebWorker
 Точное TypeScript API определяется implementation issue, но semantic surface минимум позволяет:
 
 - создать runtime из seed/map/participants;
-- enqueue trusted player command;
+- admit/enqueue trusted player command в bounded per-player queue;
 - выполнить explicit `step()`;
 - прочитать transport-neutral snapshot;
 - drain transport-neutral runtime events;
@@ -2407,7 +2571,7 @@ Shared runtime владеет gameplay match execution boundary:
 - player/team match setup;
 - player economies;
 - wave/result state;
-- command queue ingress;
+- bounded per-player command queues + deterministic command scheduler;
 - gameplay system stepping;
 - simulation/runtime events.
 
@@ -2974,7 +3138,7 @@ Room lock/rate limit/reconnect остаются Remote shell concerns.
 
 ### Simulation / scenario
 
-Покрыть ResourceNode/gather/depletion/no-dropoff failure, BUILD NEW/EXISTING atomicity/resume/busy-site, construction/occupancy, deterministic A*/lane budgets/replan/breach planning, включая `MAX_MOVE_ENTITY_IDS <= commandBudget`, отсутствие forever-pending oversized group MOVE, отсутствие AI/replan starvation при player spam и stop-before-blocked-cell при exhausted active-task budget, Team/Health/combat, generic Objective, Soldier behavior, Tower/garrison/ejection, PvE/STALLED, wave/WAVE_CLEARED/DEFEAT и repeatability.
+Покрыть ResourceNode/gather/depletion/no-dropoff failure; BUILD NEW/EXISTING atomicity, same-owner access, immediate reservation while approaching, `construction_busy`, `already_building`, release-on-cancel/death/failure/destroy/complete; construction/occupancy; deterministic A*/lane budgets/replan/breach planning, включая `MAX_MOVE_ENTITY_IDS <= commandBudget`, bounded per-player command queues, deterministic cross-player round-robin, no head bypass within player, no cross-player starvation, no AI/replan starvation при player spam, ascending entityId order для active-task/AI lane, max one query/entity/tick и stop-before-blocked-cell при exhausted active-task budget; Team/Health/combat, generic Objective, Soldier behavior, Tower/garrison/ejection, PvE/STALLED, wave/WAVE_CLEARED/DEFEAT и repeatability.
 
 ### MatchRuntime / Local-Remote parity
 
@@ -2990,7 +3154,9 @@ Room lock/rate limit/reconnect остаются Remote shell concerns.
 - invalid ownership/control rejected;
 - malformed message does not crash room;
 - bounded commandId/entityIds/identifiers;
+- bounded `maxPendingCommandsPerPlayer` + `queue_full`;
 - explicit room message-rate limit;
+- one-player spam cannot unboundedly delay another player's queued command;
 - new joins locked after START, reserved reconnect still works;
 - economy/combat/wave remain authoritative.
 
@@ -3060,7 +3226,7 @@ G14 Full Local/Remote E2E + acceptance
 #002 DONE
 ```
 
-G0 финализирует spec/ADR/TV. G1 закрывает shared host/event drain/tick validation. G2 — rate/size/room lock/full GameTransport и bounded `entityIds[]`. G3 — kinds/definitionId/generic Objective/Map/grid/occupancy. G4 — deterministic A*/separate command-activeTask-AI budgets/breach + starvation regressions. G5 Economy и G6 Combat могут идти параллельно. G7 construction, затем G8 Garrison и G9 PvE параллельно; G10 после G9; G11 ждёт G8+G10; G12 UI/presentation; G13 representative visual target; G14 final E2E.
+G0 финализирует spec/ADR/TV. G1 закрывает shared host/event drain/tick validation и per-player runtime queues foundation. G2 — rate/size/room lock/full GameTransport, bounded `entityIds[]` и `maxPendingCommandsPerPlayer/queue_full`. G3 — kinds/definitionId/generic Objective/Map/grid/occupancy. G4 — deterministic A*, fair round-robin command scheduling, command/activeTask/AI budgets, entityId lane ordering, breach + starvation regressions. G5 Economy и G6 Combat могут идти параллельно. G7 construction фиксирует same-owner BUILD EXISTING и immediate active-builder reservation; затем G8 Garrison и G9 PvE параллельно; G10 после G9; G11 ждёт G8+G10; G12 UI/presentation; G13 representative visual target; G14 final E2E.
 
 Практический максимум — 2 Coding Agents одновременно.
 
@@ -3072,7 +3238,7 @@ Architecture pass завершён и reconciled с merged Art Direction #48/#49
 
 Сохраняются approved решения: continuous world + grid, deterministic navigation/breach planning, generic garrison, Owner/Controller/Team separation, tick-boundary validation, projection-oriented GameStateView, shared MatchRuntime, `@web-rts/match-adapter`, declarative game-data.
 
-Дополнительно зафиксированы generic Objective vs Sacred Site identity, stable player-color semantics, event drain/parity, rate+size limits, room lock, full GameTransport session boundary, one MatchSnapshot/tick + full recipient GameStateView, starvation-free separated pathfinding budgets, resumable Construction Site через BUILD EXISTING, replicated tickRateHz и representative Babylon target.
+Дополнительно зафиксированы generic Objective vs Sacred Site identity, stable player-color semantics, event drain/parity, rate+size limits, room lock, full GameTransport session boundary, one MatchSnapshot/tick + full recipient GameStateView, bounded per-player command queues + deterministic fair round-robin, starvation-free separated pathfinding budgets с entityId lane ordering, resumable same-owner Construction Site с immediate builder reservation, replicated tickRateHz и representative Babylon target.
 
 До merge PR #52 implementation не запускается. После merge создаются отдельные implementation issues G1–G14; каждый проходит Task Chat → Coding Agent → PR → independent review → user manual merge.
 
