@@ -1,13 +1,14 @@
 # Gameplay Spec #002 — First Economy & Defense Vertical Slice
 
-Статус: **ACCEPTED — implementation starts after merge to main**  
+Статус: **ACCEPTED — implementation in progress**  
 Дата: **2026-10-04**  
 Проект: **Web RTS**  
 Tracking issue: **#50**
 
-> Архитектурный проход по #002 завершён и дополнительно reconciled с merged Art Direction (#48/#49, PR #51)
-> и техническим аудитом #53. Этот PR остаётся documentation/architecture gate: implementation issues
-> создаются и запускаются только после merge PR #52 в `main`, чтобы Coding Agents стартовали от одного source of truth.
+> Архитектурный проход по #002 завершён и reconciled с merged Art Direction (#48/#49, PR #51)
+> и техническим аудитом #53. PR #52 уже merged в `main`; implementation идёт через epic #50 и
+> reviewable child issues. Логические stages этой Spec сохраняются, а GitHub decomposition может
+> делить крупный stage на несколько PR без изменения архитектурного contract.
 
 ## 1. Цель
 
@@ -3203,45 +3204,83 @@ Playable flow: start → gather Wood → build Wall/Tower → Soldier/garrison �
 
 ## 29. Final implementation graph
 
+Архитектурные stages остаются G0–G14. Для правила `1 issue = 1 reviewable PR` два крупных logical stages разделены на implementation sub-stages:
+
+- G4 → G4a navigation, G4b fair scheduling/budgets, G4c breach-aware planner;
+- G12 → G12a presentation invariants, G12b gameplay interactions, G12c HUD/state feedback.
+
+Это **implementation decomposition**, а не изменение gameplay architecture: требования исходных G4/G12 остаются распределены между дочерними issues.
+
+Актуальный dependency graph:
+
 ```text
-G0  Architecture/docs finalization
+G0  Architecture/docs finalization — merged PR #52
  ▼
-G1  Shared MatchRuntime / Foundation host hardening
- ▼
-G2  Session / input hardening
- ▼
-G3  Entity / Objective / Map spatial foundation
- ▼
-G4  Navigation / MOVE / breach planning
- ├──────────────┐
- ▼              ▼
-G5 Economy      G6 Combat / Teams / Soldier
- └──────┬───────┘
-        ▼
-G7 Construction / Wall / Tower
- ├──────────────┐
- ▼              ▼
-G8 Garrison     G9 PvE AI
+#54 G1  Shared MatchRuntime / Foundation host hardening
+ ├──────────────────┐
+ ▼                  ▼
+#55 G2             #56 G3
+Session/input      Entity/Objective/Map
+                      │
+                      ▼
+                   #57 G4a
+                   Navigation / MOVE core
+                      │
+                 ┌────┴────┐
+                 ▼         ▼
+              #68 G4b   #69 G4c
+              Fair      Breach-aware
+              scheduler planner
+                 │
+            ┌────┴────┐
+            ▼         ▼
+         #58 G5     #59 G6
+         Economy    Combat / Teams / Soldier
+            └────┬────┘
                  ▼
-               G10 Wave / Defeat
-G8 ──────────────┤
-                 ▼
-G11 Protocol / Replication final shape
- ▼
-G12 Client gameplay/UI + presentation cleanup
- ▼
-G13 Representative Art Direction target
- ▼
-G14 Full Local/Remote E2E + acceptance
- ▼
-#002 DONE
+              #60 G7 Construction / Wall / Tower
+              ┌──┴─────────────────┐
+              ▼                    ▼
+           #61 G8               #62 G9
+           Garrison             PvE AI
+                                (also needs #69)
+                                   │
+                                   ▼
+                                #63 G10 Wave / Defeat
+              #61 ─────────────────┤
+                                   ▼
+                                #64 G11 Protocol / Replication
+                                   ▼
+                                #65 G12a Presentation cleanup
+                                   ▼
+                                #70 G12b Interaction controls
+                                   ▼
+                                #71 G12c HUD / state feedback
+                                   ▼
+                                #66 G13 Representative Art Direction target
+                                   ▼
+                                #67 G14 Full Local/Remote E2E
+                                   ▼
+                                #002 DONE
 ```
 
-G0 финализирует spec/ADR/TV. G1 закрывает shared host/event drain/tick validation, per-player runtime queues foundation и permanent-leave pending-queue cleanup. G2 — rate/size/room lock/full GameTransport, bounded `entityIds[]` и `maxPendingCommandsPerPlayer/queue_full`. G3 — kinds/definitionId/generic Objective/Map/grid/occupancy. G4 — deterministic A*, fair round-robin command scheduling, command/activeTask/AI budgets, entityId lane ordering, breach + starvation regressions. G5 Economy и G6 Combat могут идти параллельно. G7 construction фиксирует same-owner BUILD EXISTING и immediate active-builder reservation; затем G8 Garrison и G9 PvE параллельно; G10 после G9; G11 ждёт G8+G10; G12 UI/presentation; G13 representative visual target; G14 final E2E.
+Dependency/parallelism rules:
 
-Практический максимум — 2 Coding Agents одновременно.
+- after G1/#54: G2/#55 and G3/#56 may run independently;
+- G4a/#57 depends on G3/#56;
+- after G4a/#57: G4b/#68 and G4c/#69 may run in parallel; G4b also consumes G2/#55 policy/caps;
+- after G4b/#68: G5/#58 and G6/#59 may run in parallel;
+- G9/#62 requires both G7/#60 and G4c/#69;
+- G11/#64 waits for G8/#61 and G10/#63;
+- G12a → G12b → G12c are intentionally sequential because they share one client/presentation surface.
 
-Каждый implementation issue G1–G14 обязан содержать **Required reading** с конкретными разделами этой Spec и ADR, а не только общей ссылкой на почти 3000-строчный документ. Issue должен повторять локальные acceptance criteria, но не дублировать/переопределять архитектурный contract.
+G1 closes shared host/event drain/tick validation, per-player queue **structure** and permanent-leave pending-queue cleanup. G2 owns ingress caps, `maxPendingCommandsPerPlayer`, `queue_full`, rate/size hardening and room lock. G4b owns deterministic fair round-robin and path budgets. Эти boundaries нельзя схлопывать обратно в один ранний PR.
+
+LOBBY/join/reconnect/room-lock lifecycle остаётся shell-owned согласно ADR-009. Shared MatchRuntime объединяет gameplay bootstrap/execution/projection, а Local/Remote обязаны иметь одинаковые observable `START → RUNNING → FINISHED` gameplay semantics без общего session manager.
+
+Практический максимум — **2 Coding Agents одновременно**.
+
+Каждый implementation issue в этом graph обязан содержать **Required reading** с конкретными разделами этой Spec и ADR, а не только общей ссылкой на документ. Issue повторяет локальные acceptance criteria, но не дублирует и не переопределяет архитектурный contract.
 
 ## 30. Architecture review conclusion
 
@@ -3251,6 +3290,6 @@ Architecture pass завершён и reconciled с merged Art Direction #48/#49
 
 Дополнительно зафиксированы generic Objective vs Sacred Site identity, stable player-color semantics, event drain/parity, rate+size limits, room lock, full GameTransport session boundary, one MatchSnapshot/tick + full recipient GameStateView, bounded per-player command queues + deterministic fair round-robin, starvation-free separated pathfinding budgets с entityId lane ordering, resumable same-owner Construction Site с immediate builder reservation, replicated tickRateHz и representative Babylon target.
 
-До merge PR #52 implementation не запускается. После merge создаются отдельные implementation issues G1–G14; каждый проходит Task Chat → Coding Agent → PR → independent review → user manual merge.
+PR #52 уже merged, architecture gate пройден. Implementation идёт через epic #50 и child issues #54–#71 по graph из §29; каждый issue проходит Task Chat → Coding Agent → PR → independent review → user manual merge.
 
-Issue #53 остаётся audit record; findings закрываются stage'ами #002, а не отдельной конкурирующей архитектурой.
+Issue #53 остаётся audit record / verification tracker. Его исходные рекомендации сохраняются как historical snapshot; при расхождении текущий contract задают accepted Spec/ADR и соответствующий child issue.
