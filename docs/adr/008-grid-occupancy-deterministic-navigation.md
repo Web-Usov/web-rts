@@ -75,6 +75,14 @@ Priority:
 
 Stable FIFO/entity ordering обязателен. Group command не применяется частично из-за исчерпанного budget.
 
+Чтобы command не мог остаться pending навсегда, configuration обязана удовлетворять:
+
+```text
+MAX_MOVE_ENTITY_IDS <= maxPathQueriesPerTick
+```
+
+Protocol/input layer ограничивает `entityIds[]`, а startup/integration assertion проверяет согласованность command cap и simulation path budget. Если command помещается в полный fresh-tick budget, но не помещается в остаток текущего tick, он переносится целиком. Oversized request не разрешается превращать в forever-pending command.
+
 ## Последствия
 
 Плюсы:
@@ -101,4 +109,5 @@ Flow fields/navmesh/RVO/resumable A* добавляются только пос�
 - accepted construction blocks immediately;
 - no gameplay RNG in A*;
 - same topology/start/goal → same path;
-- pathfinding work per tick bounded deterministically.
+- pathfinding work per tick bounded deterministically;
+- maximum accepted group MOVE fits within a fresh tick path-query budget.
