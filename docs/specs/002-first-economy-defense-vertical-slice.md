@@ -1027,25 +1027,211 @@ slotIndex
 Host destruction не может оставить dangling `ContainedIn` relation.
 
 
-## 16. Teams / hostility — draft
+## 16. Teams / hostility — APPROVED
 
-Hostility нельзя определять через:
+Статус архитектурного решения: **APPROVED 2026-10-04**.
 
-```ts
-playerId !== otherPlayerId
-```
+Team/allegiance является отдельным gameplay concept и не выводится напрямую из Owner или Controller.
 
-Нужен минимальный team/faction concept, который допускает:
+### 16.1 Owner / Controller / Team
+
+Инвариант:
 
 ```text
-несколько игроков одной команды
-PvE hostile faction
-будущие PvP teams
+Owner      → economic/provenance ownership
+Controller → command authority
+Team       → gameplay/combat allegiance
+```
+
+Пример Coop:
+
+```text
+Soldier A:
+Owner      = Player 0
+Controller = Player 0
+Team       = Team 0
+
+Soldier B:
+Owner      = Player 1
+Controller = Player 1
+Team       = Team 0
+```
+
+Разные owners не означают hostility.
+
+### 16.2 Entity team component
+
+Gameplay entity, участвующая в allegiance/combat rules, имеет generic team component:
+
+```text
+Team
+└─ teamId
+```
+
+`TeamId` — отдельный opaque/stable simulation id. Специальные magic values вроде `-1 = PvE` не используются.
+
+Для #002 минимум Team имеют:
+
+- Worker;
+- Soldier;
+- Town Hall;
+- Wall;
+- Tower;
+- Construction Site;
+- Sacred Site;
+- PvE Enemy.
+
+Resource Node и static terrain Team не имеют и считаются neutral/non-combat allegiance.
+
+### 16.3 Player → Team assignment
+
+Match-level state хранит authoritative mapping:
+
+```text
+PlayerId → TeamId
+```
+
+Entity player-owned spawn/build получает Team из authoritative match assignment.
+
+Entity Team не вычисляется каждый tick через Owner.
+
+Это позволяет PvE и shared objectives иметь Team без Owner.
+
+Для #002:
+
+```text
+player(s) → player Team
+PvE       → separate PvE Team
+```
+
+### 16.4 Relationship resolver
+
+Hostility не определяется правилом:
+
+```ts
+teamA !== teamB
+```
+
+Gameplay systems используют общий deterministic relationship resolver:
+
+```text
+relationship(teamA, teamB)
+→ FRIENDLY | NEUTRAL | HOSTILE
+```
+
+Допустимы helpers вроде `areHostile` / `areFriendly`, но они должны опираться на relationship policy.
+
+Для #002 relation симметрична:
+
+```text
+Player Team ↔ Player Team = FRIENDLY
+PvE Team    ↔ PvE Team    = FRIENDLY
+Player Team ↔ PvE Team    = HOSTILE
+no Team     ↔ anything    = NEUTRAL
+```
+
+### 16.5 Relationship policy is match-level
+
+Relationship policy хранится на уровне match/game mode state/config, а не как дублируемая component каждой entity.
+
+#002 не вводит diplomacy system, но relationship representation не должна блокировать будущие:
+
+- Coop teams;
+- PvP/PvPvE teams;
+- neutral factions;
+- scenario relationships.
+
+Asymmetric diplomacy, temporary alliances и team switching находятся вне #002.
+
+### 16.6 Combat uses hostility + targetability
+
+Combat не должен атаковать entity только потому, что её Team отличается.
+
+Valid attack target требует отдельных условий:
+
+```text
+hostile relationship
++
+targetability / allowed target kind
++
+destructible/Health where applicable
+```
+
+Пример:
+
+```text
+Wall:
+  hostile to PvE + breachable/destructible → valid blocker/combat target
+
+Resource Node:
+  no Team / NEUTRAL → не hostile combat target
 ```
 
 Friendly fire в #002 отсутствует.
 
-> **Architecture review:** определить минимальную representation, не создавая преждевременную diplomacy system.
+### 16.7 Sacred Site
+
+В #002 Sacred Site:
+
+```text
+Owner      = null
+Controller = null
+Team       = player/shared Team
+Objective  = SACRED_SITE
+```
+
+Это сохраняет objective как team-level protected target и не привязывает его к конкретному player.
+
+PvE может атаковать Sacred Site через HOSTILE relationship.
+
+### 16.8 PvE entities
+
+Basic PvE enemy:
+
+```text
+Owner      = null
+Controller = null
+Team       = PvE Team
+```
+
+AI/combat/blocker planner используют Team relationship resolver, а не Owner/Controller.
+
+Approved breach-aware planning из §8.7 трактует blocker как hostile именно через Team relationship.
+
+### 16.9 Disconnect / control transfer / garrison
+
+Изменение Controller не меняет Team.
+
+Пример после disconnect:
+
+```text
+Owner      = Player 0
+Controller = null
+Team       = Team 0
+```
+
+Передача control другому player также не меняет allegiance автоматически.
+
+Garrison не меняет Team occupant или host.
+
+Same-owner garrison requirement в #002 остаётся отдельной access policy и не заменяется Team semantics.
+
+### 16.10 Determinism and scope
+
+Team assignment и relationship policy deterministic и не используют RNG.
+
+В #002 не реализуются:
+
+- diplomacy UI;
+- declare war;
+- alliances;
+- reputation;
+- temporary treaties;
+- asymmetric relationships;
+- runtime team switching.
+
+Архитектура лишь сохраняет возможность добавить их позже без переписывания combat allegiance model.
+
 
 ## 17. Combat
 
@@ -1525,17 +1711,26 @@ Walls            │
 - [x] host destruction сначала снимает occupancy и deterministic eject'ит occupant;
 - [x] contained occupant не является отдельной combat target в #002;
 - [x] Tower combat profile derived data-driven из host + occupant capability;
-- [x] snapshot/replication обязаны поддержать living entity без Position.
+- [x] snapshot/replication обязаны поддержать living entity без Position;
+- [x] Owner / Controller / Team — независимые concepts;
+- [x] Team хранится entity-level, Player→Team assignment — match-level;
+- [x] hostility не определяется через разные `teamId`;
+- [x] relationship resolver возвращает FRIENDLY / NEUTRAL / HOSTILE;
+- [x] relationship policy является match-level и симметрична в #002;
+- [x] entities без Team считаются neutral;
+- [x] combat использует hostility отдельно от targetability/destructibility;
+- [x] Sacred Site имеет shared player Team без Owner/Controller;
+- [x] PvE имеет отдельную Team без Owner/Controller;
+- [x] disconnect/control transfer/garrison не меняют Team автоматически.
 
 Этот блок является основой будущего **ADR-008: Grid, occupancy and deterministic navigation**.
 
 ### Ещё требуется review
 
-1. team/hostility representation;
-2. command schemas и runtime validation;
-3. replication/view contract;
-4. shared Local/Remote host abstractions;
-5. package boundaries после добавления gameplay systems;
-6. финальная dependency graph и безопасная параллельная issue breakdown.
+1. command schemas и runtime validation;
+2. replication/view contract;
+3. shared Local/Remote host abstractions;
+4. package boundaries после добавления gameplay systems;
+5. финальная dependency graph и безопасная параллельная issue breakdown.
 
 До завершения этих пунктов tracking issue #50 остаётся **DRAFT**, ADR-008 не считается финализированным, а implementation issues не запускаются.
