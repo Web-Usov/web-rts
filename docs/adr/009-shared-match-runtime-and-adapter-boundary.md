@@ -45,6 +45,8 @@ Local shell владеет WebWorker messaging/local identity/scheduler/disposal
 
 Transport internals намеренно не объединяются fake abstraction.
 
+При permanent leave/timeout Remote shell вызывает trusted MatchRuntime lifecycle cleanup: pending not-yet-applied commands этого player атомарно удаляются из per-player ingress queue до/вместе с release control. Для отброшенных commands не создаются recipient events. Disconnect внутри reconnect grace queue не очищает.
+
 Audit #53 H1 предлагал общий host module также для phase lifecycle. ADR-009 принимает эту рекомендацию **частично и осознанно**: общий gameplay runtime/bootstrap/projection обязателен, но LOBBY/join/reconnect/room-lock lifecycle остаётся shell-owned. Local и Remote вместо общего session manager обязаны иметь одинаковые observable gameplay lifecycle semantics для START → RUNNING → FINISHED и parity/integration tests на эти переходы.
 
 ### Bridge package
@@ -119,5 +121,7 @@ Remote и Local используют один shared projector. Production app s
 - simulation does not import protocol/framework APIs;
 - application shells do not own gameplay rules;
 - direct production access to mutable World stores avoided;
+- permanent player removal atomically discards that player's not-yet-applied pending commands without generating stale recipient events;
+- reconnect-grace disconnect does not prematurely discard pending commands;
 - reconnect/session/rate limits remain shell concerns;
 - shell-owned session lifecycle may differ internally, but observable START/RUNNING/FINISHED gameplay semantics remain equivalent across Local/Remote.
