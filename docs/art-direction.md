@@ -9,6 +9,28 @@
 
 Concept art ниже — **визуальные reference targets**, а не production assets, не точные layout карты и не обещание конкретного количества объектов в gameplay.
 
+### Связь с gameplay specs
+
+Art Direction описывает **долгосрочный визуальный target проекта**, а не scope конкретного gameplay milestone.
+
+Поэтому наличие на concept art или в этом документе:
+
+- дорог;
+- полей;
+- ворот;
+- домов;
+- quarry / рабочих зон;
+- кранов и другой инженерии;
+- outposts;
+- fog / weather;
+- большого числа юнитов или декоративных props
+
+**не добавляет эти системы в ближайшую gameplay spec автоматически**.
+
+Конкретная feature/spec определяет, какие gameplay entities и mechanics существуют в данном milestone. Art Direction определяет, **как они должны визуально читаться**, если и когда входят в scope.
+
+Обратное тоже верно: developer/proxy art в раннем vertical slice не считается финальным визуальным решением только потому, что gameplay entity уже реализована.
+
 ## 1. Короткая формула
 
 Рабочий shorthand направления:
@@ -119,6 +141,8 @@ Fantasy сильнее проявляется в окружающем мире, 
 
 Синий цвет на текущих concepts — пример одного player-color slot, а не зафиксированная финальная multiplayer palette.
 
+Player-color должен следовать **стабильной gameplay identity / ownership policy**, а не временно меняться только из-за смены command control. Точная связь Owner / Team / Controller определяется gameplay/technical spec; Art Direction фиксирует лишь визуальный принцип: временная потеря или передача control сама по себе не должна случайно перекрашивать принадлежащий игроку объект.
+
 ## 4. Люди и армия
 
 Базовая человеческая культура одна. Игроки различаются прежде всего player-color accents, а не отдельными архитектурными цивилизациями.
@@ -175,6 +199,8 @@ Fantasy сильнее проявляется в окружающем мире, 
 
 Sacred Site должен резко отличаться от обычной человеческой архитектуры и оставаться заметным landmark даже на дальнем zoom.
 
+При этом **Sacred Site — визуальная / world-entity identity, а не имя generic gameplay objective type**. Gameplay architecture может назначать этой entity роль вроде `protect` через обобщённую Objective model. Art Direction не требует hardcode objective system под Sacred Site.
+
 ## 7. PvE threat
 
 Финальный дизайн PvE-врагов **ещё не зафиксирован**.
@@ -192,6 +218,8 @@ Sacred Site должен резко отличаться от обычной ч�
 
 > один противник вызывает любопытство; сотни таких противников создают давление.
 
+Gameplay prototype может временно использовать условный `basic melee enemy`, простой proxy mesh или цветную фигуру. Это описывает **combat role / AI behavior**, а не утверждает финальную visual identity PvE. В частности, humanoid attackers из concept references не становятся каноническим дизайном врага автоматически.
+
 ## 8. Fortifications и engineering
 
 Укрепления должны быть крупными и ясными:
@@ -203,6 +231,8 @@ Sacred Site должен резко отличаться от обычной ч�
 - defensive machinery.
 
 Большие инженерные объекты — один из характерных элементов human-side art direction. Они должны выглядеть собранными из понятных материалов: дерево, металл, камень, канаты.
+
+Если gameplay использует defensive Tower, способную автоматически атаковать без отдельной controllable unit внутри, это не должно визуально читаться как необъяснимая магическая автоматика. Базовая Tower может подразумевать встроенный расчёт, механический firing setup или другую абстрагированную human-side operation. Явный garrison дополнительного Soldier может менять боевой профиль, не отрицая наличие базовой обслуживающей логики башни.
 
 При близком zoom механизм может раскрывать детали. При дальнем zoom он должен читаться одной сильной формой.
 
@@ -238,6 +268,8 @@ Game Vision требует выразительных разрушений, но
 Рабочее визуальное направление для здания:
 
 > короткое понятное разрушение → несколько крупных читаемых частей / пыль → состояние руин или cleanup.
+
+Это **presentation intent**, а не требование создавать persistent gameplay-entity руин, collision/occupancy или loot. Gameplay spec может удалить destroyed entity из active world сразу, а presentation поверх этого показать короткий transient destruction/cleanup effect. Persistent ruins становятся gameplay-механикой только по отдельному решению.
 
 Точная implementation-модель разрушений определяется отдельной gameplay/presentation задачей.
 
@@ -289,6 +321,8 @@ Art direction должен выдерживать сильный диапазо�
 Мелкая декорация должна визуально исчезать раньше, чем начинает мешать чтению карты.
 
 Точное поведение camera zoom/rotation и техническая LOD-стратегия этим документом не фиксируются.
+
+Art Direction также не требует немедленно перерабатывать Foundation camera в ближайшей gameplay spec. Representative in-engine target должен сначала проверить normal gameplay zoom и strategic overview на фактической сцене; отдельная camera implementation issue нужна только если текущая система не обеспечивает требуемую читаемость.
 
 ## 12. Browser RTS: visual-density rules
 
@@ -385,17 +419,21 @@ Concepts ниже фиксируют **направление формы, пло
 
 Эти concepts не являются production-ready assets.
 
-Перед массовым созданием 3D-контента нужен небольшой representative in-engine target:
+Перед массовым созданием 3D-контента нужен небольшой representative in-engine target, желательно поверх первого достаточно полного gameplay vertical slice, чтобы проверять стиль не в изолированном render mockup, а в реальном RTS context:
 
-- один тип человека;
-- 2–3 здания;
+- один тип человека / representative human unit;
+- 2–3 representative здания;
 - wall + tower;
-- один engineering object;
+- один engineering object или ясно читаемый engineering cue;
 - небольшой environment patch;
 - Sacred Site proxy/hero asset;
+- player-color accents;
 - normal gameplay zoom;
-- strategic zoom.
+- strategic zoom;
+- небольшая defense/combat scene для проверки visual density.
 
-После этого стиль оценивается в Babylon.js на фактическом игровом масштабе. Только после такой проверки стоит фиксировать asset budgets и расширять каталог.
+Этот target **не является production-art gate для начала gameplay implementation**: ранние gameplay stages могут и должны использовать proxy/developer assets. Он нужен до массового производства финального 3D-контента и до фиксации asset budgets.
+
+После representative target стиль оценивается в Babylon.js на фактическом игровом масштабе. Только после такой проверки стоит фиксировать asset budgets и расширять production catalog.
 
 Provenance текущих references находится в [docs/art/concepts/README.md](./art/concepts/README.md).
