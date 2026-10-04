@@ -1,77 +1,88 @@
 # ADR-007: replication boundary + visibility
 
 Статус: **Accepted**  
-Дата: **2026-09-24**
+Дата: **2026-09-24**  
+Уточнение стратегии: **2026-10-04**
 
 ## Контекст
 
-Authoritative simulation содержит больше данных, чем должен видеть конкретный client. Особенно это важно для fog of war, hidden enemy state и будущих оптимизаций network payload.
+Authoritative simulation содержит больше данных, чем должен видеть конкретный client. Особенно это важно для fog of war, hidden enemy state и будущих network optimizations.
 
-Если network state сделать тем же объектом, что simulation state, transport/framework concerns быстро проникнут в game rules, а безопасная per-player visibility станет сложной.
+Foundation реализовал transport-neutral snapshot + `GameStateView` messages, а не Colyseus Schema как canonical replicated world. Audit #53 показал, что Technical Vision всё ещё описывал старое предположение про Schema.
 
 ## Решение
 
-Разделить:
+Сохранить жёсткую boundary:
 
 ```text
-Simulation State
+Simulation / MatchRuntime
       ↓
-ReplicationAdapter
+transport-neutral MatchSnapshot
       ↓
-Player/Team Network View
+recipient projection
       ↓
-Colyseus replication/messages
+GameStateView
+      ↓
+transport message
       ↓
 ClientGameState
 ```
 
-Simulation остаётся полной authoritative моделью.
+Simulation остаётся полной authoritative моделью и не зависит от protocol/Colyseus.
 
-`ReplicationAdapter` отвечает за:
+Для текущего gameplay stage используется:
 
-- projection simulation state в network state;
-- выбор полей, нужных client;
-- visibility filtering;
-- преобразование internal structures в transport-friendly representation;
-- возможность позднее изменить replication strategy без изменения game rules.
+- один MatchSnapshot на simulation tick;
+- per-recipient projection поверх этого snapshot;
+- полный `GameStateView` message как baseline;
+- one-shot events/messages для `COMMAND_REJECTED`, `ACTION_FAILED`, transient notifications/VFX hints.
 
-Fog of war и information visibility являются **server-owned gameplay rules**. Hidden enemy entities не должны просто отправляться client и скрываться renderer'ом.
+Colyseus Schema, delta replication, dirty masks, binary serialization и отдельная patch frequency остаются допустимыми будущими optimizations после profiling. Они не должны менять gameplay rules или simulation structures.
 
-Persistent state передаётся через state replication; одноразовые notifications/VFX hints/command rejection могут передаваться events/messages.
+Fog of war/information visibility остаются **server-owned gameplay policy**. Hidden state не отправляется client только для renderer-side hiding.
 
 ## Последствия
 
 Плюсы:
 
-- simulation не зависит от Colyseus Schema;
-- скрытая информация не утечёт client по умолчанию;
-- можно отдельно оптимизировать payload/patch rate;
-- можно заменить Colyseus state replication на другой serialization layer без переписывания simulation.
+- simulation не зависит от Colyseus Schema или wire DTO;
+- Local и Remote используют одинаковую projection semantics;
+- один snapshot на tick избегает повторного обхода World для каждого recipient;
+- reconnect восстанавливается fresh persistent snapshot;
+- serialization strategy можно менять независимо.
 
 Минусы:
 
-- нужно поддерживать projection между simulation и network state;
-- per-player/team filtering имеет CPU/serialization cost;
-- возможны bugs рассинхронизации projection, поэтому нужны integration tests.
+- full snapshots могут стать network bottleneck при росте entity count;
+- projection/filtering имеет CPU/serialization cost;
+- нужны parity/integration tests.
+
+Если profiling покажет bottleneck, следующий шаг — измеряемая optimization/ADR update, а не перенос protocol concerns в simulation.
 
 ## Альтернативы
 
-### Реплицировать полный simulation state
+### Replicate full simulation state
 
-Отклонено из-за утечки hidden information, лишнего network traffic и сильной связанности.
+Отклонено из-за утечки hidden data и связности.
 
 ### Client-side fog only
 
-Отклонено как небезопасная модель для PvP: скрытые enemy data всё равно были бы доступны client.
+Отклонено как небезопасная PvP model.
 
-### Colyseus Schema как canonical world model
+### Colyseus Schema as canonical world model
 
-Отклонено: networking framework не должен определять внутреннюю структуру game simulation.
+Отклонено: networking framework не определяет simulation structure.
+
+### Обязательный Colyseus Schema transport прямо сейчас
+
+Не выбран. Foundation full-view messages достаточны для текущего масштаба; Schema/delta path остаётся optimization option.
 
 ## Инварианты
 
 - simulation state и replicated state — разные модели;
-- server определяет player/team visibility;
-- client не получает gameplay-sensitive hidden state без необходимости;
-- replication frequency может меняться независимо от simulation tick;
-- изменение transport/serialization не должно требовать изменения core gameplay rules.
+- MatchSnapshot transport-neutral;
+- per-recipient visibility authoritative;
+- one snapshot per tick может обслуживать несколько projections;
+- critical persistent gameplay state находится в state view, а не только events;
+- replication frequency/serialization могут меняться независимо от simulation tick;
+- transport optimization не требует изменения core gameplay rules.
