@@ -5,13 +5,14 @@
 ## Документы
 
 - [`game-vision.md`](./game-vision.md) — Game Vision v0.1: направление игры, режимы, core loop, цели матча и границы MVP.
+- [`art-direction.md`](./art-direction.md) — Art Direction v0.1: visual DNA, shape/material language, readability и density principles, zoom-level rules и curated concept references.
 - [`technical-vision.md`](./technical-vision.md) — Technical Vision v0.1: зафиксированный стек, simulation architecture, networking, rendering, testing, CI и agent-driven development rules.
 - [`technical-direction.md`](./technical-direction.md) — Technical Direction v0.1: предварительный документ, на основе которого сформирован Technical Vision. При расхождениях приоритет имеет `technical-vision.md`.
 
 ## Specs
 
 - [`specs/001-foundation-network-vertical-slice.md`](./specs/001-foundation-network-vertical-slice.md) — Foundation Spec #001: первый authoritative multiplayer vertical slice, tooling, simulation kernel, transport, client/server integration, tests, CI и LAN startup.
-- [`specs/002-first-economy-defense-vertical-slice.md`](./specs/002-first-economy-defense-vertical-slice.md) — **DRAFT** Gameplay Spec #002: первый economy/defense loop — Wood gathering, construction, grid/pathfinding, combat, Tower garrison, PvE wave и Sacred Site defeat. До implementation требуется architecture review; tracking issue #50.
+- [`specs/002-first-economy-defense-vertical-slice.md`](./specs/002-first-economy-defense-vertical-slice.md) — Gameplay Spec #002: first economy/defense slice, foundation hardening, deterministic navigation, Wood/construction/combat/PvE wave и Art Direction integration.
 - [`docker-lan.md`](./docker-lan.md) — Docker Compose startup: порты, LAN URL, env, smoke и ручной checklist со второго устройства.
 
 Корневой [`AGENTS.md`](../AGENTS.md) содержит обязательные правила для coding agents: source-of-truth hierarchy, архитектурные инварианты, scope discipline и требования к PR/tests.
@@ -26,10 +27,13 @@
 - [`adr/005-data-oriented-entity-model.md`](./adr/005-data-oriented-entity-model.md) — data-oriented system-driven entity model без обязательного ECS framework на старте.
 - [`adr/006-local-vs-remote-game-transport.md`](./adr/006-local-vs-remote-game-transport.md) — единая GameTransport boundary для локального Solo и remote multiplayer.
 - [`adr/007-replication-boundary-and-visibility.md`](./adr/007-replication-boundary-and-visibility.md) — отделение simulation state от network state и server-owned visibility/fog.
+- [`adr/008-grid-occupancy-deterministic-navigation.md`](./adr/008-grid-occupancy-deterministic-navigation.md) — continuous world + discrete grid, generic occupancy, deterministic A*/breach planning и bounded pathfinding work.
+- [`adr/009-shared-match-runtime-and-adapter-boundary.md`](./adr/009-shared-match-runtime-and-adapter-boundary.md) — один MatchRuntime для Local/Remote и bridge `match-adapter` между simulation и protocol.
 
 ## Как развиваем документацию
 
 - Продуктовые решения фиксируются в `game-vision.md` или отдельных спецификациях в `docs/specs/`.
+- Визуальное направление конкретизируется в `art-direction.md`; оно не может молча переопределять Game Vision.
 - Значимые технические решения оформляются как ADR в `docs/adr/`.
 - Реализация конкретной фичи должна начинаться со spec и acceptance criteria.
 - GitHub Issues используются для задач реализации, а не как единственное место хранения продуктовой документации.
