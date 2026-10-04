@@ -371,7 +371,8 @@ Command ingress shared для Local/Remote:
 - внутри player сохраняется FIFO;
 - между players используется deterministic round-robin с persistent cursor;
 - raw packet arrival order между разными players не определяет gameplay winner;
-- path-heavy commands расходуют command path budget по approved Spec/ADR-008.
+- path-heavy commands расходуют command path budget по approved Spec/ADR-008;
+- permanent leave/timeout очищает not-yet-applied pending queue player без создания stale rejection events; reconnect grace этого не делает.
 
 Gameplay permissions/control, costs, placement, reachability и entity state проверяются shared simulation против текущего world state на tick boundary.
 
