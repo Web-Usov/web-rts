@@ -1413,37 +1413,310 @@ result = DEFEAT
 
 Victory condition отсутствует.
 
-## 22. Protocol — draft
+## 22. Protocol / command validation — APPROVED
 
-Существующий `MOVE` сохраняется.
+Статус архитектурного решения: **APPROVED 2026-10-04**.
 
-Рабочий набор новых gameplay intents:
+### 22.1 Validation layers
+
+Untrusted client payload проходит три разных уровня:
 
 ```text
+unknown payload
+→ protocol/schema validation
+→ typed GameCommand
+→ session/transport validation
+→ trusted actor context + command
+→ simulation queue
+→ gameplay semantic validation at tick boundary
+→ apply / reject
+```
+
+Transport/application boundary отвечает за schema/session/match-phase/transport limits.
+
+Simulation отвечает за gameplay semantics:
+
+- Controller permission;
+- entity existence/state;
+- resource availability;
+- placement;
+- path/reachability;
+- garrison conditions;
+- другие gameplay rules.
+
+Gameplay validation не должна дублироваться отдельными Local и Remote implementations.
+
+### 22.2 Semantic validation happens on tick boundary
+
+Команда не должна считаться gameplay-valid только потому, что была valid в момент network receive.
+
+Host после schema/session checks enqueue'ит trusted command. На simulation tick команды обрабатываются FIFO и каждая проверяется против **текущего world state**, уже учитывающего предыдущие команды этого же tick.
+
+Пример конфликтов:
+
+```text
+BUILD A cell X → accepted, occupancy changes
+BUILD B cell X → rejected: invalid_placement
+
+Wood = 100
+BUILD A cost 80 → accepted, Wood = 20
+BUILD B cost 80 → rejected: insufficient_resources
+```
+
+Gameplay mutation одной применяемой команды должна быть atomic относительно command application.
+
+### 22.3 Trusted actor context
+
+Public GameCommand не содержит authoritative identity:
+
+- playerId;
+- teamId;
+- ownerId;
+- session identity.
+
+Remote host выводит PlayerId из server session/slot.
+Local host назначает Local PlayerId внутри trusted local runtime.
+
+В simulation queue actor context отделён от gameplay intent концептуально:
+
+```text
+QueuedCommand
+├─ actor.playerId
+└─ command: SimulationCommand
+```
+
+`sessionId` остаётся host/logging concern и не входит в simulation.
+
+### 22.4 Public command set #002
+
+В #002 используются:
+
+```text
+MOVE
 GATHER
 BUILD
 GARRISON
 UNGARRISON
 ```
 
-Отдельный ATTACK в #002 не требуется: Soldier/Tower/PvE combat automatic.
+Отдельный ATTACK не вводится; Soldier/Tower/PvE combat automatic.
 
-Client не является authority для:
+#### MOVE
 
-- player identity;
-- resource amount;
+```text
+entityIds[]
+target { x, y }   // world-space
+```
+
+MOVE сохраняет continuous world-space semantics.
+
+#### GATHER
+
+```text
+workerEntityId
+resourceEntityId
+```
+
+Client не передаёт resource position/type/remaining amount как authority.
+
+#### BUILD
+
+```text
+builderEntityId
+buildingTypeId
+anchorCell { x, y }
+```
+
+BUILD использует grid anchor, потому что placement/grid occupancy являются gameplay contract.
+
+`buildingTypeId` — bounded data identifier, а не обязательный protocol enum для каждого будущего building definition.
+Simulation валидирует, существует ли definition и разрешён ли он в текущем game mode/slice.
+
+#### GARRISON
+
+```text
+unitEntityId
+containerEntityId
+```
+
+#### UNGARRISON
+
+```text
+unitEntityId
+```
+
+Container определяется через approved `ContainedIn` relation.
+
+### 22.5 Command metadata and ordering
+
+Существующие `commandId` и `clientSequence` сохраняются.
+
+`commandId` используется для correlation/rejection/diagnostics.
+
+`clientSequence` является client/transport metadata и **не задаёт authoritative gameplay ordering между players**.
+
+Authoritative order #002 — FIFO order trusted commands в simulation queue.
+
+При одинаковой последовательности queued commands simulation должна давать одинаковый result.
+
+Replay/deduplication protocol поверх `clientSequence` находится вне #002.
+
+### 22.6 Command rejection vs later task failure
+
+Нужно различать два lifecycle.
+
+#### COMMAND_REJECTED
+
+Команда не начала gameplay action.
+
+Примеры stable machine-readable reasons:
+
+```text
+invalid_schema
+not_running
+not_controller
+entity_not_found
+entity_not_spatial
+blocked_target
+insufficient_resources
+invalid_placement
+no_path
+no_garrison_slot
+no_exit
+```
+
+#### ACTION_FAILED
+
+Команда была применена и долгоживущая task стартовала, но позже world изменился так, что task нельзя завершить.
+
+Примеры:
+
+```text
+GARRISON accepted
+→ unit идёт к Tower
+→ slot занят другим unit
+→ entry validation fails
+→ ACTION_FAILED
+
+MOVE accepted
+→ topology changed
+→ replan fails
+→ ACTION_FAILED
+```
+
+Это не retroactive `COMMAND_REJECTED`.
+
+Для meaningful asynchronous failure protocol должен иметь one-shot event концептуально:
+
+```text
+ACTION_FAILED
+├─ commandId
+├─ entityId
+├─ action
+└─ reason
+```
+
+Нормальное завершение lifecycle не считается failure. Например истощение ResourceNode → final deposit → Worker IDLE.
+
+### 22.7 BUILD atomicity
+
+BUILD применяется только если на tick одновременно валидны минимум:
+
+- Controller permission;
+- builder capability;
+- building definition;
+- resource cost;
+- buildability;
+- footprint occupancy;
+- builder reachability/valid build approach.
+
+Successful application атомарно выполняет:
+
+```text
+spend Wood
++ create construction entity
++ register solid footprint
++ start Worker construction task
+```
+
+После этого поздняя невозможность продолжить construction не возвращает ресурсы и не отменяет созданный site.
+
+### 22.8 Two-phase task validation
+
+GARRISON и GATHER естественно имеют initial validation при command application и повторную validation на момент interaction.
+
+GARRISON entry повторно проверяет host/slot/access.
+
+GATHER arrival повторно проверяет target existence/resource remaining.
+
+World changes после command acceptance обрабатываются task lifecycle, а не разными Remote/Local command rules.
+
+### 22.9 Protocol hardening
+
+Zod/wire schemas остаются strict.
+
+Все потенциально unbounded client fields должны иметь разумные limits:
+
+- string lengths;
+- arrays;
+- numeric domains;
+- finite world coordinates;
+- bounded identifier sizes.
+
+Конкретные security constants определяются implementation/config, но unbounded gameplay payload запрещён архитектурно.
+
+### 22.10 Client sends intent only
+
+Client никогда не является authority для:
+
+- PlayerId / TeamId;
+- current resources;
+- Health / damage;
 - construction progress;
 - path result;
-- damage;
-- death;
+- gather amount;
 - target selection;
+- attack cooldown;
 - wave progression;
 - match result.
 
-При breaking wire changes увеличивается `PROTOCOL_VERSION`.
+Client отправляет intent + entity/data references; authoritative gameplay result вычисляется shared simulation.
 
-> **Architecture review:** окончательно определить payload schemas, command ownership checks,
-> rate/size validation и какие gameplay interactions выражаются explicit command, а какие — server/simulation behavior.
+### 22.11 Stable machine-readable failure codes
+
+Failure/rejection reason является stable machine-readable code, а не локализованным human text.
+
+UI сам отображает локализованное сообщение.
+
+Для malformed payload без валидного commandId целевое protocol направление — nullable/optional command correlation вместо semantic sentinel `"unknown"`; конкретная wire migration определяется implementation issue вместе с PROTOCOL_VERSION bump.
+
+### 22.12 Local / Remote convergence
+
+Foundation-style pre-validation gameplay rules в Remote `SimulationHost` и отдельная Local command-validation копия являются временным foundation shape.
+
+Целевой #002 flow:
+
+```text
+Remote host                   Local host
+    │                             │
+schema/session checks       schema/session checks
+derive trusted PlayerId     derive trusted PlayerId
+    │                             │
+    └──── trusted command ────────┘
+                  ↓
+        shared gameplay command queue
+                  ↓
+              World.step
+                  ↓
+       semantic gameplay validation
+                  ↓
+             systems/tasks
+```
+
+Точное shared host/runtime размещение определяется отдельным Local/Remote architecture pass.
+
+Breaking wire changes требуют `PROTOCOL_VERSION` bump по существующему contract.
+
 
 ## 23. Replication — draft
 
@@ -1721,16 +1994,27 @@ Walls            │
 - [x] combat использует hostility отдельно от targetability/destructibility;
 - [x] Sacred Site имеет shared player Team без Owner/Controller;
 - [x] PvE имеет отдельную Team без Owner/Controller;
-- [x] disconnect/control transfer/garrison не меняют Team автоматически.
+- [x] disconnect/control transfer/garrison не меняют Team автоматически;
+- [x] protocol/schema/session validation отделены от gameplay semantic validation;
+- [x] gameplay validation выполняется на simulation tick boundary;
+- [x] trusted PlayerId выводится host'ом и не приходит в client payload;
+- [x] public command set #002: MOVE / GATHER / BUILD / GARRISON / UNGARRISON;
+- [x] MOVE world-space, BUILD grid-anchored, interactions ссылаются на entity IDs;
+- [x] simulation command queue FIFO; clientSequence не задаёт gameplay ordering;
+- [x] COMMAND_REJECTED отделён от позднего ACTION_FAILED;
+- [x] BUILD application atomic относительно resources/entity/occupancy/task;
+- [x] GATHER/GARRISON поддерживают повторную validation на момент interaction;
+- [x] schemas strict и bounded; client отправляет только intent;
+- [x] failure reasons machine-readable;
+- [x] Local/Remote должны сходиться в shared gameplay command-validation path.
 
 Этот блок является основой будущего **ADR-008: Grid, occupancy and deterministic navigation**.
 
 ### Ещё требуется review
 
-1. command schemas и runtime validation;
-2. replication/view contract;
-3. shared Local/Remote host abstractions;
-4. package boundaries после добавления gameplay systems;
-5. финальная dependency graph и безопасная параллельная issue breakdown.
+1. replication/view contract;
+2. shared Local/Remote host abstractions;
+3. package boundaries после добавления gameplay systems;
+4. финальная dependency graph и безопасная параллельная issue breakdown.
 
 До завершения этих пунктов tracking issue #50 остаётся **DRAFT**, ADR-008 не считается финализированным, а implementation issues не запускаются.
