@@ -356,14 +356,26 @@ untrusted payload
 → strict/bounded schema validation
 → session/phase/rate checks
 → trusted actor + typed command
-→ MatchRuntime FIFO queue
+→ shared MatchRuntime admission
+   ├─ bounded per-player FIFO queue
+   └─ queue_full on overflow
+→ deterministic fair scheduler
 → semantic gameplay validation at simulation tick boundary
 → apply or COMMAND_REJECTED
 ```
 
-Permissions/control, costs, placement, reachability и entity state проверяются shared simulation против текущего world state на tick boundary.
+Command ingress shared для Local/Remote:
 
-Long-running task может позже получить `ACTION_FAILED`, если world изменился. Это не retroactive rejection.
+- `maxPendingCommandsPerPlayer` ограничивает memory per player;
+- `maxCommandsPerTick` ограничивает command processing work;
+- внутри player сохраняется FIFO;
+- между players используется deterministic round-robin с persistent cursor;
+- raw packet arrival order между разными players не определяет gameplay winner;
+- path-heavy commands расходуют command path budget по approved Spec/ADR-008.
+
+Gameplay permissions/control, costs, placement, reachability и entity state проверяются shared simulation против текущего world state на tick boundary.
+
+`queue_full` является admission/backpressure rejection до semantic validation. Long-running task может позже получить `ACTION_FAILED`, если world изменился; это не retroactive rejection.
 
 Client никогда не сообщает authoritative HP/resources/team/damage/construction/path/final position.
 
@@ -1080,7 +1092,10 @@ Server authoritative означает:
 - ownership/control и gameplay semantics проверяются на simulation tick boundary;
 - resource costs считаются сервером;
 - hidden enemy state не отправляется client;
-- room input имеет explicit rate limit;
+- remote room input имеет explicit rate limit;
+- shared MatchRuntime имеет bounded per-player pending command queues;
+- overflow отклоняется machine-readable `queue_full`, без вытеснения уже queued commands;
+- deterministic fair scheduling не позволяет одному player неограниченно блокировать command ingress остальных;
 - client-controlled strings/arrays/ids/coordinates bounded;
 - malformed commands отклоняются runtime validation без падения Room;
 - после START новые joins в текущий match блокируются, reserved reconnect остаётся отдельным разрешённым path.
