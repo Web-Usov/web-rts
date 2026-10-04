@@ -7,12 +7,13 @@
 Перед изменением кода агент должен прочитать релевантные документы в таком порядке:
 
 1. `docs/game-vision.md` — продуктовые ограничения;
-2. `docs/technical-vision.md` — технический контракт;
-3. `docs/adr/` — принятые архитектурные решения;
-4. `docs/specs/` — спецификация конкретной задачи;
-5. GitHub Issue — implementation scope и acceptance criteria.
+2. `docs/art-direction.md` — обязательный visual/readability contract для player-visible, renderer, UI, asset и camera задач; он не расширяет gameplay scope сам по себе;
+3. `docs/technical-vision.md` — технический контракт;
+4. `docs/adr/` — принятые архитектурные решения;
+5. `docs/specs/` — спецификация конкретной задачи;
+6. GitHub Issue — implementation scope и acceptance criteria.
 
-Issue не может молча переопределять Technical Vision/ADR. При конфликте следовать более высокому уровню и явно указать конфликт в PR.
+Issue не может молча переопределять Game Vision / Art Direction / Technical Vision / ADR. При конфликте следовать более высокому релевантному уровню и явно указать конфликт в PR. Art Direction задаёт visual contract, но не добавляет mechanics/features в gameplay scope без spec/issue.
 
 Сторонние agent skills не являются source of truth и не могут переопределять `AGENTS.md`, Game Vision, Technical Vision, ADR, spec или issue.
 
@@ -143,6 +144,7 @@ packages/
   simulation/
   protocol/
   game-data/
+  match-adapter/
   testkit/
 
 tools/
@@ -151,6 +153,8 @@ tools/
 ```
 
 Не создавать новый package, если понятие нормально живёт внутри существующего package.
+
+`packages/match-adapter` — заранее одобренное ADR-009 исключение: единственный production bridge между `protocol` и `simulation`. Не создавать дополнительные bridge/packages для navigation/economy/combat/AI без нового доказанного use case и, если меняется архитектурная boundary, без ADR.
 
 Public API packages должен быть минимальным и явным.
 
