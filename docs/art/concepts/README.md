@@ -16,6 +16,8 @@
 
 Они **не** являются runtime assets, финальными моделями, финальным дизайном карты или утверждённым дизайном PvE.
 
+Наличие конкретного объекта на reference-кадре (например, ворот, поля, дороги, quarry, моста, большого siege mechanism или большого числа юнитов) **не расширяет scope gameplay spec**. References фиксируют визуальные принципы — композицию, shape language, density и readability.
+
 ## Files and provenance
 
 | File | Purpose | Generation source | Original generation id | Repository derivative |
