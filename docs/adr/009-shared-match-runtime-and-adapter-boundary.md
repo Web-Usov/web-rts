@@ -45,6 +45,8 @@ Local shell владеет WebWorker messaging/local identity/scheduler/disposal
 
 Transport internals намеренно не объединяются fake abstraction.
 
+Audit #53 H1 предлагал общий host module также для phase lifecycle. ADR-009 принимает эту рекомендацию **частично и осознанно**: общий gameplay runtime/bootstrap/projection обязателен, но LOBBY/join/reconnect/room-lock lifecycle остаётся shell-owned. Local и Remote вместо общего session manager обязаны иметь одинаковые observable gameplay lifecycle semantics для START → RUNNING → FINISHED и parity/integration tests на эти переходы.
+
 ### Bridge package
 
 Добавляется один production package:
@@ -115,4 +117,5 @@ Remote и Local используют один shared projector. Production app s
 - simulation does not import protocol/framework APIs;
 - application shells do not own gameplay rules;
 - direct production access to mutable World stores avoided;
-- reconnect/session/rate limits remain shell concerns.
+- reconnect/session/rate limits remain shell concerns;
+- shell-owned session lifecycle may differ internally, but observable START/RUNNING/FINISHED gameplay semantics remain equivalent across Local/Remote.
