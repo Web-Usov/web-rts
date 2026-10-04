@@ -1718,28 +1718,371 @@ derive trusted PlayerId     derive trusted PlayerId
 Breaking wire changes требуют `PROTOCOL_VERSION` bump по существующему contract.
 
 
-## 23. Replication — draft
+## 23. Replication / GameStateView — APPROVED
 
-Client получает view/projection, а не simulation World.
+Статус архитектурного решения: **APPROVED 2026-10-04**.
 
-Минимально UI/presentation потребуется состояние для:
+### 23.1 Projection, not serialized World
 
-- entity kind/type;
+`GameStateView` остаётся presentation-oriented projection и не копирует component stores/runtime internals simulation.
+
+```text
+Simulation World
+→ transport-neutral snapshot/projection
+→ per-recipient replication policy
+→ GameStateView
+→ ClientGameState
+→ HUD + interpolation/presentation
+```
+
+В #002 используются full snapshots. Delta replication, dirty masks, binary protocol, compression и interest management не вводятся до profiling/measurement.
+
+### 23.2 Static data through definitionId
+
+Каждая gameplay entity получает stable `definitionId`, связанный с `game-data`.
+
+Примеры:
+
+```text
+worker
+soldier
+enemy_melee
+town_hall
+wall
+tower
+sacred_site
+wood_node
+```
+
+Static definition data (footprint, base stats, cost, garrison capacity, attack profiles, resource type и т.п.) не дублируется каждый tick без необходимости.
+
+Совместимость static definitions защищается существующим `GAME_DATA_VERSION`.
+
+### 23.3 Broad entity kind + data definition
+
+View использует широкую category:
+
+```text
+UNIT
+BUILDING
+RESOURCE
+OBJECTIVE
+```
+
+и отдельный `definitionId`.
+
+Protocol не расширяется отдельным enum variant для каждого нового конкретного unit/building definition.
+
+### 23.4 Location is discriminated
+
+Обязательные `x/y` заменяются semantic location union:
+
+```text
+WORLD {
+  x,
+  y
+}
+
+CONTAINED {
+  containerEntityId,
+  slotIndex
+}
+```
+
+Это выражает approved garrison invariant прямо в view contract.
+
+Living entity без Position не исчезает из snapshot/view.
+
+### 23.5 Living entity != spatial entity
+
+Transport-neutral snapshot обходит living gameplay entities, а не только entities с Position.
+
+Contained Soldier остаётся в replicated entity collection:
+
+```text
+entityId
+Owner
+Controller
+Team
+Health
+location = CONTAINED(...)
+```
+
+Отсутствие WORLD position не означает destruction.
+
+### 23.6 Composed entity view
+
+Wire/view model не строит OOP hierarchy `UnitView → SoldierView` / `BuildingView → TowerView`.
+
+Entity projection composition-oriented:
+
+```text
+entityId
+kind
+definitionId
+location
+
+ownerPlayerId
+controllerPlayerId
+teamId
+relationToLocal
+
+health?
+construction?
+resourceNode?
+objective?
+```
+
+Конкретная Zod representation может группировать поля в nested objects, но public semantics должны оставаться capability/composition-oriented.
+
+### 23.7 Recipient relationship
+
+Entity view содержит:
+
+```text
+teamId | null
+relationToLocal:
+  FRIENDLY | NEUTRAL | HOSTILE
+```
+
+`relationToLocal` вычисляется authoritative per-recipient projection через approved Team relationship resolver.
+
+Client не выводит hostility правилом `teamId !== localTeamId`.
+
+### 23.8 Health projection
+
+Для destructible entities view содержит effective:
+
+```text
+health {
+  current
+  max
+}
+```
+
+Даже если base max находится в game-data, effective max может позже меняться modifiers/upgrades.
+
+Client не является authority для Health.
+
+### 23.9 Construction projection
+
+Для active construction достаточно presentation state:
+
+```text
+construction {
+  progress // normalized 0..1
+}
+```
+
+Internal worked ticks, builder accumulators и construction system state не реплицируются.
+
+Completed building не обязано сохранять construction object.
+
+### 23.10 Resource node projection
+
+Resource node dynamic view минимум содержит:
+
+```text
+resourceNode {
+  remaining
+}
+```
+
+Static resource semantics берутся из `definitionId` / game-data.
+
+### 23.11 Garrison relation has one view source
+
+Contained occupant relation реплицируется occupant-side через `location = CONTAINED`.
+
+View не обязан дублировать authoritative dynamic relation отдельным `Tower.occupants[]`.
+
+Client может derived-query occupants host по `containerEntityId`.
+
+Static host capacity хранится в game-data definition.
+
+### 23.12 Spatial interpolation rules
+
+Interpolation применяется только к continuous transition:
+
+```text
+WORLD → WORLD
+```
+
+Spatial discontinuities сбрасывают interpolation history entity:
+
+```text
+WORLD → CONTAINED
+→ немедленно убрать world mesh / pose history
+
+CONTAINED → WORLD
+→ fresh spatial spawn at authoritative Position
+
+destroyed
+→ remove entity
+```
+
+Нельзя lerp'ить Soldier от pre-garrison Position к post-ungarrison Position.
+
+### 23.13 Selection and non-spatial entities
+
+Gameplay selection не обязана исчезать при garrison, потому что contained entity остаётся в `entities`.
+
+Presentation world mesh для non-WORLD entity отсутствует, но UI может продолжать показывать selected Soldier и action `UNGARRISON`.
+
+### 23.14 Players and teams
+
+`PlayerSlotView` расширяется минимум:
+
+```text
+playerId
+connected
+teamId
+```
+
+Team membership полезна UI, но relationship semantics по-прежнему authoritative и не вычисляется простым сравнением team ids.
+
+### 23.15 Economy projection
+
+Gameplay economy отделена от lobby/player connection state.
+
+Концептуально:
+
+```text
+playerEconomies [
+  {
+    playerId
+    resources [
+      { resourceTypeId, amount }
+    ]
+  }
+]
+```
+
+В #002 recipient минимум получает собственную economy.
+
+Replication policy определяет, какие allied/opponent economies разрешено видеть; отсутствие Fog в #002 не означает автоматическую утечку будущей enemy economy.
+
+### 23.16 Wave is persistent replicated state
+
+Wave lifecycle реплицируется top-level persistent state:
+
+```text
+wave {
+  index
+  phase: PREPARING | WARNING | ACTIVE | CLEARED
+  phaseEndsAtTick | null
+}
+```
+
+Simulation source of truth — ticks, а не wall-clock seconds.
+
+`WAVE_CLEARED` является state, а не единственным one-shot event.
+
+### 23.17 Match result is persistent
+
+Top-level result:
+
+```text
+null
+or
+DEFEAT {
+  defeatedTeamId
+}
+```
+
+Для #002:
+
+```text
+wave = CLEARED
+phase = RUNNING
+result = null
+```
+
+и при destruction Sacred Site:
+
+```text
+phase = FINISHED
+result = DEFEAT(playerTeam)
+```
+
+Union result может расширяться позже при появлении victory conditions.
+
+### 23.18 Map identity is replicated
+
+`GameStateView` содержит `mapId`.
+
+Client использует `mapId + game-data` как source of truth для map presentation bounds/layout data.
+
+Presentation не хранит независимый gameplay map size вроде собственного hardcoded `RTS_MAP_HALF_EXTENT`.
+
+### 23.19 Internal simulation data is not replicated
+
+Не являются public view contract без отдельного UI/use-case:
+
+- A* paths/open sets;
+- current waypoint index;
+- AI evaluation scores;
+- breach planner result;
+- topologyRevision;
+- raw task objects;
+- raw attack cooldown implementation;
+- RNG state;
+- command queue;
+- component stores.
+
+Если UI нужен coarse activity state, он добавляется как dedicated presentation projection, а не экспорт internal state machine.
+
+### 23.20 Per-recipient projection
+
+Даже без Fog of War #002 сохраняет per-recipient projection boundary.
+
+Recipient-specific минимум:
+
+- `localPlayerId`;
+- `relationToLocal`;
+- visible player economies.
+
+World visibility в #002 может быть одинаковой для всех recipients.
+
+Remote server и Local path должны использовать одинаковую projection semantics.
+
+### 23.21 Persistent state vs events
+
+Persistent/reconnect-critical gameplay state находится в snapshot:
+
+- entities/location;
 - Health;
-- building state;
-- construction progress;
-- ResourceNode state;
-- Worker task при необходимости UI;
-- player Wood;
-- garrison relation/state;
-- active Tower combat profile при необходимости presentation;
-- wave state;
+- construction;
+- resource amounts;
+- containment;
+- wave;
 - match result.
 
-Fog filtering в #002 отсутствует.
+One-shot events используются для:
 
-> **Architecture review:** определить, какие поля действительно являются stable public view contract,
-> а какие можно оставить локальной projection detail, чтобы не раздувать protocol без необходимости.
+- `COMMAND_REJECTED`;
+- `ACTION_FAILED`;
+- `PROTOCOL_MISMATCH`;
+- будущих transient VFX/SFX cues при необходимости.
+
+Критический gameplay state не должен восстанавливаться только через историю events.
+
+### 23.22 Reconnect completeness
+
+Fresh authoritative snapshot после reconnect должен быть достаточен, чтобы восстановить текущий gameplay view:
+
+- living/spatial/contained entities;
+- Tower/Soldier containment;
+- construction progress;
+- economy;
+- wave state;
+- Sacred Site health;
+- match result.
+
+Replay прошлых gameplay events для восстановления state не требуется.
+
+Breaking wire changes требуют `PROTOCOL_VERSION` bump.
+
 
 ## 24. Presentation / UI minimum
 
@@ -2006,15 +2349,30 @@ Walls            │
 - [x] GATHER/GARRISON поддерживают повторную validation на момент interaction;
 - [x] schemas strict и bounded; client отправляет только intent;
 - [x] failure reasons machine-readable;
-- [x] Local/Remote должны сходиться в shared gameplay command-validation path.
+- [x] Local/Remote должны сходиться в shared gameplay command-validation path;
+- [x] GameStateView является projection, а не serialized World;
+- [x] #002 использует full snapshots, без premature delta replication;
+- [x] static entity semantics идут через definitionId + game-data;
+- [x] entity view использует broad kind + capability/composition state;
+- [x] location discriminated: WORLD | CONTAINED;
+- [x] living entity без Position остаётся в snapshot/view;
+- [x] recipient получает authoritative relationToLocal;
+- [x] Health передаётся current/max, construction — normalized progress, ResourceNode — remaining;
+- [x] garrison relation не дублируется Tower.occupants[] как второй source;
+- [x] interpolation только WORLD→WORLD, location transition сбрасывает pose history;
+- [x] contained selected entity может оставаться selected без world mesh;
+- [x] PlayerSlotView получает teamId, economy отделена и recipient-filtered;
+- [x] wave/result — persistent top-level replicated state;
+- [x] mapId входит в GameStateView и убирает hardcoded presentation map extent;
+- [x] internal navigation/AI/task/component state не реплицируется;
+- [x] reconnect восстанавливается fresh snapshot без replay events.
 
 Этот блок является основой будущего **ADR-008: Grid, occupancy and deterministic navigation**.
 
 ### Ещё требуется review
 
-1. replication/view contract;
-2. shared Local/Remote host abstractions;
-3. package boundaries после добавления gameplay systems;
-4. финальная dependency graph и безопасная параллельная issue breakdown.
+1. shared Local/Remote host abstractions;
+2. package boundaries после добавления gameplay systems;
+3. финальная dependency graph и безопасная параллельная issue breakdown.
 
 До завершения этих пунктов tracking issue #50 остаётся **DRAFT**, ADR-008 не считается финализированным, а implementation issues не запускаются.
