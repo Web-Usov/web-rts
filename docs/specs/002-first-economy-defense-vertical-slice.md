@@ -2131,28 +2131,344 @@ commands
 
 simulation scenario должен давать одинаковый gameplay result.
 
-## 26. Local vs Remote
+## 26. Shared Local / Remote Match Runtime — APPROVED
 
-Ключевой #002 scenario должен работать через:
+Статус архитектурного решения: **APPROVED 2026-10-04**.
 
-```text
-LocalGameTransport
-→ WebWorker
-→ shared simulation
-```
+### 26.1 One shared gameplay runtime
 
-и:
+Local и Remote execution используют один framework-agnostic match runtime boundary.
+
+Рабочее архитектурное имя:
 
 ```text
-RemoteGameTransport
-→ Colyseus
-→ authoritative server
-→ shared simulation
+MatchRuntime
 ```
 
-Local path не получает упрощённые economy/combat/wave rules.
+Он не является transport, renderer, Colyseus Room или WebWorker API.
 
-Foundation multiplayer/reconnect/browser regression должны сохраняться.
+```text
+Remote shell             Local shell
+Colyseus Room            WebWorker
+      \                    /
+       \                  /
+          MatchRuntime
+               │
+        shared simulation
+```
+
+Точное TypeScript API определяется implementation issue, но semantic surface минимум позволяет:
+
+- создать runtime из seed/map/participants;
+- enqueue trusted player command;
+- выполнить explicit `step()`;
+- прочитать transport-neutral snapshot;
+- drain transport-neutral runtime events;
+- получить explicit diagnostics/metrics;
+- выполнить trusted host operation вроде permanent control release.
+
+### 26.2 Runtime ownership
+
+Shared runtime владеет gameplay match execution boundary:
+
+- simulation World;
+- runtime map/grid state;
+- gameplay bootstrap;
+- player/team match setup;
+- player economies;
+- wave/result state;
+- command queue ingress;
+- gameplay system stepping;
+- simulation/runtime events.
+
+Gameplay rules остаются в shared simulation systems; runtime не создаёт альтернативный rules engine.
+
+Не должно быть отдельных gameplay bootstrap implementations для Remote и Local.
+
+### 26.3 Transport/session shells remain different
+
+Remote shell продолжает владеть:
+
+- Colyseus Room;
+- auth/sessionId;
+- join/leave;
+- player slot allocation;
+- reconnect grace;
+- WebSocket;
+- server/network logging context;
+- tick scheduling.
+
+Local shell продолжает владеть:
+
+- Worker lifecycle;
+- main ↔ worker bridge;
+- local session identity;
+- trusted Local PlayerId assignment;
+- timer/scheduler;
+- worker termination.
+
+Colyseus и WebWorker internals не абстрагируются в общий fake transport layer внутри gameplay runtime.
+
+### 26.4 Runtime has no timers
+
+MatchRuntime/simulation не вызывает wall-clock APIs.
+
+```text
+Remote scheduler → runtime.step()
+Local scheduler  → runtime.step()
+```
+
+В gameplay runtime запрещены:
+
+- `setInterval`;
+- `setTimeout`;
+- `Date.now()`;
+- `performance.now()`.
+
+Gameplay time определяется simulation tick.
+
+### 26.5 Shared match bootstrap
+
+Перед созданием RUNNING match shell формирует trusted setup:
+
+```text
+MatchSetup
+├─ seed
+├─ mapId
+└─ participants
+   ├─ playerId
+   └─ teamId
+```
+
+Один shared bootstrap создаёт/инициализирует:
+
+- map runtime/grid;
+- teams/economies;
+- starting Town Hall;
+- Worker;
+- Soldier;
+- Sacred Site;
+- Resource Nodes;
+- wave state.
+
+Application shell не содержит gameplay placement rules.
+
+### 26.6 Lobby remains application/session concern
+
+`LOBBY` и connection lifecycle не переносятся в simulation.
+
+Flow:
+
+```text
+session/application LOBBY
+→ START
+→ resolve MatchSetup
+→ create shared MatchRuntime
+→ RUNNING
+```
+
+Gameplay terminal result определяется runtime/simulation.
+
+Например Sacred Site destruction создаёт DEFEAT result, после чего shell отражает `FINISHED`.
+
+### 26.7 Shared trusted command ingress
+
+После protocol/schema/session checks оба path сходятся в один ingress:
+
+```text
+Remote                         Local
+  │                              │
+parse schema                   parse schema
+derive trusted PlayerId       derive trusted PlayerId
+  │                              │
+  └──── trusted command ─────────┘
+                 ↓
+            MatchRuntime
+                 ↓
+          simulation queue
+                 ↓
+        tick-boundary validation
+```
+
+Remote `SimulationHost` и Local runtime не должны поддерживать отдельные `assessMove/assessBuild/...` gameplay rules до enqueue.
+
+### 26.8 One protocol → internal command mapper
+
+Protocol-to-simulation mapping должен иметь одну shared pure implementation.
+
+Mapper:
+
+- принимает typed/validated GameCommand;
+- удаляет transport-only metadata вроде `clientSequence`;
+- не принимает client-supplied identity;
+- не переносит sessionId в simulation;
+- не выполняет gameplay semantic validation.
+
+Remote и Local не содержат два независимых `switch(command.type)`.
+
+Физический package/module mapper определяется package-boundary architecture pass.
+
+### 26.9 Runtime events carry recipient identity
+
+Поскольку gameplay rejection/failure может возникнуть на simulation tick, transport shell должен понимать recipient.
+
+Transport-neutral runtime event концептуально содержит:
+
+```text
+recipientPlayerId
++
+runtime event payload
+```
+
+Remote shell переводит PlayerId в текущую Colyseus session.
+Local shell доставляет event локальному player через worker bridge.
+
+Transient event может быть потерян при disconnect; persistent gameplay state остаётся восстановим fresh snapshot.
+
+### 26.10 Shared state projection
+
+Remote и Local не должны иметь отдельные implementations:
+
+```text
+server replication-adapter
+vs
+local projectLocalState/toEntityView
+```
+
+Один shared projector получает:
+
+- transport-neutral match snapshot;
+- recipient PlayerId/context;
+- session-level view metadata (room id, connected players/phase where needed);
+
+и создаёт одинаковую gameplay semantics `GameStateView`:
+
+- relationToLocal;
+- allowed economies;
+- entities;
+- wave;
+- result;
+- mapId;
+- team information.
+
+Transport-specific metadata может отличаться, gameplay projection — нет.
+
+### 26.11 Snapshot and runtime events remain transport-neutral
+
+Simulation/runtime layer не импортирует wire DTO как authoritative state.
+
+```text
+runtime snapshot != GameStateView
+runtime event    != wire GameEvent
+```
+
+Shared adapters/projectors переводят transport-neutral data в protocol contracts.
+
+`packages/simulation` по-прежнему не импортирует `@web-rts/protocol`.
+
+### 26.12 Application code does not inspect World internals
+
+Production application shells не должны читать component stores/World для gameplay decisions или replication.
+
+Используются explicit runtime APIs:
+
+```text
+readSnapshot()
+readMetrics()
+drainEvents()
+```
+
+Server diagnostics получают минимум tick/entityCount/pendingCommandCount через runtime metrics, а не через прямой доступ к component stores.
+
+Low-level simulation tests могут тестировать World напрямую.
+
+### 26.13 Disconnect / reconnect operations
+
+Unexpected Remote drop:
+
+- runtime продолжает simulation;
+- Owner/Controller остаются в grace period;
+- reconnect не создаёт новый gameplay runtime.
+
+Permanent leave/timeout:
+
+```text
+trusted host operation
+→ runtime.releaseControlForPlayer(playerId)
+```
+
+Это не public GameCommand.
+
+Local disconnect завершает/dispose локальный runtime целиком; transport lifecycle здесь намеренно отличается.
+
+### 26.14 GameTransport start boundary
+
+`startMatch()` должен стать частью публичного `GameTransport` interface, поскольку UI уже должен одинаково запускать Local и Remote path.
+
+START остаётся session/application control message, а не gameplay GameCommand.
+
+Presentation/UI не должны зависеть от concrete Local/Remote transport type ради запуска матча.
+
+### 26.15 Match finish
+
+Runtime/simulation определяет gameplay result.
+
+После terminal result shell отражает:
+
+```text
+phase = FINISHED
+result = ...
+```
+
+Новые gameplay commands после FINISHED отклоняются на host/session boundary как `not_running`.
+
+Final runtime snapshot остаётся доступен для presentation/reconnect/final screen до disposal session.
+
+### 26.16 Local / Remote parity tests
+
+#002 требует equivalence tests:
+
+```text
+same seed
+same map
+same participants
+same command sequence
+same number of ticks
+→ equivalent gameplay state
+```
+
+Local-backed и Remote-backed paths сравниваются после normalization transport-specific metadata.
+
+Также одинаковые invalid gameplay commands должны приводить к одинаковым machine-readable gameplay reasons.
+
+Это first-class regression защита принципа:
+
+> Solo и multiplayer используют одинаковые gameplay rules.
+
+### 26.17 Do not over-abstract transport internals
+
+Не становятся частью shared gameplay runtime:
+
+- Colyseus Room/Client;
+- WebWorker MessageEvent;
+- sessionId/reconnectToken;
+- WebSocket close codes;
+- Worker lifecycle;
+- network-specific logging context.
+
+Целевая boundary остаётся узкой:
+
+```text
+transport/session shell
+→ trusted ingress
+→ MatchRuntime
+→ snapshot/events
+→ shared projector
+→ transport/session shell
+```
+
+Foundation multiplayer/reconnect/browser regressions должны сохраняться.
+
 
 ## 27. Automated testing direction
 
@@ -2365,14 +2681,28 @@ Walls            │
 - [x] wave/result — persistent top-level replicated state;
 - [x] mapId входит в GameStateView и убирает hardcoded presentation map extent;
 - [x] internal navigation/AI/task/component state не реплицируется;
-- [x] reconnect восстанавливается fresh snapshot без replay events.
+- [x] reconnect восстанавливается fresh snapshot без replay events;
+- [x] Local и Remote используют один shared MatchRuntime boundary;
+- [x] gameplay bootstrap один для обоих execution paths;
+- [x] transport/session shells остаются отдельными и владеют scheduler/lifecycle;
+- [x] MatchRuntime не имеет timers/wall-clock;
+- [x] trusted commands сходятся в один runtime ingress;
+- [x] protocol→internal command mapper имеет одну shared pure implementation;
+- [x] runtime events transport-neutral и адресуются recipientPlayerId;
+- [x] GameStateView projection shared для Local/Remote;
+- [x] runtime snapshot/events не являются wire DTO;
+- [x] production app shells не читают World/component stores напрямую;
+- [x] disconnect control release — trusted host operation, не GameCommand;
+- [x] startMatch становится частью GameTransport interface;
+- [x] gameplay finish определяется runtime, session shell отражает FINISHED;
+- [x] Local/Remote parity tests обязательны;
+- [x] Colyseus/WebWorker internals не абстрагируются в gameplay runtime.
 
 Этот блок является основой будущего **ADR-008: Grid, occupancy and deterministic navigation**.
 
 ### Ещё требуется review
 
-1. shared Local/Remote host abstractions;
-2. package boundaries после добавления gameplay systems;
-3. финальная dependency graph и безопасная параллельная issue breakdown.
+1. package boundaries после добавления gameplay systems;
+2. финальная dependency graph и безопасная параллельная issue breakdown.
 
 До завершения этих пунктов tracking issue #50 остаётся **DRAFT**, ADR-008 не считается финализированным, а implementation issues не запускаются.
