@@ -177,6 +177,8 @@ tools/
   scenario-runner/
 ```
 
+Monorepo по-прежнему использует `pnpm workspaces + Turborepo`. Корневые `pnpm dev/build/test/typecheck/lint` остаются единым interface для человека, CI и agents; runtime-код игры от Turborepo не зависит.
+
 `apps/web`: React UI, Babylon presentation, ClientGameState, input/selection/interpolation, Local/Remote GameTransport. Local WebWorker остаётся session/scheduler shell и не владеет отдельными gameplay rules/projection.
 
 `apps/game-server`: Colyseus Room/session/reconnect, room lock/rate limit, tick scheduler, logs и lifecycle shared MatchRuntime. Server app не владеет отдельными gameplay validators и не читает World stores для production gameplay decisions.
