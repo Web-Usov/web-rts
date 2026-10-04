@@ -750,7 +750,7 @@ APPROACH_BLOCKER
 
 Resumable A*, worker-thread pathfinding, flow fields и dynamic borrowing между budget lanes вне #002.
 
-## 9. Economy## 9. Economy
+## 9. Economy
 
 В #002 существует только:
 
@@ -950,7 +950,7 @@ Reservation освобождается, когда:
 
 Refund отсутствует.
 
-## 12. Town Hall## 12. Town Hall
+## 12. Town Hall
 
 В #002 существует **только стартовый Town Hall**.
 
@@ -1730,7 +1730,7 @@ Gameplay mutation одной применяемой command должна быт�
 
 `queue_full` — единственная из описанных здесь backpressure reasons, которая может возникнуть до tick-boundary semantic validation, потому что command вообще не попала в pending queue.
 
-### 22.3 Trusted actor context### 22.3 Trusted actor context
+### 22.3 Trusted actor context
 
 Public GameCommand не содержит authoritative identity:
 
@@ -1852,7 +1852,7 @@ simulation должна давать одинаковый ordering/result.
 
 Replay/deduplication protocol поверх `clientSequence` находится вне #002.
 
-### 22.6 Command rejection vs later task failure### 22.6 Command rejection vs later task failure
+### 22.6 Command rejection vs later task failure
 
 Нужно различать два lifecycle.
 
@@ -2074,7 +2074,7 @@ Player B submits valid command
 
 Exact bound выводится из configured participant count, `maxCommandsPerTick`, round-robin scheduler и command/path budgets; test обязан фиксировать конкретную config и ожидаемый upper bound.
 
-### 22.14 Complete GameTransport session boundary### 22.14 Complete GameTransport session boundary — RECONCILED FROM #53
+### 22.14 Complete GameTransport session boundary — RECONCILED FROM #53
 
 UI не зависит от concrete `PageGameTransport`. Target `GameTransport` включает gameplay/state/event methods плюс:
 
@@ -2559,7 +2559,7 @@ Colyseus Room            WebWorker
 - прочитать transport-neutral snapshot;
 - drain transport-neutral runtime events;
 - получить explicit diagnostics/metrics;
-- выполнить trusted host operation вроде permanent control release.
+- выполнить trusted host operations для permanent player removal: очистить pending ingress queue и release control.
 
 ### 26.2 Runtime ownership
 
@@ -2804,10 +2804,19 @@ Permanent leave/timeout:
 
 ```text
 trusted host operation
+→ runtime.removePlayerFromCommandIngress(playerId)
+   ├─ atomically discard all not-yet-applied pending commands for player
+   └─ remove player queue / scheduler participation
 → runtime.releaseControlForPlayer(playerId)
 ```
 
-Это не public GameCommand.
+Pending commands, отброшенные из-за permanent leave, **не превращаются в `COMMAND_REJECTED` events**: recipient уже окончательно отсутствует, а commands никогда не применяются к gameplay world.
+
+Это cleanup trusted host lifecycle, а не public GameCommand и не gameplay semantic rejection.
+
+Unexpected disconnect внутри reconnect grace **не очищает** player queue автоматически: reserved session/player сохраняется согласно reconnect policy.
+
+Уже применённые gameplay tasks не считаются pending commands и этим cleanup не откатываются; их дальнейшее поведение определяется существующими control/task rules.
 
 Local disconnect завершает/dispose локальный runtime целиком; transport lifecycle здесь намеренно отличается.
 
@@ -3147,6 +3156,8 @@ Room lock/rate limit/reconnect остаются Remote shell concerns.
 - runtime drains events every tick;
 - remote simulation rejection не теряется;
 - enqueue → Controller loss before apply → rejection;
+- permanent leave/timeout → pending queue этого player очищена, commands никогда не применяются и stale rejection events не создаются;
+- reconnect-grace disconnect не очищает pending queue преждевременно;
 - one MatchSnapshot per tick then recipient projections.
 
 ### Server integration / security
@@ -3226,7 +3237,7 @@ G14 Full Local/Remote E2E + acceptance
 #002 DONE
 ```
 
-G0 финализирует spec/ADR/TV. G1 закрывает shared host/event drain/tick validation и per-player runtime queues foundation. G2 — rate/size/room lock/full GameTransport, bounded `entityIds[]` и `maxPendingCommandsPerPlayer/queue_full`. G3 — kinds/definitionId/generic Objective/Map/grid/occupancy. G4 — deterministic A*, fair round-robin command scheduling, command/activeTask/AI budgets, entityId lane ordering, breach + starvation regressions. G5 Economy и G6 Combat могут идти параллельно. G7 construction фиксирует same-owner BUILD EXISTING и immediate active-builder reservation; затем G8 Garrison и G9 PvE параллельно; G10 после G9; G11 ждёт G8+G10; G12 UI/presentation; G13 representative visual target; G14 final E2E.
+G0 финализирует spec/ADR/TV. G1 закрывает shared host/event drain/tick validation, per-player runtime queues foundation и permanent-leave pending-queue cleanup. G2 — rate/size/room lock/full GameTransport, bounded `entityIds[]` и `maxPendingCommandsPerPlayer/queue_full`. G3 — kinds/definitionId/generic Objective/Map/grid/occupancy. G4 — deterministic A*, fair round-robin command scheduling, command/activeTask/AI budgets, entityId lane ordering, breach + starvation regressions. G5 Economy и G6 Combat могут идти параллельно. G7 construction фиксирует same-owner BUILD EXISTING и immediate active-builder reservation; затем G8 Garrison и G9 PvE параллельно; G10 после G9; G11 ждёт G8+G10; G12 UI/presentation; G13 representative visual target; G14 final E2E.
 
 Практический максимум — 2 Coding Agents одновременно.
 
