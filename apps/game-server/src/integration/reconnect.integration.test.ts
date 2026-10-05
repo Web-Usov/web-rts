@@ -268,6 +268,39 @@ describe("reconnect integration", () => {
     expect(moved?.ownerPlayerId).toBe(playerA);
   });
 
+  it("locks new joins after START while a reserved reconnect in grace still works", async () => {
+    const { room, clientA, clientB, sessionA, playerA } = await startRunningPair();
+    expect(room.locked).toBe(true);
+    await expect(colyseus.connectTo(room, compatibleOptions)).rejects.toThrow();
+
+    const token = clientA.reconnectionToken;
+    await dropUnexpected(clientA);
+    await vi.waitFor(
+      () => {
+        expect(room.slots.getBySessionId(sessionA)?.connected).toBe(false);
+      },
+      { timeout: 2_000, interval: 20 },
+    );
+    // A free-looking room during grace is still closed to new players.
+    await expect(colyseus.connectTo(room, compatibleOptions)).rejects.toThrow();
+
+    const restored = (await colyseus.sdk.reconnect(token)) as unknown as SdkRoom;
+    expect(restored.sessionId).toBe(sessionA);
+    expect(room.slots.getBySessionId(sessionA)).toMatchObject({
+      playerId: playerA,
+      connected: true,
+    });
+
+    // A permanent leave frees a slot, but the match stays locked.
+    await clientB.leave(true);
+    await vi.waitFor(() => {
+      expect(room.slots.size).toBe(1);
+    });
+    await expect(colyseus.connectTo(room, compatibleOptions)).rejects.toThrow();
+    expect(room.slots.size).toBe(1);
+    expect(room.phase).toBe("RUNNING");
+  });
+
   it("releases the slot and Controller after the grace timeout without deleting the unit", async () => {
     const { room, clientA, clientB, runtime, sessionA, playerA, unitA, objectiveId } =
       await startRunningPair(2);

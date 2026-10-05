@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 import { foundationUnitSpawnPosition } from "@web-rts/game-data";
 import {
   GAME_DATA_VERSION,
+  MAX_COMMAND_ID_LENGTH,
+  MAX_MOVE_ENTITY_IDS,
   PROTOCOL_VERSION,
   type GameEvent,
   type GameStateView,
 } from "@web-rts/protocol";
-import type { MatchRuntime, MatchSetup } from "@web-rts/simulation";
+import { createMatchRuntime, type MatchRuntime, type MatchSetup } from "@web-rts/simulation";
 import {
   FOUNDATION_PARITY_FIXTURE,
   PARITY_FINISH_AFTER_STEPS,
@@ -202,6 +204,83 @@ describe("local match runtime", () => {
       commandId: "start",
       reason: "invalid_phase",
     });
+  });
+
+  it("rejects oversized payloads as invalid_schema without echoing an oversized commandId", () => {
+    const match = harness();
+    match.handle(connectMessage);
+    match.handle({ type: "start", sessionId: 1 });
+    const move = {
+      type: "MOVE",
+      commandId: "ok-id",
+      clientSequence: 1,
+      entityIds: [1],
+      target: { x: 1, y: 1 },
+    };
+
+    expect(() => {
+      match.handle({
+        type: "command",
+        sessionId: 1,
+        command: { ...move, commandId: "x".repeat(MAX_COMMAND_ID_LENGTH * 1000) },
+      });
+      match.handle({
+        type: "command",
+        sessionId: 1,
+        command: { ...move, entityIds: Array.from({ length: MAX_MOVE_ENTITY_IDS + 1 }, () => 1) },
+      });
+      match.handle({
+        type: "command",
+        sessionId: 1,
+        command: { ...move, target: { x: Number.POSITIVE_INFINITY, y: 0 } },
+      });
+    }).not.toThrow();
+
+    expect(match.events).toEqual([
+      { type: "COMMAND_REJECTED", commandId: "unknown", reason: "invalid_schema" },
+      { type: "COMMAND_REJECTED", commandId: "ok-id", reason: "invalid_schema" },
+      { type: "COMMAND_REJECTED", commandId: "ok-id", reason: "invalid_schema" },
+    ]);
+    expect(match.states.at(-1)?.phase).toBe("RUNNING");
+  });
+
+  it("bounds the Local pending queue and answers overflow with queue_full", () => {
+    const match = harness((setup) => createMatchRuntime(setup, { maxPendingCommandsPerPlayer: 2 }));
+    match.handle(connectMessage);
+    match.handle({ type: "start", sessionId: 1 });
+    const unitId = match.states.at(-1)!.entities.find((entity) => entity.kind === "unit")!.entityId;
+    for (const commandId of ["q1", "q2", "q3"]) {
+      match.handle({
+        type: "command",
+        sessionId: 1,
+        command: {
+          type: "MOVE",
+          commandId,
+          clientSequence: 1,
+          entityIds: [unitId],
+          target: { x: 3, y: 3 },
+        },
+      });
+    }
+    expect(match.events).toEqual([
+      { type: "COMMAND_REJECTED", commandId: "q3", reason: "queue_full" },
+    ]);
+
+    match.tick();
+    // Queued commands were not evicted: they applied and freed the queue.
+    expect(match.events).toHaveLength(1);
+    match.handle({
+      type: "command",
+      sessionId: 1,
+      command: {
+        type: "MOVE",
+        commandId: "q4",
+        clientSequence: 2,
+        entityIds: [unitId],
+        target: { x: 3, y: 3 },
+      },
+    });
+    expect(match.events).toHaveLength(1);
   });
 
   it("stops the tick schedule on disconnect", () => {

@@ -1,5 +1,5 @@
 import type { z } from "zod";
-import { gameCommandSchema, type GameCommand } from "./commands.js";
+import { commandIdSchema, gameCommandSchema, type GameCommand } from "./commands.js";
 import { gameEventSchema, type GameEvent } from "./events.js";
 import { gameStateViewSchema, type GameStateView } from "./state.js";
 
@@ -44,6 +44,21 @@ function toProtocolResult<T>(result: z.ZodSafeParseResult<T>): ProtocolParseResu
  */
 export function parseGameCommand(input: unknown): ProtocolParseResult<GameCommand> {
   return toProtocolResult(gameCommandSchema.safeParse(input));
+}
+
+/** `commandId` echoed back for a payload that failed {@link parseGameCommand}. */
+export const UNKNOWN_COMMAND_ID = "unknown";
+
+/**
+ * Correlation id for an `invalid_schema` rejection. A missing, oversized or
+ * out-of-domain `commandId` is never echoed back; it becomes {@link UNKNOWN_COMMAND_ID}.
+ */
+export function readRejectedCommandId(input: unknown): string {
+  if (input === null || typeof input !== "object") {
+    return UNKNOWN_COMMAND_ID;
+  }
+  const parsed = commandIdSchema.safeParse((input as Record<string, unknown>)["commandId"]);
+  return parsed.success ? parsed.data : UNKNOWN_COMMAND_ID;
 }
 
 export function parseGameEvent(input: unknown): ProtocolParseResult<GameEvent> {

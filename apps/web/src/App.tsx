@@ -4,16 +4,14 @@ import {
   PROTOCOL_VERSION,
   type GameEvent,
   type GameStateView,
+  type GameTransport,
   type MatchPhase,
   type TransportConnectionNotice,
 } from "@web-rts/protocol";
 import { ClientGameState } from "./client/client-game-state.js";
 import { DebugOverlay, type DebugOverlayView } from "./debug/DebugOverlay.js";
 import { DEBUG_METRICS_INTERVAL_MS, isDebugInstrumentationEnabled } from "./debug/debug-metrics.js";
-import {
-  createPageGameTransport,
-  type PageGameTransport,
-} from "./network/create-page-game-transport.js";
+import { createPageGameTransport } from "./network/create-page-game-transport.js";
 import { mountPresentation, type PresentationSession } from "./presentation/scene.js";
 import type { HudView } from "./presentation/types.js";
 
@@ -51,7 +49,7 @@ export function App() {
   const [errorMessage, setErrorMessage] = useState("");
   const [debugView, setDebugView] = useState<DebugOverlayView>(emptyDebugView);
 
-  const transportRef = useRef<PageGameTransport | null>(null);
+  const transportRef = useRef<GameTransport | null>(null);
   const clientStateRef = useRef<ClientGameState | null>(null);
   const presentationRef = useRef<PresentationSession | null>(null);
   const commandCounter = useRef(0);

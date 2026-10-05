@@ -13,7 +13,10 @@ export type {
 } from "./commands.js";
 export type { SimulationEvent } from "./events.js";
 export {
+  DEFAULT_MAX_PENDING_COMMANDS_PER_PLAYER,
   createMatchRuntime,
+  resolveRuntimeConfig,
+  type RuntimeConfig,
   type CommandAdmission,
   type CommandAdmissionRejection,
   type MatchParticipant,

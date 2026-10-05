@@ -5,6 +5,7 @@ import {
   type MatchSetup,
   type MatchSnapshot,
   type MatchStatus,
+  type RuntimeConfig,
 } from "@web-rts/simulation";
 import type { FoundationRoom } from "../rooms/foundation-room.js";
 
@@ -29,7 +30,7 @@ export type RuntimeProbe = {
 
 export function installRuntimeProbe(
   room: FoundationRoom,
-  options: { held?: boolean } = {},
+  options: { held?: boolean; runtimeConfig?: Partial<RuntimeConfig> } = {},
 ): RuntimeProbe {
   const setups: MatchSetup[] = [];
   let wrapper: MatchRuntime | null = null;
@@ -42,7 +43,7 @@ export function installRuntimeProbe(
 
   room.matchRuntimeFactory = (setup) => {
     setups.push(setup);
-    const runtime = createMatchRuntime(setup);
+    const runtime = createMatchRuntime(setup, options.runtimeConfig);
     const status = (): MatchStatus => (finished ? "FINISHED" : runtime.status);
     wrapper = {
       get status() {

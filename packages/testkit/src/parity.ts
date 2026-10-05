@@ -1,5 +1,11 @@
 import { projectGameStateView, toGameEvent, toSimulationCommand } from "@web-rts/match-adapter";
-import { parseGameCommand, type GameStateView } from "@web-rts/protocol";
+import {
+  MAX_COMMAND_ID_LENGTH,
+  MAX_MOVE_ENTITY_IDS,
+  parseGameCommand,
+  readRejectedCommandId,
+  type GameStateView,
+} from "@web-rts/protocol";
 import {
   createMatchRuntime,
   type CommandAdmission,
@@ -75,6 +81,26 @@ export const FOUNDATION_PARITY_FIXTURE: MatchParityFixture = {
       atTick: 3,
       payload: {
         type: "MOVE",
+        commandId: "x".repeat(MAX_COMMAND_ID_LENGTH + 1),
+        clientSequence: 4,
+        entityIds: [1],
+        target: { x: 1, y: 1 },
+      },
+    },
+    {
+      atTick: 3,
+      payload: {
+        type: "MOVE",
+        commandId: "too-many-ids",
+        clientSequence: 4,
+        entityIds: Array.from({ length: MAX_MOVE_ENTITY_IDS + 1 }, () => 1),
+        target: { x: 1, y: 1 },
+      },
+    },
+    {
+      atTick: 3,
+      payload: {
+        type: "MOVE",
         commandId: "foreign",
         clientSequence: 4,
         entityIds: [999],
@@ -96,6 +122,8 @@ export const FOUNDATION_PARITY_FIXTURE: MatchParityFixture = {
     { commandId: "oob", reason: "out_of_bounds" },
     { commandId: "objective", reason: "not_your_unit" },
     { commandId: "malformed", reason: "invalid_schema" },
+    { commandId: "unknown", reason: "invalid_schema" },
+    { commandId: "too-many-ids", reason: "invalid_schema" },
     { commandId: "foreign", reason: "not_your_unit" },
   ],
 };
@@ -138,7 +166,10 @@ export function runParityReference(fixture: MatchParityFixture): ParityOutcome {
       }
       const parsed = parseGameCommand(step.payload);
       if (!parsed.success) {
-        rejections.push({ commandId: readCommandId(step.payload), reason: "invalid_schema" });
+        rejections.push({
+          commandId: readRejectedCommandId(step.payload),
+          reason: "invalid_schema",
+        });
         continue;
       }
       const admission = runtime.submitCommand(actor, toSimulationCommand(parsed.data));
@@ -199,15 +230,4 @@ export function createFinishingMatchRuntime(
       inner.removePlayer(playerId);
     },
   };
-}
-
-function readCommandId(payload: unknown): string {
-  if (
-    payload !== null &&
-    typeof payload === "object" &&
-    typeof (payload as Record<string, unknown>)["commandId"] === "string"
-  ) {
-    return (payload as Record<string, unknown>)["commandId"] as string;
-  }
-  return "unknown";
 }

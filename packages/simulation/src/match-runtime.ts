@@ -24,7 +24,22 @@ export type MatchSetup = {
 /** Gameplay lifecycle owned by the runtime. LOBBY/STARTING stay in the shells. */
 export type MatchStatus = "RUNNING" | "FINISHED";
 
-export type CommandAdmissionRejection = "not_participant" | "not_running";
+/**
+ * Default per-player pending command cap (Spec #002 §8.8, §22.13).
+ * Shared by Local and Remote; the Remote room rate limit is an extra guard only.
+ */
+export const DEFAULT_MAX_PENDING_COMMANDS_PER_PLAYER = 32;
+
+/** Host-owned runtime limits. Not part of the trusted gameplay setup. */
+export type RuntimeConfig = {
+  readonly maxPendingCommandsPerPlayer: number;
+};
+
+/**
+ * `queue_full` is backpressure: the command was not enqueued and World state
+ * was not read. Already queued commands are never evicted.
+ */
+export type CommandAdmissionRejection = "not_participant" | "not_running" | "queue_full";
 
 export type CommandAdmission =
   | { readonly accepted: true }
@@ -74,8 +89,20 @@ export interface MatchRuntime {
   removePlayer(playerId: PlayerId): void;
 }
 
-export function createMatchRuntime(setup: MatchSetup): MatchRuntime {
-  return new FoundationMatchRuntime(setup);
+export function resolveRuntimeConfig(overrides: Partial<RuntimeConfig> = {}): RuntimeConfig {
+  const maxPendingCommandsPerPlayer =
+    overrides.maxPendingCommandsPerPlayer ?? DEFAULT_MAX_PENDING_COMMANDS_PER_PLAYER;
+  if (!Number.isSafeInteger(maxPendingCommandsPerPlayer) || maxPendingCommandsPerPlayer < 1) {
+    throw new RangeError("maxPendingCommandsPerPlayer must be a positive integer");
+  }
+  return { maxPendingCommandsPerPlayer };
+}
+
+export function createMatchRuntime(
+  setup: MatchSetup,
+  config: Partial<RuntimeConfig> = {},
+): MatchRuntime {
+  return new FoundationMatchRuntime(setup, resolveRuntimeConfig(config));
 }
 
 class FoundationMatchRuntime implements MatchRuntime {
@@ -84,7 +111,10 @@ class FoundationMatchRuntime implements MatchRuntime {
   private readonly queues = new Map<PlayerId, SimulationCommand[]>();
   private readonly outbox: RuntimeEvent[] = [];
 
-  constructor(setup: MatchSetup) {
+  constructor(
+    setup: MatchSetup,
+    private readonly config: RuntimeConfig,
+  ) {
     // mapId is carried for the shells; Foundation has a single layout until G3.
     this.world = createWorld({ seed: setup.seed, mapBounds: FOUNDATION_MAP_BOUNDS });
     const playerIds = setup.participants.map((participant) => participant.playerId);
@@ -107,6 +137,9 @@ class FoundationMatchRuntime implements MatchRuntime {
     const queue = this.queues.get(actor.playerId);
     if (queue === undefined) {
       return { accepted: false, reason: "not_participant" };
+    }
+    if (queue.length >= this.config.maxPendingCommandsPerPlayer) {
+      return { accepted: false, reason: "queue_full" };
     }
     queue.push(command);
     return { accepted: true };
