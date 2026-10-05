@@ -1,9 +1,9 @@
-# Art Direction v0.1
+# Art Direction v0.2
 
-Статус: **Draft / согласованное рабочее направление**  
-Дата: **2026-10-03**  
+Статус: **Согласованное рабочее направление / representative-target input**  
+Дата: **2026-10-05**  
 Проект: **Web RTS**  
-Основание: [Game Vision](./game-vision.md), интерактивный visual brief [#48](https://github.com/Web-Usov/web-rts/issues/48), issue [#49](https://github.com/Web-Usov/web-rts/issues/49).
+Основание: [Game Vision](./game-vision.md), интерактивный visual brief [#48](https://github.com/Web-Usov/web-rts/issues/48), issue [#49](https://github.com/Web-Usov/web-rts/issues/49), hybrid style decision [#75](https://github.com/Web-Usov/web-rts/issues/75).
 
 Этот документ конкретизирует визуальный раздел Game Vision. Он не переопределяет Game Vision, Technical Vision или ADR. Если возникает конфликт, действует более высокий уровень source of truth.
 
@@ -125,19 +125,37 @@ Fantasy сильнее проявляется в окружающем мире, 
 
 | Ось | Направление |
 |---|---|
-| Геометрия | Stylized low-poly 3D с крупными формами и умеренной геометрической сложностью |
+| Геометрия | **Stylized Low-Poly / Soft Hand-Painted**: production-friendly low-poly geometry, крупные формы, restrained faceting |
 | Пропорции | Умеренно карикатурные; люди короткие, крепкие, оружие и важные детали немного увеличены |
 | Силуэт | Тип сущности должен считываться с игрового расстояния |
-| Материалы | Matte / hand-painted feeling; простые, чистые материалы вместо photorealism |
+| Материалы | Matte / soft hand-painted feeling; небольшая color/material variation без texture noise и photorealism |
 | Детализация | Деталь концентрируется на крупных функциональных элементах, а не на texture noise |
 | Палитра | Яркая стилизованная, но с ясной иерархией и достаточным разделением gameplay-объектов |
 | Player color | Акценты на ткани, знаменах, щитах, отдельных частях крыш/экипировки; не полный recolor объекта |
 | Свет | Тёплый и читаемый базовый свет; атаки, туман и погода могут усиливать контраст |
-| Края | Чистые формы, без обязательной демонстрации polygon facets как художественной цели |
+| Края | Чистые формы; polygon facets могут помогать отдельным объектам, но не являются обязательной художественной целью |
 | Анимация | Сдержанная и функциональная; без постоянной cartoon elasticity |
 | UI | Современный чистый game UI, визуально отделённый от 3D-мира |
 
 Термин **low-poly** здесь означает прежде всего дисциплину формы, стоимости и читаемости. Visible faceting / flat shading не является обязательным стилевым приёмом.
+
+### Approved production-style target
+
+Зафиксированная точка между ранними painterly concepts и чистым faceted low-poly:
+
+> **Stylized Low-Poly / Soft Hand-Painted**
+
+Практически это означает:
+
+- **geometry / silhouette target** берётся из low-poly подхода: простые meshes, крупные формы, хороший strategic readability;
+- **material / mood target** берётся из painterly exploration: тёплые matte surfaces, небольшая variation цвета и материала, ощущение обжитого мира;
+- low-poly не должен визуально превращаться в generic asset-pack style только за счёт одинакового visible faceting;
+- человеческая архитектура сохраняет небольшую асимметрию, кривоватость и handmade / lived-in feeling;
+- micro-detail и texture noise не используются для компенсации слабого силуэта;
+- close zoom может раскрывать material cues и крупные бытовые детали, но normal / strategic zoom остаются главным art-budget constraint;
+- repeated environment assets должны быть достаточно простыми для browser RTS, но variation формы/масштаба/поворота не должна создавать ощущение стерильного набора одинаковых модулей.
+
+Painterly references поэтому остаются **mood/material targets**, а чистые low-poly iterations — **geometry/readability targets**. Новые hybrid references являются основной визуальной точкой для representative Babylon target G13 (#66).
 
 Синий цвет на текущих concepts — пример одного player-color slot, а не зафиксированная финальная multiplayer palette.
 
@@ -197,6 +215,15 @@ Player-color должен следовать **стабильной gameplay ide
 
 Происхождение визуально должно оставаться неочевидным.
 
+В hybrid target Sacred Site намеренно менее «собран» и симметричен, чем человеческие здания:
+
+- корни физически деформируют и охватывают каменную структуру;
+- монолиты и фрагменты могут стоять под слегка странными углами;
+- архитектурная логика не обязана полностью совпадать с human-side construction language;
+- холодное свечение остаётся restrained magical cue и не должно превращать объект в чистый sci-fi portal.
+
+Это усиливает контраст: **human side понятна и рукотворна; Sacred Site древний, странный и не до конца объяснимый**.
+
 Sacred Site должен резко отличаться от обычной человеческой архитектуры и оставаться заметным landmark даже на дальнем zoom.
 
 При этом **Sacred Site — визуальная / world-entity identity, а не имя generic gameplay objective type**. Gameplay architecture может назначать этой entity роль вроде `protect` через обобщённую Objective model. Art Direction не требует hardcode objective system под Sacred Site.
@@ -235,6 +262,8 @@ Gameplay prototype может временно использовать усло
 Если gameplay использует defensive Tower, способную автоматически атаковать без отдельной controllable unit внутри, это не должно визуально читаться как необъяснимая магическая автоматика. Базовая Tower может подразумевать встроенный расчёт, механический firing setup или другую абстрагированную human-side operation. Явный garrison дополнительного Soldier может менять боевой профиль, не отрицая наличие базовой обслуживающей логики башни.
 
 При близком zoom механизм может раскрывать детали. При дальнем zoom он должен читаться одной сильной формой.
+
+Для representative #002 target одобрен direction, где Tower визуально объясняет ranged attack через крупный физический механизм — например oversized ballista / bolt-thrower, лебёдку, канаты и обслуживающую площадку. Конкретная форма оружия остаётся art choice и не становится gameplay contract, но сам принцип **readable physical engineering, not magic** считается зафиксированным.
 
 ## 9. Environment, fog и weather
 
@@ -374,19 +403,36 @@ Instancing, LOD, batching и другие renderer optimizations вводятс�
 
 Concepts ниже фиксируют **направление формы, плотности, композиции и масштаба**, а не финальные модели или layout карты.
 
-### Compact settlement overview
+### Approved hybrid production-style target
+
+После сравнения painterly и explicit low-poly iterations основным visual target выбран **Stylized Low-Poly / Soft Hand-Painted**. Source renders зафиксированы в #75 и в [concept provenance](./art/concepts/README.md).
+
+| Reference | Source generation id | Что фиксирует |
+|---|---|---|
+| Hybrid strategic overview | `b0d33501-faa4-4a4e-801d-14955a93f2c2` | общий world/building balance, strategic readability, hybrid geometry/material treatment |
+| Hybrid Town Hall / economy | `358e348c-8b89-4c2b-bd64-51fc0cbf6bba` | cozy human-side architecture, economy yard, workers, lived-in detail budget |
+| Hybrid fortification / Tower | `30a33938-8ec7-4995-9dbe-219a03c6b0d2` | pale stone + timber wall language, oversized physical engineering, readable Tower silhouette |
+| Hybrid Sacred Site | `eae1fb02-e2ea-45f1-99d3-e39cc932b931` | ancient tree + deformed stone monument + restrained supernatural glow |
+
+Эти четыре кадра являются главным visual acceptance input для G13 (#66). Их не следует интерпретировать как точный map layout, production meshes или обязательный набор decorative props.
+
+### Earlier exploration references
+
+Ранние references продолжают быть полезны как отдельные mood/readability studies, но больше не определяют production-style target по отдельности.
+
+#### Compact settlement overview
 
 ![Compact settlement overview](./art/concepts/settlement-overview.webp)
 
 Показывает основной баланс: уютная база, Sacred Site, несколько ясных функциональных зон и ограниченная visual density.
 
-### Defense engineering
+#### Defense engineering
 
 ![Defense engineering](./art/concepts/defense-engineering.webp)
 
 Показывает характер фортификаций и слегка чрезмерной человеческой инженерии без превращения сцены в clutter.
 
-### Compact siege
+#### Compact siege
 
 ![Compact siege](./art/concepts/compact-siege.webp)
 
@@ -394,11 +440,12 @@ Concepts ниже фиксируют **направление формы, пло
 
 Дизайн красных атакующих в этом кадре **не является утверждённым PvE design**; он служит только для проверки композиции и battle readability.
 
-### Maximum strategic zoom
+#### Maximum strategic zoom
 
 ![Maximum strategic zoom](./art/concepts/strategic-overview.webp)
 
 Показывает принцип максимального zoom-out: база и terrain читаются как стратегическая структура, а мелкие детали подчиняются информации.
+
 
 ## 15. Что ещё не зафиксировано
 
@@ -435,5 +482,7 @@ Concepts ниже фиксируют **направление формы, пло
 Этот target **не является production-art gate для начала gameplay implementation**: ранние gameplay stages могут и должны использовать proxy/developer assets. Он нужен до массового производства финального 3D-контента и до фиксации asset budgets.
 
 После representative target стиль оценивается в Babylon.js на фактическом игровом масштабе. Только после такой проверки стоит фиксировать asset budgets и расширять production catalog.
+
+G13 (#66) должен проверять именно **hybrid target из §3/§14**, а не пытаться буквально воспроизвести ни ранний painterly render, ни чистый faceted low-poly variant. Критерий успеха — одновременно сохранить production-friendly geometry/readability и достаточное количество warmth/material character, чтобы мир не выглядел generic low-poly asset pack.
 
 Provenance текущих references находится в [docs/art/concepts/README.md](./art/concepts/README.md).
