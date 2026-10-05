@@ -249,7 +249,7 @@ describe("local match runtime", () => {
     const match = harness((setup) => createMatchRuntime(setup, { maxPendingCommandsPerPlayer: 2 }));
     match.handle(connectMessage);
     match.handle({ type: "start", sessionId: 1 });
-    const unitId = match.states.at(-1)!.entities.find((entity) => entity.kind === "unit")!.entityId;
+    const unitId = match.states.at(-1)!.entities.find((entity) => entity.kind === "UNIT")!.entityId;
     for (const commandId of ["q1", "q2", "q3"]) {
       match.handle({
         type: "command",
