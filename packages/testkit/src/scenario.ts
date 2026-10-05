@@ -76,7 +76,7 @@ export function spawnUnit(
   position: { x: number; y: number },
   playerId: PlayerId = TEST_PLAYER_ID,
 ): number {
-  const entityId = world.createEntity();
+  const entityId = world.createEntity({ kind: "UNIT", definitionId: "foundation_unit" });
   world.positions.set(entityId, position);
   world.owners.set(entityId, { ownerPlayerId: playerId });
   world.controllers.set(entityId, { controllerPlayerId: playerId });

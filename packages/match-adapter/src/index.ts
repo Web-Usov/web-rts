@@ -74,6 +74,7 @@ function toEntityView(entity: MatchEntitySnapshot): EntityView {
   return {
     entityId: entity.entityId,
     kind: entity.kind,
+    definitionId: entity.definitionId,
     x: entity.x,
     y: entity.y,
     ownerPlayerId: entity.ownerPlayerId,

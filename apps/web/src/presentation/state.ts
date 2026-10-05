@@ -78,7 +78,7 @@ export class PresentationState {
   getHudView(): HudView {
     let objectiveCount = 0;
     for (const entity of this.entities.values()) {
-      if (entity.kind === "objective") {
+      if (entity.kind === "OBJECTIVE") {
         objectiveCount += 1;
       }
     }

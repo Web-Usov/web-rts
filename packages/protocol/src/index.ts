@@ -33,10 +33,13 @@ export {
 } from "./events.js";
 
 export {
+  entityKindSchema,
   entityViewSchema,
   gameStateViewSchema,
   matchPhaseSchema,
+  objectiveTypeSchema,
   playerSlotViewSchema,
+  type EntityKindView,
   type EntityView,
   type GameStateView,
   type MatchPhase,

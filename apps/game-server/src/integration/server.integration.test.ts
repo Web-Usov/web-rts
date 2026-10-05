@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { boot, type ColyseusTestServer } from "@colyseus/testing";
-import { FOUNDATION_MAP_HALF_EXTENT } from "@web-rts/game-data";
+import { FOUNDATION_MAP, mapWorldBounds } from "@web-rts/game-data";
 import {
   GAME_DATA_VERSION,
   MAX_COMMAND_ID_LENGTH,
@@ -58,7 +58,7 @@ function runtimeOf(room: FoundationRoom) {
 function unitOf(room: FoundationRoom, playerId: number) {
   const unit = runtimeOf(room)
     .readSnapshot()
-    .entities.find((entity) => entity.kind === "unit" && entity.ownerPlayerId === playerId);
+    .entities.find((entity) => entity.kind === "UNIT" && entity.ownerPlayerId === playerId);
   expect(unit).toBeDefined();
   return unit!;
 }
@@ -66,7 +66,7 @@ function unitOf(room: FoundationRoom, playerId: number) {
 function objectiveOf(room: FoundationRoom) {
   const objective = runtimeOf(room)
     .readSnapshot()
-    .entities.find((entity) => entity.kind === "objective");
+    .entities.find((entity) => entity.kind === "OBJECTIVE");
   expect(objective).toBeDefined();
   return objective!;
 }
@@ -470,16 +470,16 @@ describe("game-server integration", () => {
     expect(entityA.x).toBeCloseTo(target.x, 5);
     expect(viewA.localPlayerId).toBe(playerA);
     expect(viewB.localPlayerId).not.toBe(viewA.localPlayerId);
-    expect(viewA.entities.filter((entity) => entity.kind === "unit")).toHaveLength(2);
+    expect(viewA.entities.filter((entity) => entity.kind === "UNIT")).toHaveLength(2);
 
-    const objectivesA = viewA.entities.filter((entity) => entity.kind === "objective");
-    const objectivesB = viewB.entities.filter((entity) => entity.kind === "objective");
+    const objectivesA = viewA.entities.filter((entity) => entity.kind === "OBJECTIVE");
+    const objectivesB = viewB.entities.filter((entity) => entity.kind === "OBJECTIVE");
     expect(objectivesA).toHaveLength(1);
     expect(objectivesB).toEqual(objectivesA);
     expect(objectivesA[0]).toMatchObject({
       x: 0,
       y: 0,
-      objectiveType: "SACRED_SITE",
+      objectiveType: "PROTECT",
       objectiveState: "ACTIVE",
       ownerPlayerId: null,
       controllerPlayerId: null,
@@ -487,7 +487,8 @@ describe("game-server integration", () => {
     expect(entityA).toMatchObject({
       ownerPlayerId: playerA,
       controllerPlayerId: playerA,
-      kind: "unit",
+      kind: "UNIT",
+      definitionId: "foundation_unit",
     });
   });
 
@@ -516,7 +517,7 @@ describe("game-server integration", () => {
       createMove({
         commandId: "oob",
         entityIds: [unitA],
-        target: { x: FOUNDATION_MAP_HALF_EXTENT + 5, y: 0 },
+        target: { x: mapWorldBounds(FOUNDATION_MAP).maxX + 5, y: 0 },
       }),
       createMove({ commandId: "foreign", entityIds: [unitB], target: { x: 1, y: 1 } }),
       createMove({

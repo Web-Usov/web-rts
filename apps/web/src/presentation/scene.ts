@@ -19,7 +19,6 @@ import {
   RTS_CAMERA_BETA,
   RTS_CAMERA_MAX_RADIUS,
   RTS_CAMERA_MIN_RADIUS,
-  RTS_MAP_HALF_EXTENT,
   createRtsCameraPose,
   panRtsCamera,
   screenDragToGround,
@@ -31,6 +30,8 @@ import {
   simulationToBabylonGround,
   simulationToBabylonPosition,
 } from "./coordinates.js";
+import { ownerColorSlot } from "./entity-color.js";
+import { PRESENTED_MAP, mapGroundExtent, type GroundExtent } from "./map-layout.js";
 import {
   EMPTY_RENDERER_DEBUG_SAMPLE,
   snapshotRendererDebugSample,
@@ -91,7 +92,8 @@ export function mountPresentation(
   let rendererSample: RendererDebugSample = EMPTY_RENDERER_DEBUG_SAMPLE;
   let inspectorToken: { dispose(): Promise<void>; isDisposed: boolean } | null = null;
 
-  const poseHolder = { current: createRtsCameraPose() };
+  const extent = mapGroundExtent(PRESENTED_MAP);
+  const poseHolder = { current: createRtsCameraPose(extent) };
   const camera = new ArcRotateCamera(
     "rts-camera",
     RTS_CAMERA_ALPHA,
@@ -106,8 +108,12 @@ export function mountPresentation(
   const light = new HemisphericLight("sky", new Vector3(0.2, 1, 0.3), scene);
   light.intensity = 0.95;
 
-  const mapSize = RTS_MAP_HALF_EXTENT * 2;
-  const terrain = MeshBuilder.CreateGround("terrain", { width: mapSize, height: mapSize }, scene);
+  const terrain = MeshBuilder.CreateGround(
+    "terrain",
+    { width: extent.maxX - extent.minX, height: extent.maxZ - extent.minZ },
+    scene,
+  );
+  terrain.position.set((extent.minX + extent.maxX) / 2, 0, (extent.minZ + extent.maxZ) / 2);
   const terrainMaterial = new StandardMaterial("terrain-material", scene);
   terrainMaterial.diffuseColor = new Color3(0.16, 0.22, 0.18);
   terrainMaterial.specularColor = Color3.Black();
@@ -115,7 +121,7 @@ export function mountPresentation(
   terrain.metadata = { role: "ground" };
   terrain.isPickable = true;
 
-  const grid = createGrid(scene);
+  const grid = createGrid(scene, extent);
 
   const selection = MeshBuilder.CreateTorus(
     "selection",
@@ -159,7 +165,7 @@ export function mountPresentation(
       visuals.set(entity.id, visual);
       visual.mesh.position.set(entity.position.x, entity.position.y, entity.position.z);
       visual.mesh.material =
-        entity.kind === "objective"
+        entity.kind === "OBJECTIVE"
           ? objectiveMaterial
           : materialFor(scene, materials, entity.colorSlot);
     }
@@ -223,11 +229,11 @@ export function mountPresentation(
         visual = createVisual(scene, entity, materials);
         visuals.set(pose.entityId, visual);
         visual.mesh.material =
-          entity.kind === "objective"
+          entity.kind === "OBJECTIVE"
             ? objectiveMaterial
             : materialFor(scene, materials, entity.colorSlot);
       }
-      const height = pose.kind === "objective" ? OBJECTIVE_HEIGHT / 2 : UNIT_HEIGHT;
+      const height = pose.kind === "OBJECTIVE" ? OBJECTIVE_HEIGHT / 2 : UNIT_HEIGHT;
       const position = simulationToBabylonPosition({ x: pose.x, y: pose.y }, height);
       visual.mesh.position.set(position.x, position.y, position.z);
     }
@@ -286,7 +292,7 @@ export function mountPresentation(
       lastY = scene.pointerY;
       dragDistance += Math.abs(screenDx) + Math.abs(screenDy);
       const ground = screenDragToGround(screenDx, screenDy, poseHolder.current.radius);
-      poseHolder.current = panRtsCamera(poseHolder.current, ground.x, ground.z);
+      poseHolder.current = panRtsCamera(poseHolder.current, ground.x, ground.z, extent);
       applyPose(camera, poseHolder.current);
       return;
     }
@@ -404,13 +410,8 @@ export function mountPresentation(
 }
 
 function poseToPresentation(pose: InterpolatedPose): PresentationEntity {
-  const colorSlot =
-    pose.kind === "objective"
-      ? 0
-      : pose.controllerPlayerId !== null && pose.controllerPlayerId >= 0
-        ? pose.controllerPlayerId
-        : 0;
-  const height = pose.kind === "objective" ? OBJECTIVE_HEIGHT / 2 : UNIT_HEIGHT;
+  const colorSlot = ownerColorSlot(pose.kind, pose.ownerPlayerId);
+  const height = pose.kind === "OBJECTIVE" ? OBJECTIVE_HEIGHT / 2 : UNIT_HEIGHT;
   return {
     id: pose.entityId,
     kind: pose.kind,
@@ -439,12 +440,13 @@ function applyPose(camera: ArcRotateCamera, pose: RtsCameraPose): void {
   camera.target.z = pose.targetZ;
 }
 
-function createGrid(scene: Scene): LinesMesh {
+function createGrid(scene: Scene, extent: GroundExtent): LinesMesh {
   const lines: Vector3[][] = [];
-  const half = RTS_MAP_HALF_EXTENT;
-  for (let offset = -half; offset <= half; offset += 2) {
-    lines.push([new Vector3(offset, 0.02, -half), new Vector3(offset, 0.02, half)]);
-    lines.push([new Vector3(-half, 0.02, offset), new Vector3(half, 0.02, offset)]);
+  for (let x = extent.minX; x <= extent.maxX; x += 2) {
+    lines.push([new Vector3(x, 0.02, extent.minZ), new Vector3(x, 0.02, extent.maxZ)]);
+  }
+  for (let z = extent.minZ; z <= extent.maxZ; z += 2) {
+    lines.push([new Vector3(extent.minX, 0.02, z), new Vector3(extent.maxX, 0.02, z)]);
   }
 
   const grid = MeshBuilder.CreateLineSystem("grid", { lines }, scene);
@@ -459,7 +461,7 @@ function createVisual(
   materials: Map<number, StandardMaterial>,
 ): EntityVisual {
   const mesh =
-    entity.kind === "objective"
+    entity.kind === "OBJECTIVE"
       ? MeshBuilder.CreateCylinder(
           `objective-${entity.id}`,
           { diameterTop: 0.2, diameterBottom: 1.4, height: OBJECTIVE_HEIGHT, tessellation: 5 },

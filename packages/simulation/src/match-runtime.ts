@@ -1,11 +1,11 @@
-import { FOUNDATION_MAP_BOUNDS } from "@web-rts/game-data";
+import { FOUNDATION_MAP } from "@web-rts/game-data";
 import type {
   CommandActor,
   CommandRejectionReason,
   QueuedCommand,
   SimulationCommand,
 } from "./commands.js";
-import { placeFoundationObjective, spawnFoundationUnits } from "./foundation-match.js";
+import { placeStartingStructures, spawnPlayerUnits } from "./foundation-match.js";
 import { readWorldEntities, type MatchEntitySnapshot } from "./snapshot.js";
 import type { PlayerId } from "./types.js";
 import { createWorld, type World } from "./world.js";
@@ -115,14 +115,16 @@ class FoundationMatchRuntime implements MatchRuntime {
     setup: MatchSetup,
     private readonly config: RuntimeConfig,
   ) {
-    // mapId is carried for the shells; Foundation has a single layout until G3.
-    this.world = createWorld({ seed: setup.seed, mapBounds: FOUNDATION_MAP_BOUNDS });
+    // #002 has one fixed MapDefinition. Selecting it by mapId waits for mapId on the
+    // wire (G11); shells still pass arbitrary ids, so they must not change the layout.
+    const map = FOUNDATION_MAP;
+    this.world = createWorld({ seed: setup.seed, map });
     const playerIds = setup.participants.map((participant) => participant.playerId);
     for (const playerId of playerIds) {
       this.queues.set(playerId, []);
     }
-    spawnFoundationUnits(this.world, playerIds);
-    placeFoundationObjective(this.world);
+    spawnPlayerUnits(this.world, map, playerIds);
+    placeStartingStructures(this.world, map);
     this.world.drainEvents();
   }
 

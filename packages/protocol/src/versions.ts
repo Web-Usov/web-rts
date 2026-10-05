@@ -1,17 +1,20 @@
 /**
  * Wire protocol version. Bump on breaking command/event/state contract changes.
- * F6: EntityView gained required objectiveType/objectiveState.
- * Old strict parsers reject the new keys, so this bump is breaking.
+ * G3: EntityView kind became UNIT/BUILDING/RESOURCE/OBJECTIVE, gained required
+ * `definitionId`, and objectiveType SACRED_SITE was replaced by generic PROTECT.
+ * Old strict parsers reject the new values/keys, so this bump is breaking.
  * @see docs/technical-vision.md §11
  */
-export const PROTOCOL_VERSION = 3 as const;
+export const PROTOCOL_VERSION = 4 as const;
 
 /**
  * Declarative game-data / balance contract version exchanged at handshake.
  * Kept independent from PROTOCOL_VERSION so assets/rules can diverge from wire shape.
+ * G3: foundation map and entity definitions replaced the old bounds helper, so
+ * clients still on `0.0.0` no longer share this static contract.
  * @see docs/technical-vision.md §11
  */
-export const GAME_DATA_VERSION = "0.0.0" as const;
+export const GAME_DATA_VERSION = "0.1.0" as const;
 
 export type ProtocolVersion = typeof PROTOCOL_VERSION;
 export type GameDataVersion = typeof GAME_DATA_VERSION;

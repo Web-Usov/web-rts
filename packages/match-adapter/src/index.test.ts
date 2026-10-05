@@ -74,14 +74,47 @@ describe("projectGameStateView", () => {
       players: session.players,
     });
     expect(view.entities).toEqual(snapshot.entities);
-    expect(view.entities.find((entity) => entity.kind === "objective")).toMatchObject({
+    expect(view.entities.find((entity) => entity.kind === "OBJECTIVE")).toMatchObject({
       x: 0,
       y: 0,
       ownerPlayerId: null,
       controllerPlayerId: null,
-      objectiveType: "SACRED_SITE",
+      objectiveType: "PROTECT",
       objectiveState: "ACTIVE",
     });
+  });
+
+  it("passes every broad kind and definitionId through without inferring kind", () => {
+    const base = runningSnapshot();
+    const snapshot: MatchSnapshot = {
+      ...base,
+      entities: (["UNIT", "BUILDING", "RESOURCE", "OBJECTIVE"] as const).map((kind, index) => ({
+        entityId: index + 1,
+        kind,
+        definitionId: `def_${kind.toLowerCase()}`,
+        x: index,
+        y: 0,
+        ownerPlayerId: null,
+        controllerPlayerId: null,
+        objectiveType: kind === "BUILDING" ? "PROTECT" : null,
+        objectiveState: kind === "BUILDING" ? "ACTIVE" : null,
+      })),
+    };
+    const view = projectGameStateView(snapshot, { localPlayerId: 0 }, session);
+
+    expect(gameStateViewSchema.safeParse(view).success).toBe(true);
+    expect(
+      view.entities.map(({ kind, definitionId, objectiveType }) => [
+        kind,
+        definitionId,
+        objectiveType,
+      ]),
+    ).toEqual([
+      ["UNIT", "def_unit", null],
+      ["BUILDING", "def_building", "PROTECT"],
+      ["RESOURCE", "def_resource", null],
+      ["OBJECTIVE", "def_objective", null],
+    ]);
   });
 
   it("shares entities between recipients and changes only localPlayerId", () => {

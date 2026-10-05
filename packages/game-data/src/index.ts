@@ -1,13 +1,29 @@
-/** Declarative game-data for foundation maps and spawn layout. */
+/** Declarative game-data: entity definitions, map definitions and spatial constants. */
 export const packageName = "@web-rts/game-data" as const;
 
 export {
-  FOUNDATION_MAP_BOUNDS,
-  FOUNDATION_MAP_HALF_EXTENT,
-  FOUNDATION_OBJECTIVE_POSITION,
-  FOUNDATION_UNIT_SPAWN_POSITIONS,
-  foundationUnitSpawnPosition,
-  isWithinFoundationBounds,
-  type FoundationMapBounds,
-  type GroundPoint,
-} from "./foundation-map.js";
+  ENTITY_DEFINITIONS,
+  ENTITY_KINDS,
+  getEntityDefinition,
+  type EntityDefinition,
+  type EntityDefinitionId,
+  type EntityKind,
+  type FootprintDefinition,
+} from "./entity-definitions.js";
+export {
+  FOUNDATION_MAP,
+  FOUNDATION_MAP_ID,
+  MAP_OBJECTIVE_TYPES,
+  NAVIGATION_CELL_SIZE,
+  getMapDefinition,
+  mapWorldBounds,
+  type CellCoord,
+  type CellRect,
+  type MapDefinition,
+  type MapObjectiveType,
+  type MapPlacement,
+  type MapWorldBounds,
+  type PlayerSpawnDefinition,
+  type StaticTerrainRegion,
+  type WorldPoint,
+} from "./map-definition.js";

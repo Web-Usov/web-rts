@@ -18,7 +18,8 @@ function view(overrides: Partial<GameStateView> = {}): GameStateView {
     entities: [
       {
         entityId: 10,
-        kind: "unit",
+        kind: "UNIT",
+        definitionId: "foundation_unit",
         x: 0,
         y: 0,
         ownerPlayerId: 0,
@@ -28,7 +29,8 @@ function view(overrides: Partial<GameStateView> = {}): GameStateView {
       },
       {
         entityId: 11,
-        kind: "unit",
+        kind: "UNIT",
+        definitionId: "foundation_unit",
         x: 5,
         y: 5,
         ownerPlayerId: 1,
@@ -58,7 +60,8 @@ describe("ClientGameState", () => {
         entities: [
           {
             entityId: 10,
-            kind: "unit",
+            kind: "UNIT",
+            definitionId: "foundation_unit",
             x: 10,
             y: 0,
             ownerPlayerId: 0,
@@ -68,7 +71,8 @@ describe("ClientGameState", () => {
           },
           {
             entityId: 11,
-            kind: "unit",
+            kind: "UNIT",
+            definitionId: "foundation_unit",
             x: 5,
             y: 5,
             ownerPlayerId: 1,
@@ -95,7 +99,8 @@ describe("ClientGameState", () => {
         entities: [
           {
             entityId: 10,
-            kind: "unit",
+            kind: "UNIT",
+            definitionId: "foundation_unit",
             x: 20,
             y: 0,
             ownerPlayerId: 0,
@@ -105,7 +110,8 @@ describe("ClientGameState", () => {
           },
           {
             entityId: 11,
-            kind: "unit",
+            kind: "UNIT",
+            definitionId: "foundation_unit",
             x: 5,
             y: 5,
             ownerPlayerId: 1,
@@ -159,12 +165,13 @@ describe("ClientGameState", () => {
           ...view().entities,
           {
             entityId: 12,
-            kind: "objective",
+            kind: "OBJECTIVE",
+            definitionId: "sacred_site",
             x: 0,
             y: 0,
             ownerPlayerId: null,
             controllerPlayerId: null,
-            objectiveType: "SACRED_SITE",
+            objectiveType: "PROTECT",
             objectiveState: "ACTIVE",
           },
         ],

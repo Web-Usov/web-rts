@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { canIssueMove, createWorld } from "./world.js";
 
+const UNIT = { kind: "UNIT", definitionId: "foundation_unit" } as const;
+const SACRED_SITE = { kind: "OBJECTIVE", definitionId: "sacred_site" } as const;
+
 describe("owner and controller", () => {
   it("stores Owner and Controller independently", () => {
     const world = createWorld({ seed: 1 });
-    const entityId = world.createEntity();
+    const entityId = world.createEntity(UNIT);
     world.owners.set(entityId, { ownerPlayerId: 0 });
     world.controllers.set(entityId, { controllerPlayerId: 1 });
 
@@ -14,7 +17,7 @@ describe("owner and controller", () => {
 
   it("allows MOVE only for the current controller", () => {
     const world = createWorld({ seed: 1 });
-    const entityId = world.createEntity();
+    const entityId = world.createEntity(UNIT);
     world.positions.set(entityId, { x: 0, y: 0 });
     world.owners.set(entityId, { ownerPlayerId: 0 });
     world.controllers.set(entityId, { controllerPlayerId: 0 });
@@ -25,7 +28,7 @@ describe("owner and controller", () => {
 
   it("changes MOVE permission when controller changes and keeps the owner", () => {
     const world = createWorld({ seed: 1 });
-    const entityId = world.createEntity();
+    const entityId = world.createEntity(UNIT);
     world.positions.set(entityId, { x: 0, y: 0 });
     world.owners.set(entityId, { ownerPlayerId: 0 });
     world.controllers.set(entityId, { controllerPlayerId: 0 });
@@ -39,7 +42,7 @@ describe("owner and controller", () => {
 
   it("rejects MOVE for an entity without a Controller", () => {
     const world = createWorld({ seed: 1 });
-    const entityId = world.createEntity();
+    const entityId = world.createEntity(UNIT);
     world.positions.set(entityId, { x: 0, y: 0 });
     world.owners.set(entityId, { ownerPlayerId: 0 });
 
@@ -47,27 +50,31 @@ describe("owner and controller", () => {
     expect(canIssueMove(world, 0, [entityId])).toBe(false);
   });
 
-  it("rejects MOVE for an objective that has no Controller", () => {
+  it("rejects MOVE for an objective target that has no Controller", () => {
     const world = createWorld({ seed: 1 });
-    const entityId = world.createEntity();
+    const entityId = world.createEntity(SACRED_SITE);
     world.positions.set(entityId, { x: 0, y: 0 });
-    world.objectives.set(entityId, { type: "SACRED_SITE", state: "ACTIVE" });
+    world.addObjective({
+      type: "PROTECT",
+      targetEntityId: entityId,
+      required: true,
+      state: "ACTIVE",
+    });
 
     expect(canIssueMove(world, 0, [entityId])).toBe(false);
     expect(canIssueMove(world, 1, [entityId])).toBe(false);
   });
 
-  it("drops owner, controller, and objective when the entity is destroyed", () => {
+  it("drops identity, owner and controller when the entity is destroyed", () => {
     const world = createWorld({ seed: 1 });
-    const entityId = world.createEntity();
+    const entityId = world.createEntity(UNIT);
     world.owners.set(entityId, { ownerPlayerId: 0 });
     world.controllers.set(entityId, { controllerPlayerId: 0 });
-    world.objectives.set(entityId, { type: "SACRED_SITE", state: "ACTIVE" });
 
     world.destroyEntity(entityId);
 
+    expect(world.identities.has(entityId)).toBe(false);
     expect(world.owners.has(entityId)).toBe(false);
     expect(world.controllers.has(entityId)).toBe(false);
-    expect(world.objectives.has(entityId)).toBe(false);
   });
 });
