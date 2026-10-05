@@ -610,16 +610,16 @@ Permissions могут вычисляться системой, а не обяз
 ```ts
 type Objective = {
   id: ObjectiveId;
-  type: "protect" | "destroy" | "capture";
+  type: "PROTECT" | "DESTROY" | "CAPTURE";
   entityId?: EntityId;
   teamId?: TeamId;
   required: boolean;
 };
 ```
 
-`Sacred Site` — concrete entity/definition identity. `protect` — gameplay objective role, назначенная этой entity.
+`Sacred Site` — concrete entity/definition identity. `PROTECT` — gameplay objective role, назначенная этой entity.
 
-Первая gameplay реализация использует `protect` для Sacred Site.
+Первая gameplay реализация использует `PROTECT` для Sacred Site.
 
 ---
 

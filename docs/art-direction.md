@@ -199,7 +199,7 @@ Player-color должен следовать **стабильной gameplay ide
 
 Sacred Site должен резко отличаться от обычной человеческой архитектуры и оставаться заметным landmark даже на дальнем zoom.
 
-При этом **Sacred Site — визуальная / world-entity identity, а не имя generic gameplay objective type**. Gameplay architecture может назначать этой entity роль вроде `protect` через обобщённую Objective model. Art Direction не требует hardcode objective system под Sacred Site.
+При этом **Sacred Site — визуальная / world-entity identity, а не имя generic gameplay objective type**. Gameplay architecture может назначать этой entity роль вроде `PROTECT` через обобщённую Objective model. Art Direction не требует hardcode objective system под Sacred Site.
 
 ## 7. PvE threat
 
