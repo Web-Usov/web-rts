@@ -27,6 +27,7 @@
     "@colyseus/tools": "^0.18.4",
     "@eslint/js": "^10.0.1",
     "@types/node": "^22.20.4",
+    "@web-rts/testkit": "workspace:^",
     "eslint": "^10.11.0",
     "eslint-config-prettier": "^10.1.8",
     "tsx": "^4.23.15",
@@ -37,6 +38,7 @@
   "dependencies": {
     "@colyseus/ws-transport": "^0.18.3",
     "@web-rts/game-data": "workspace:^",
+    "@web-rts/match-adapter": "workspace:^",
     "@web-rts/protocol": "workspace:^",
     "@web-rts/simulation": "workspace:^",
     "colyseus": "^0.18.8"

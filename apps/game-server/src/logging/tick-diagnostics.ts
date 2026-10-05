@@ -1,5 +1,5 @@
 /**
- * Wall-clock measurement around SimulationHost.step().
+ * Wall-clock measurement around MatchRuntime.step().
  * The clock stays in the server/application boundary. packages/simulation does not see it.
  *
  * Verbose per-tick logs:
@@ -49,19 +49,26 @@ export function measureStepDuration(step: () => void, now: () => number = readWa
   return now() - started;
 }
 
+/** Shape of `MatchRuntime.readMetrics()`; diagnostics never read World internals. */
+export type TickMetrics = {
+  tick: number;
+  entityCount: number;
+  pendingCommandCount: number;
+};
+
+/** Pending commands are counted before the step; tick and entity count after it. */
 export function buildTickDiagnostic(input: {
   step: () => void;
   now?: () => number;
-  tick: () => number;
-  entityCount: () => number;
-  pendingCommandCount: () => number;
+  metrics: () => TickMetrics;
 }): TickDiagnostic {
-  const pendingCommandCount = input.pendingCommandCount();
+  const pendingCommandCount = input.metrics().pendingCommandCount;
   const durationMs = measureStepDuration(input.step, input.now ?? readWallClockMs);
+  const after = input.metrics();
   return {
-    tick: input.tick(),
+    tick: after.tick,
     durationMs,
-    entityCount: input.entityCount(),
+    entityCount: after.entityCount,
     pendingCommandCount,
   };
 }

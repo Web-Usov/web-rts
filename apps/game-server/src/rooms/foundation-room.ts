@@ -13,7 +13,14 @@ import {
   type MatchPhase,
   type ProtocolMismatchEvent,
 } from "@web-rts/protocol";
-import { DEFAULT_TICK_HZ } from "@web-rts/simulation";
+import { projectGameStateView, toGameEvent, toSimulationCommand } from "@web-rts/match-adapter";
+import {
+  DEFAULT_TICK_HZ,
+  createMatchRuntime,
+  type MatchRuntime,
+  type MatchSetup,
+  type MatchSnapshot,
+} from "@web-rts/simulation";
 import {
   AUTH_ERROR_CODE,
   DEFAULT_RECONNECT_GRACE_SECONDS,
@@ -33,17 +40,15 @@ import {
   type TickDiagnostic,
 } from "../logging/tick-diagnostics.js";
 import { PlayerSlotRegistry } from "../player-slots.js";
-import { projectWorldToGameStateView } from "../replication-adapter.js";
-import { SimulationHost } from "../simulation-host.js";
 
 type ClientUserData = {
   playerId: number;
 };
 
 /**
- * Authoritative multiplayer room shell.
- * Owns session lifecycle and command intake; gameplay rules live in SimulationHost / World.
- * Replication projects World → GameStateView (not Colyseus Schema as simulation state).
+ * Authoritative multiplayer room shell (ADR-009).
+ * Owns session lifecycle, schema/session checks, and the tick scheduler. Gameplay
+ * rules live in the shared MatchRuntime; match-adapter projects its snapshot.
  */
 export class FoundationRoom extends Room {
   override maxClients = MAX_PLAYERS;
@@ -57,8 +62,13 @@ export class FoundationRoom extends Room {
    * Join/create payloads are never copied onto this field.
    */
   reconnectGraceSeconds = DEFAULT_RECONNECT_GRACE_SECONDS;
+  /**
+   * Same rule as `reconnectGraceSeconds`: tests may replace it on the server room,
+   * client payloads never reach it.
+   */
+  matchRuntimeFactory: (setup: MatchSetup) => MatchRuntime = createMatchRuntime;
   readonly slots = new PlayerSlotRegistry();
-  simulationHost: SimulationHost | null = null;
+  matchRuntime: MatchRuntime | null = null;
   /** Latest measured simulation step. Updated every tick; verbose logging is separate. */
   lastTickDiagnostic: TickDiagnostic | null = null;
 
@@ -80,12 +90,7 @@ export class FoundationRoom extends Room {
       }
     }
 
-    this.setMetadata({
-      phase: this.phase,
-      seed: this.seed,
-      mapId: this.mapId,
-      maxPlayers: MAX_PLAYERS,
-    });
+    this.publishMetadata();
 
     this.onMessage(COMMAND_MESSAGE, (client, payload) => {
       this.handleCommandMessage(client, payload);
@@ -200,12 +205,13 @@ export class FoundationRoom extends Room {
 
   /**
    * Permanent leave: consented Disconnect, or reconnect timeout after onDrop.
-   * Frees the slot and active Controller. Owner and the entity stay.
+   * Discards the player's pending commands and frees the slot and active Controller.
+   * Owner and the entity stay. A drop inside the grace period keeps the queue.
    */
   override async onLeave(client: Client): Promise<void> {
     const slot = this.slots.release(client.sessionId);
     if (slot) {
-      this.simulationHost?.releaseControlForPlayer(slot.playerId);
+      this.matchRuntime?.removePlayer(slot.playerId);
       this.emitMatchLog(
         { level: "info", event: "player_left" },
         { playerId: slot.playerId, sessionId: client.sessionId },
@@ -218,64 +224,109 @@ export class FoundationRoom extends Room {
 
   override onDispose(): void {
     this.emitMatchLog({ level: "info", event: "room_disposed" });
-    this.simulationHost = null;
+    this.matchRuntime = null;
     this.phase = "FINISHED";
   }
 
-  /** Starts SimulationHost, spawns primitive units, and enters RUNNING. */
+  /** Creates the shared MatchRuntime for the players present now and enters RUNNING. */
   startMatch(): boolean {
     if (this.phase !== "LOBBY" && this.phase !== "STARTING") {
       return false;
     }
     this.phase = "STARTING";
-    this.simulationHost = new SimulationHost({
+    const runtime = this.matchRuntimeFactory({
       seed: this.seed,
       mapId: this.mapId,
+      participants: this.slots.list().map((slot) => ({ playerId: slot.playerId })),
     });
-    const playerIds = this.slots.list().map((slot) => slot.playerId);
-    this.simulationHost.bootstrapMatch(playerIds);
+    this.matchRuntime = runtime;
     this.phase = "RUNNING";
     this.emitMatchLog({
       level: "info",
       event: "match_started",
-      entityCount: this.simulationHost.world.entityIds().length,
+      entityCount: runtime.readMetrics().entityCount,
     });
+    this.publishMetadata();
+
+    // Drive fixed ticks at the simulation boundary (not gameplay rules).
+    this.setFixedTimestep(() => {
+      this.runTick();
+    }, DEFAULT_TICK_HZ);
+
+    this.finishIfRuntimeFinished();
+    this.broadcastState();
+    return true;
+  }
+
+  private runTick(): void {
+    const runtime = this.matchRuntime;
+    if (this.phase !== "RUNNING" || !runtime) {
+      return;
+    }
+    const diagnostic = buildTickDiagnostic({
+      step: () => {
+        runtime.step();
+      },
+      metrics: () => runtime.readMetrics(),
+    });
+    this.lastTickDiagnostic = diagnostic;
+    if (isVerboseTickLoggingEnabled()) {
+      this.emitMatchLog({
+        level: "info",
+        event: "simulation_tick",
+        durationMs: diagnostic.durationMs,
+        entityCount: diagnostic.entityCount,
+        pendingCommandCount: diagnostic.pendingCommandCount,
+      });
+    }
+    this.deliverRuntimeEvents(runtime);
+    this.finishIfRuntimeFinished();
+    this.broadcastState();
+  }
+
+  /** Routes recipient-addressed events to the player's current session. Offline players lose them. */
+  private deliverRuntimeEvents(runtime: MatchRuntime): void {
+    for (const event of runtime.drainEvents()) {
+      const slot = this.slots
+        .list()
+        .find((candidate) => candidate.playerId === event.recipientPlayerId);
+      this.emitMatchLog(
+        {
+          level: "warn",
+          event: "command_rejected",
+          reason: event.reason,
+          commandId: event.commandId,
+        },
+        slot
+          ? { playerId: slot.playerId, sessionId: slot.sessionId }
+          : { playerId: event.recipientPlayerId },
+      );
+      if (!slot || !slot.connected) {
+        continue;
+      }
+      const client = this.clients.find((candidate) => candidate.sessionId === slot.sessionId);
+      if (client) {
+        this.sendEvent(client, toGameEvent(event));
+      }
+    }
+  }
+
+  private finishIfRuntimeFinished(): void {
+    if (this.phase !== "RUNNING" || this.matchRuntime?.status !== "FINISHED") {
+      return;
+    }
+    this.phase = "FINISHED";
+    this.emitMatchLog({ level: "info", event: "match_finished" });
+    this.publishMetadata();
+  }
+
+  private publishMetadata(): void {
     this.setMetadata({
       phase: this.phase,
       seed: this.seed,
       mapId: this.mapId,
       maxPlayers: MAX_PLAYERS,
     });
-
-    // Drive fixed ticks at the simulation boundary (not gameplay rules).
-    this.setFixedTimestep(() => {
-      const host = this.simulationHost;
-      if (this.phase !== "RUNNING" || !host) {
-        return;
-      }
-      const diagnostic = buildTickDiagnostic({
-        step: () => {
-          host.step();
-        },
-        tick: () => host.tick,
-        entityCount: () => host.world.entityIds().length,
-        pendingCommandCount: () => host.pendingCommandCount(),
-      });
-      this.lastTickDiagnostic = diagnostic;
-      if (isVerboseTickLoggingEnabled()) {
-        this.emitMatchLog({
-          level: "info",
-          event: "simulation_tick",
-          durationMs: diagnostic.durationMs,
-          entityCount: diagnostic.entityCount,
-          pendingCommandCount: diagnostic.pendingCommandCount,
-        });
-      }
-      this.broadcastState();
-    }, DEFAULT_TICK_HZ);
-
-    this.broadcastState();
-    return true;
   }
 
   private handleStartMessage(client: Client): void {
@@ -349,7 +400,8 @@ export class FoundationRoom extends Room {
         return;
       }
 
-      if (!this.simulationHost || this.phase !== "RUNNING") {
+      const runtime = this.matchRuntime;
+      if (!runtime || this.phase !== "RUNNING") {
         this.emitMatchLog(
           {
             level: "warn",
@@ -367,18 +419,17 @@ export class FoundationRoom extends Room {
         return;
       }
 
-      // Identity is session-derived only (Finding I1 / AGENTS network rules).
-      const result = this.simulationHost.enqueueFromSession(parsed.data, {
-        playerId: slot.playerId,
-        sessionId: client.sessionId,
-      });
-
-      if (!result.ok) {
+      // Identity is session-derived only; gameplay validation runs on the tick boundary.
+      const admission = runtime.submitCommand(
+        { playerId: slot.playerId },
+        toSimulationCommand(parsed.data),
+      );
+      if (!admission.accepted) {
         this.emitMatchLog(
           {
             level: "warn",
             event: "command_rejected",
-            reason: result.reason,
+            reason: admission.reason,
             commandId: parsed.data.commandId,
           },
           { playerId: slot.playerId, sessionId: client.sessionId },
@@ -386,7 +437,7 @@ export class FoundationRoom extends Room {
         this.sendEvent(client, {
           type: "COMMAND_REJECTED",
           commandId: parsed.data.commandId,
-          reason: result.reason,
+          reason: admission.reason,
         });
       }
     } catch (error) {
@@ -415,7 +466,7 @@ export class FoundationRoom extends Room {
   ): void {
     const context: MatchLogContext = {
       roomId: this.roomId,
-      tick: this.simulationHost?.tick ?? 0,
+      tick: this.matchRuntime?.readMetrics().tick ?? 0,
     };
     if (identity?.playerId !== undefined) {
       context.playerId = identity.playerId;
@@ -426,42 +477,47 @@ export class FoundationRoom extends Room {
     writeMatchLog(createMatchLogRecord(context, fields));
   }
 
-  /** Per-client GameStateView projection (localPlayerId differs; entities shared in F5). */
+  /** One transport-neutral snapshot per broadcast, then a projection per recipient. */
   broadcastState(exceptSessionId?: string): void {
+    const snapshot = this.readSnapshot();
     for (const client of this.clients) {
       if (client.sessionId === exceptSessionId) {
         continue;
       }
-      this.sendState(client);
+      this.sendState(client, snapshot);
     }
   }
 
   /** One recipient. Used by broadcast and by the post-join sync request. */
-  sendState(client: Client): void {
+  sendState(client: Client, snapshot: MatchSnapshot | null = this.readSnapshot()): void {
     const slot = this.slots.getBySessionId(client.sessionId);
     if (!slot) {
       return;
     }
     try {
-      client.send(STATE_MESSAGE, this.buildStateView(slot.playerId));
+      client.send(STATE_MESSAGE, this.buildStateView(slot.playerId, snapshot));
     } catch {
       // A client mid-handshake cannot accept a send yet. It asks again with SYNC.
     }
   }
 
-  buildStateView(localPlayerId: number) {
-    const players = this.slots.list().map((slot) => ({
-      playerId: slot.playerId,
-      connected: slot.connected,
-    }));
+  buildStateView(localPlayerId: number, snapshot: MatchSnapshot | null = this.readSnapshot()) {
+    return projectGameStateView(
+      snapshot,
+      { localPlayerId },
+      {
+        roomId: this.roomId,
+        phase: this.phase,
+        players: this.slots.list().map((slot) => ({
+          playerId: slot.playerId,
+          connected: slot.connected,
+        })),
+      },
+    );
+  }
 
-    return projectWorldToGameStateView({
-      world: this.simulationHost?.world ?? null,
-      roomId: this.roomId,
-      phase: this.phase,
-      localPlayerId,
-      players,
-    });
+  private readSnapshot(): MatchSnapshot | null {
+    return this.matchRuntime?.readSnapshot() ?? null;
   }
 
   private sendEvent(client: Client, event: GameEvent | CommandRejectedEvent): void {

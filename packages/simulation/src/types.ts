@@ -9,6 +9,14 @@ export interface Vec2 {
   y: number;
 }
 
+/** Axis-aligned inclusive playable area on simulation (x, y). */
+export interface MapBounds {
+  readonly minX: number;
+  readonly maxX: number;
+  readonly minY: number;
+  readonly maxY: number;
+}
+
 export interface Position {
   x: number;
   y: number;

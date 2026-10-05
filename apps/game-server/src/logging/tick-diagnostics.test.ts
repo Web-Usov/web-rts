@@ -28,8 +28,11 @@ describe("tick diagnostics", () => {
   });
 
   it("records tick, duration, entity count, and pending commands", () => {
+    let stepped = false;
     const diagnostic = buildTickDiagnostic({
-      step: () => {},
+      step: () => {
+        stepped = true;
+      },
       now: (() => {
         let calls = 0;
         return () => {
@@ -37,9 +40,10 @@ describe("tick diagnostics", () => {
           return calls === 1 ? 0 : 4;
         };
       })(),
-      tick: () => 8,
-      entityCount: () => 3,
-      pendingCommandCount: () => 1,
+      metrics: () =>
+        stepped
+          ? { tick: 8, entityCount: 3, pendingCommandCount: 0 }
+          : { tick: 7, entityCount: 3, pendingCommandCount: 1 },
     });
 
     expect(diagnostic).toEqual({

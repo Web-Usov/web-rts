@@ -22,13 +22,17 @@ describe("simulation kernel", () => {
     const world = createWorld({ seed: 1 });
     const entityId = world.createEntity();
     world.positions.set(entityId, { x: 0, y: 0 });
+    world.controllers.set(entityId, { controllerPlayerId: 0 });
     world.drainEvents();
 
     world.enqueueCommand({
-      type: "MOVE",
-      commandId: "move-1",
-      entityIds: [entityId],
-      target: { x: 10, y: 0 },
+      actor: { playerId: 0 },
+      command: {
+        type: "MOVE",
+        commandId: "move-1",
+        entityIds: [entityId],
+        target: { x: 10, y: 0 },
+      },
     });
 
     expect(world.movements.has(entityId)).toBe(false);
@@ -48,6 +52,7 @@ describe("simulation kernel", () => {
     expect(events).toContainEqual({
       type: "COMMAND_APPLIED",
       commandId: "move-1",
+      playerId: 0,
       tick: 0,
     });
   });
@@ -56,11 +61,15 @@ describe("simulation kernel", () => {
     const world = createWorld({ seed: 7, defaultMoveSpeed: 5 });
     const entityId = world.createEntity();
     world.positions.set(entityId, { x: 0, y: 0 });
+    world.controllers.set(entityId, { controllerPlayerId: 0 });
     world.enqueueCommand({
-      type: "MOVE",
-      commandId: "move-2",
-      entityIds: [entityId],
-      target: { x: 2, y: 0 },
+      actor: { playerId: 0 },
+      command: {
+        type: "MOVE",
+        commandId: "move-2",
+        entityIds: [entityId],
+        target: { x: 2, y: 0 },
+      },
     });
 
     // speed 5 u/s * 0.1 s = 0.5 units/tick → 4 ticks to reach x=2
@@ -75,11 +84,15 @@ describe("simulation kernel", () => {
       const world = createWorld({ seed: 42 });
       const entityId = world.createEntity();
       world.positions.set(entityId, { x: 0, y: 0 });
+      world.controllers.set(entityId, { controllerPlayerId: 0 });
       world.enqueueCommand({
-        type: "MOVE",
-        commandId: "repeat",
-        entityIds: [entityId],
-        target: { x: 3, y: 4 },
+        actor: { playerId: 0 },
+        command: {
+          type: "MOVE",
+          commandId: "repeat",
+          entityIds: [entityId],
+          target: { x: 3, y: 4 },
+        },
       });
       world.stepN(20);
       const position = world.positions.get(entityId)!;

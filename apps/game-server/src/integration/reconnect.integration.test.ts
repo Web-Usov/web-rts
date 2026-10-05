@@ -15,6 +15,7 @@ import {
   FOUNDATION_ROOM_NAME,
 } from "../constants.js";
 import { FoundationRoom } from "../rooms/foundation-room.js";
+import { installRuntimeProbe, type RuntimeProbe } from "./runtime-probe.js";
 
 const compatibleOptions = {
   protocolVersion: PROTOCOL_VERSION,
@@ -56,6 +57,10 @@ async function waitForState(
   throw new Error("timed out waiting for matching GameStateView");
 }
 
+function entityOf(room: FoundationRoom, entityId: number) {
+  return room.matchRuntime?.readSnapshot().entities.find((entity) => entity.entityId === entityId);
+}
+
 /** Unexpected close. Disables the SDK retry loop so the test owns the resume. */
 async function dropUnexpected(client: SdkRoom): Promise<void> {
   client.reconnection.enabled = false;
@@ -77,31 +82,61 @@ describe("reconnect integration", () => {
     await colyseus.cleanup();
   });
 
-  async function startRunningPair(graceSeconds = DEFAULT_RECONNECT_GRACE_SECONDS) {
+  async function startRunningPair(
+    graceSeconds = DEFAULT_RECONNECT_GRACE_SECONDS,
+    options: { held?: boolean } = {},
+  ) {
     const room = (await colyseus.createRoom(
       FOUNDATION_ROOM_NAME,
       compatibleOptions,
     )) as FoundationRoom;
     room.reconnectGraceSeconds = graceSeconds;
+    const probe: RuntimeProbe = installRuntimeProbe(room, options);
     const clientA = (await colyseus.connectTo(room, compatibleOptions)) as unknown as SdkRoom;
     const clientB = (await colyseus.connectTo(room, compatibleOptions)) as unknown as SdkRoom;
     expect(room.startMatch()).toBe(true);
-    const host = room.simulationHost;
-    expect(host).not.toBeNull();
+    const runtime = room.matchRuntime;
+    expect(runtime).not.toBeNull();
     const sessionA = clientA.sessionId;
     const playerA = room.slots.getBySessionId(sessionA)?.playerId;
     expect(playerA).toBeDefined();
-    const unitA = host!.primitiveUnits.getEntityId(playerA!);
+    const unitA = runtime!
+      .readSnapshot()
+      .entities.find(
+        (entity) => entity.kind === "unit" && entity.ownerPlayerId === playerA,
+      )?.entityId;
     expect(unitA).toBeDefined();
+    const objectiveId = runtime!
+      .readSnapshot()
+      .entities.find((entity) => entity.kind === "objective")?.entityId;
+    expect(objectiveId).toBeDefined();
     return {
       room,
+      probe,
       clientA,
       clientB,
-      host: host!,
+      runtime: runtime!,
       sessionA,
       playerA: playerA!,
       unitA: unitA!,
+      objectiveId: objectiveId!,
     };
+  }
+
+  async function sendPendingMove(room: FoundationRoom, client: SdkRoom, unitId: number) {
+    const start = entityOf(room, unitId)!;
+    const waitServer = room.waitForMessage(COMMAND_MESSAGE);
+    client.send(
+      COMMAND_MESSAGE,
+      createMove({
+        commandId: "pending",
+        entityIds: [unitId],
+        target: { x: start.x + 2, y: start.y },
+      }),
+    );
+    await waitServer;
+    expect(room.matchRuntime!.readMetrics().pendingCommandCount).toBe(1);
+    return start;
   }
 
   it("ignores a client-supplied reconnect grace", async () => {
@@ -119,7 +154,7 @@ describe("reconnect integration", () => {
   });
 
   it("reserves the slot, unit, owner, and controller on unexpected disconnect", async () => {
-    const { room, clientA, clientB, host, sessionA, playerA, unitA } = await startRunningPair();
+    const { room, clientA, clientB, runtime, sessionA, playerA, unitA } = await startRunningPair();
     const seenByPeer = waitForState(
       clientB,
       (view) =>
@@ -141,23 +176,23 @@ describe("reconnect integration", () => {
       connected: false,
     });
     expect(room.clients.length).toBe(1);
-    expect(host.world.hasEntity(unitA)).toBe(true);
-    expect(host.primitiveUnits.getEntityId(playerA)).toBe(unitA);
-    expect(host.world.owners.get(unitA)).toEqual({ ownerPlayerId: playerA });
-    expect(host.world.controllers.get(unitA)).toEqual({ controllerPlayerId: playerA });
+    expect(entityOf(room, unitA)).toMatchObject({
+      ownerPlayerId: playerA,
+      controllerPlayerId: playerA,
+    });
     expect(view.phase).toBe("RUNNING");
     expect(room.phase).toBe("RUNNING");
-    expect(room.simulationHost).toBe(host);
+    expect(room.matchRuntime).toBe(runtime);
   });
 
   it("keeps the fixed timestep running and replicating while a player is disconnected", async () => {
-    const { room, clientA, clientB, host } = await startRunningPair();
-    const tickBefore = host.tick;
+    const { room, clientA, clientB, runtime } = await startRunningPair();
+    const tickBefore = runtime.readMetrics().tick;
     await dropUnexpected(clientA);
 
     await room.waitForNextTimestep();
-    expect(host.tick).toBeGreaterThan(tickBefore);
-    expect(room.simulationHost).toBe(host);
+    expect(runtime.readMetrics().tick).toBeGreaterThan(tickBefore);
+    expect(room.matchRuntime).toBe(runtime);
     expect(room.phase).toBe("RUNNING");
 
     const later = await waitForState(clientB, (view) => view.tick > tickBefore);
@@ -166,7 +201,7 @@ describe("reconnect integration", () => {
   });
 
   it("reconnects the same session and accepts MOVE that the peer observes", async () => {
-    const { room, clientA, clientB, host, sessionA, playerA, unitA } = await startRunningPair();
+    const { room, clientA, clientB, runtime, sessionA, playerA, unitA } = await startRunningPair();
     const token = clientA.reconnectionToken;
     expect(token.includes(":")).toBe(true);
 
@@ -186,10 +221,11 @@ describe("reconnect integration", () => {
       playerId: playerA,
       connected: true,
     });
-    expect(room.simulationHost).toBe(host);
-    expect(host.primitiveUnits.getEntityId(playerA)).toBe(unitA);
-    expect(host.world.owners.get(unitA)).toEqual({ ownerPlayerId: playerA });
-    expect(host.world.controllers.get(unitA)).toEqual({ controllerPlayerId: playerA });
+    expect(room.matchRuntime).toBe(runtime);
+    expect(entityOf(room, unitA)).toMatchObject({
+      ownerPlayerId: playerA,
+      controllerPlayerId: playerA,
+    });
 
     const resumed = waitForState(
       restored,
@@ -209,7 +245,7 @@ describe("reconnect integration", () => {
     const view = await resumed;
     expect(view.entities.filter((entity) => entity.kind === "objective")).toHaveLength(1);
 
-    const start = host.world.positions.get(unitA)!;
+    const start = entityOf(room, unitA)!;
     const target = { x: start.x + 2, y: start.y };
     const peerSeesMove = waitForState(clientB, (peerView) => {
       const entity = peerView.entities.find((candidate) => candidate.entityId === unitA);
@@ -220,17 +256,10 @@ describe("reconnect integration", () => {
         entity.controllerPlayerId === playerA
       );
     });
-    const waitServer = room.waitForMessage(COMMAND_MESSAGE);
     restored.send(
       COMMAND_MESSAGE,
       createMove({ commandId: "after-reconnect", entityIds: [unitA], target }),
     );
-    await waitServer;
-
-    while (host.pendingCommandCount() > 0 || host.world.movements.has(unitA)) {
-      host.step();
-    }
-    room.broadcastState();
 
     const peerView = await peerSeesMove;
     const moved = peerView.entities.find((entity) => entity.entityId === unitA);
@@ -240,11 +269,8 @@ describe("reconnect integration", () => {
   });
 
   it("releases the slot and Controller after the grace timeout without deleting the unit", async () => {
-    const { room, clientA, clientB, host, sessionA, playerA, unitA } = await startRunningPair(2);
-    const objectiveId = host.world
-      .entityIds()
-      .find((entityId) => host.world.objectives.has(entityId));
-    expect(objectiveId).toBeDefined();
+    const { room, clientA, clientB, runtime, sessionA, playerA, unitA, objectiveId } =
+      await startRunningPair(2);
 
     await dropUnexpected(clientA);
     await vi.waitFor(
@@ -254,7 +280,7 @@ describe("reconnect integration", () => {
       { timeout: 1_000, interval: 20 },
     );
     expect(room.slots.size).toBe(2);
-    expect(host.world.controllers.has(unitA)).toBe(true);
+    expect(entityOf(room, unitA)?.controllerPlayerId).toBe(playerA);
 
     await vi.waitFor(
       () => {
@@ -264,14 +290,16 @@ describe("reconnect integration", () => {
     );
 
     expect(room.slots.size).toBe(1);
-    expect(host.world.hasEntity(unitA)).toBe(true);
-    expect(host.primitiveUnits.getEntityId(playerA)).toBe(unitA);
-    expect(host.world.owners.get(unitA)).toEqual({ ownerPlayerId: playerA });
-    expect(host.world.controllers.has(unitA)).toBe(false);
-    expect(host.world.objectives.has(objectiveId!)).toBe(true);
-    expect(host.world.controllers.has(objectiveId!)).toBe(false);
+    expect(entityOf(room, unitA)).toMatchObject({
+      ownerPlayerId: playerA,
+      controllerPlayerId: null,
+    });
+    expect(entityOf(room, objectiveId)).toMatchObject({
+      kind: "objective",
+      controllerPlayerId: null,
+    });
     expect(room.phase).toBe("RUNNING");
-    expect(room.simulationHost).toBe(host);
+    expect(room.matchRuntime).toBe(runtime);
 
     const pending = waitForState(clientB, (view) => {
       const entity = view.entities.find((candidate) => candidate.entityId === unitA);
@@ -287,8 +315,53 @@ describe("reconnect integration", () => {
     expect(view.entities.some((entity) => entity.entityId === objectiveId)).toBe(true);
   });
 
+  it("keeps pending commands during reconnect grace and applies them on the next step", async () => {
+    const { room, probe, clientA, sessionA, unitA } = await startRunningPair(30, { held: true });
+    const start = await sendPendingMove(room, clientA, unitA);
+
+    await dropUnexpected(clientA);
+    await vi.waitFor(() => {
+      expect(room.slots.getBySessionId(sessionA)?.connected).toBe(false);
+    });
+    expect(room.matchRuntime!.readMetrics().pendingCommandCount).toBe(1);
+
+    probe.allowSteps(1);
+    await vi.waitFor(() => {
+      expect(probe.appliedSteps).toBe(1);
+    });
+    expect(room.matchRuntime!.readMetrics().pendingCommandCount).toBe(0);
+    expect(entityOf(room, unitA)!.x).toBeGreaterThan(start.x);
+  });
+
+  it("discards pending commands when the grace period times out", async () => {
+    const { room, probe, clientA, sessionA, playerA, unitA } = await startRunningPair(1, {
+      held: true,
+    });
+    const start = await sendPendingMove(room, clientA, unitA);
+
+    await dropUnexpected(clientA);
+    await vi.waitFor(
+      () => {
+        expect(room.slots.getBySessionId(sessionA)).toBeUndefined();
+      },
+      { timeout: 4_000, interval: 50 },
+    );
+    expect(room.matchRuntime!.readMetrics().pendingCommandCount).toBe(0);
+
+    probe.allowSteps(2);
+    await vi.waitFor(() => {
+      expect(probe.appliedSteps).toBe(2);
+    });
+    expect(entityOf(room, unitA)).toMatchObject({
+      x: start.x,
+      y: start.y,
+      ownerPlayerId: playerA,
+      controllerPlayerId: null,
+    });
+  });
+
   it("treats consented Disconnect as an immediate permanent leave", async () => {
-    const { room, clientA, host, sessionA, playerA, unitA } = await startRunningPair();
+    const { room, clientA, sessionA, playerA, unitA } = await startRunningPair();
     expect(room.reconnectGraceSeconds).toBe(30);
 
     await clientA.leave(true);
@@ -300,9 +373,10 @@ describe("reconnect integration", () => {
       { timeout: 2_000, interval: 20 },
     );
     expect(room.slots.size).toBe(1);
-    expect(host.world.hasEntity(unitA)).toBe(true);
-    expect(host.world.owners.get(unitA)).toEqual({ ownerPlayerId: playerA });
-    expect(host.world.controllers.has(unitA)).toBe(false);
+    expect(entityOf(room, unitA)).toMatchObject({
+      ownerPlayerId: playerA,
+      controllerPlayerId: null,
+    });
     expect(room.phase).toBe("RUNNING");
   });
 

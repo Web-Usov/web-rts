@@ -6,10 +6,18 @@ import {
   type GameEvent,
   type GameStateView,
 } from "@web-rts/protocol";
+import type { MatchRuntime, MatchSetup } from "@web-rts/simulation";
+import {
+  FOUNDATION_PARITY_FIXTURE,
+  PARITY_FINISH_AFTER_STEPS,
+  createFinishingMatchRuntime,
+  normalizeGameStateView,
+  runParityReference,
+} from "@web-rts/testkit";
 import { createLocalMatchRuntime, type LocalTickSchedule } from "./local-match-runtime.js";
 import { LOCAL_PLAYER_ID, LOCAL_ROOM_ID, type MainToWorkerMessage } from "./local-protocol.js";
 
-function harness(): {
+function harness(createRuntime?: (setup: MatchSetup) => MatchRuntime): {
   states: GameStateView[];
   events: GameEvent[];
   tick: () => void;
@@ -27,13 +35,17 @@ function harness(): {
       scheduled = null;
     };
   };
-  const runtime = createLocalMatchRuntime((message) => {
-    if (message.type === "state") {
-      states.push(message.state);
-    } else if (message.type === "event") {
-      events.push(message.event);
-    }
-  }, schedule);
+  const runtime = createLocalMatchRuntime(
+    (message) => {
+      if (message.type === "state") {
+        states.push(message.state);
+      } else if (message.type === "event") {
+        events.push(message.event);
+      }
+    },
+    schedule,
+    createRuntime ? { createRuntime } : {},
+  );
 
   return {
     states,
@@ -116,7 +128,7 @@ describe("local match runtime", () => {
     });
   });
 
-  it("forwards command rejections and ignores a stale session", () => {
+  it("forwards shell and tick-boundary rejections and ignores a stale session", () => {
     const match = harness();
     match.handle(connectMessage);
     match.handle({
@@ -158,6 +170,8 @@ describe("local match runtime", () => {
         target: { x: 1, y: 1 },
       },
     });
+    expect(match.events).toHaveLength(1);
+    match.tick();
     match.handle({
       type: "command",
       sessionId: 1,
@@ -225,5 +239,87 @@ describe("local match runtime", () => {
     expect(match.states).toEqual([]);
     runtime.handle({ type: "start", sessionId: 1 });
     expect(match.states).toEqual([]);
+  });
+
+  it("delivers a simulation rejection after the tick, not on submit", () => {
+    const match = harness();
+    match.handle(connectMessage);
+    match.handle({ type: "start", sessionId: 1 });
+    const objectiveId = match.states
+      .at(-1)
+      ?.entities.find((entity) => entity.kind === "objective")?.entityId;
+    match.handle({
+      type: "command",
+      sessionId: 1,
+      command: {
+        type: "MOVE",
+        commandId: "objective",
+        clientSequence: 1,
+        entityIds: [objectiveId!],
+        target: { x: 1, y: 1 },
+      },
+    });
+    expect(match.events).toEqual([]);
+    match.tick();
+    expect(match.events).toEqual([
+      { type: "COMMAND_REJECTED", commandId: "objective", reason: "not_your_unit" },
+    ]);
+  });
+
+  it("matches the shared parity reference for the same fixture", () => {
+    const fixture = FOUNDATION_PARITY_FIXTURE;
+    const match = harness();
+    match.handle({ ...connectMessage, seed: fixture.seed, mapId: fixture.mapId });
+    match.handle({ type: "start", sessionId: 1 });
+    for (let tick = 0; tick < fixture.ticks; tick += 1) {
+      for (const step of fixture.steps.filter((candidate) => candidate.atTick === tick)) {
+        match.handle({ type: "command", sessionId: 1, command: step.payload });
+      }
+      match.tick();
+    }
+
+    const reference = runParityReference(fixture);
+    const rejections = match.events.flatMap((event) =>
+      event.type === "COMMAND_REJECTED"
+        ? [{ commandId: event.commandId, reason: event.reason }]
+        : [],
+    );
+    expect(rejections).toEqual(fixture.expectedRejections);
+    expect(rejections).toEqual(reference.rejections);
+    expect(normalizeGameStateView(match.states.at(-1)!)).toEqual(reference.finalView);
+  });
+
+  it("reflects START → RUNNING → FINISHED and rejects commands after FINISHED", () => {
+    const match = harness((setup) => createFinishingMatchRuntime(setup));
+    match.handle(connectMessage);
+    match.handle({ type: "start", sessionId: 1 });
+    expect(match.states.map((state) => state.phase)).toEqual(["LOBBY", "RUNNING"]);
+
+    for (let tick = 0; tick < PARITY_FINISH_AFTER_STEPS; tick += 1) {
+      match.tick();
+    }
+    const final = match.states.at(-1)!;
+    expect(final).toMatchObject({ phase: "FINISHED", tick: PARITY_FINISH_AFTER_STEPS });
+    expect(final.entities.length).toBeGreaterThan(0);
+    expect(match.cancelCount()).toBe(1);
+
+    match.handle({
+      type: "command",
+      sessionId: 1,
+      command: {
+        type: "MOVE",
+        commandId: "after-finish",
+        clientSequence: 1,
+        entityIds: [1],
+        target: { x: 1, y: 1 },
+      },
+    });
+    expect(match.events.at(-1)).toEqual({
+      type: "COMMAND_REJECTED",
+      commandId: "after-finish",
+      reason: "not_running",
+    });
+    match.handle({ type: "start", sessionId: 1 });
+    expect(match.events.at(-1)).toMatchObject({ commandId: "start", reason: "invalid_phase" });
   });
 });

@@ -1,13 +1,20 @@
 import {
   createWorld,
+  type CommandActor,
   type CreateWorldOptions,
+  type PlayerId,
   type SimulationCommand,
   type World,
 } from "@web-rts/simulation";
 
+/** Player that owns and controls units created by {@link spawnUnit} by default. */
+export const TEST_PLAYER_ID: PlayerId = 0;
+
 export interface ScenarioCommandAtTick {
   /** Tick value observed on the world before the corresponding step. */
   atTick: number;
+  /** Defaults to {@link TEST_PLAYER_ID}. */
+  actor?: CommandActor;
   command: SimulationCommand;
 }
 
@@ -51,7 +58,11 @@ export function runScenario(options: RunScenarioOptions): World {
 
   for (let i = 0; i < options.ticks; i += 1) {
     while (commandIndex < scheduled.length && scheduled[commandIndex]!.atTick === world.tick) {
-      world.enqueueCommand(scheduled[commandIndex]!.command);
+      const entry = scheduled[commandIndex]!;
+      world.enqueueCommand({
+        actor: entry.actor ?? { playerId: TEST_PLAYER_ID },
+        command: entry.command,
+      });
       commandIndex += 1;
     }
     world.step();
@@ -60,8 +71,14 @@ export function runScenario(options: RunScenarioOptions): World {
   return world;
 }
 
-export function spawnUnit(world: World, position: { x: number; y: number }): number {
+export function spawnUnit(
+  world: World,
+  position: { x: number; y: number },
+  playerId: PlayerId = TEST_PLAYER_ID,
+): number {
   const entityId = world.createEntity();
   world.positions.set(entityId, position);
+  world.owners.set(entityId, { ownerPlayerId: playerId });
+  world.controllers.set(entityId, { controllerPlayerId: playerId });
   return entityId;
 }

@@ -1,6 +1,10 @@
-import type { EntityId, Vec2 } from "./types.js";
+import type { EntityId, PlayerId, Vec2 } from "./types.js";
 
-/** Commands accepted by the simulation kernel (F1: MOVE only). */
+/**
+ * Gameplay intent accepted by the simulation kernel (MOVE only for now).
+ * It carries no player/session identity: the trusted actor travels next to it
+ * in {@link QueuedCommand}.
+ */
 export type SimulationCommand = {
   type: "MOVE";
   commandId: string;
@@ -8,15 +12,29 @@ export type SimulationCommand = {
   target: Vec2;
 };
 
-export class CommandQueue {
-  private readonly pending: SimulationCommand[] = [];
+/** Trusted issuer of a command. Derived by the host from session/local identity. */
+export type CommandActor = {
+  readonly playerId: PlayerId;
+};
 
-  enqueue(command: SimulationCommand): void {
-    this.pending.push(command);
+export type QueuedCommand = {
+  readonly actor: CommandActor;
+  readonly command: SimulationCommand;
+};
+
+/** Stable machine-readable reasons produced by tick-boundary validation. */
+export type CommandRejectionReason =
+  "empty_entity_ids" | "out_of_bounds" | "not_your_unit" | "no_valid_entities";
+
+export class CommandQueue {
+  private readonly pending: QueuedCommand[] = [];
+
+  enqueue(queued: QueuedCommand): void {
+    this.pending.push(queued);
   }
 
   /** Drain all commands queued since the previous tick boundary. */
-  drain(): SimulationCommand[] {
+  drain(): QueuedCommand[] {
     if (this.pending.length === 0) {
       return [];
     }

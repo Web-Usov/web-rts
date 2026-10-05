@@ -95,6 +95,7 @@ describe("@web-rts/scenario-runner", () => {
     expect(events).toContainEqual({
       type: "COMMAND_APPLIED",
       commandId: "boundary",
+      playerId: 0,
       tick: 0,
     });
     expect(world.positions.get(1)?.x).toBeCloseTo(0.5, 10);

@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { boot, type ColyseusTestServer } from "@colyseus/testing";
 import { FOUNDATION_MAP_HALF_EXTENT } from "@web-rts/game-data";
 import {
@@ -20,6 +20,7 @@ import {
 } from "../constants.js";
 import { FoundationRoom } from "../rooms/foundation-room.js";
 import { packageName } from "../index.js";
+import { installRuntimeProbe } from "./runtime-probe.js";
 
 const compatibleOptions = {
   protocolVersion: PROTOCOL_VERSION,
@@ -44,6 +45,27 @@ function isMatchMakeError(error: unknown): error is Error & { code: number; name
     "code" in error &&
     typeof (error as { code: unknown }).code === "number"
   );
+}
+
+function runtimeOf(room: FoundationRoom) {
+  expect(room.matchRuntime).not.toBeNull();
+  return room.matchRuntime!;
+}
+
+function unitOf(room: FoundationRoom, playerId: number) {
+  const unit = runtimeOf(room)
+    .readSnapshot()
+    .entities.find((entity) => entity.kind === "unit" && entity.ownerPlayerId === playerId);
+  expect(unit).toBeDefined();
+  return unit!;
+}
+
+function objectiveOf(room: FoundationRoom) {
+  const objective = runtimeOf(room)
+    .readSnapshot()
+    .entities.find((entity) => entity.kind === "objective");
+  expect(objective).toBeDefined();
+  return objective!;
 }
 
 async function waitForState(
@@ -127,7 +149,7 @@ describe("game-server integration", () => {
     const view = await pending;
     expect(view.entities).toEqual([]);
     expect(room.phase).toBe("LOBBY");
-    expect(room.simulationHost).toBeNull();
+    expect(room.matchRuntime).toBeNull();
   });
 
   it("sends the same connected player list to every client after sync", async () => {
@@ -187,12 +209,8 @@ describe("game-server integration", () => {
     expect(room.slots.getBySessionId(replacement.sessionId)?.playerId).toBe(4);
     expect(room.startMatch()).toBe(true);
 
-    const points = room.slots.list().map((slot) => {
-      const entityId = room.simulationHost!.primitiveUnits.getEntityId(slot.playerId);
-      expect(entityId).toBeDefined();
-      return room.simulationHost!.world.positions.get(entityId!);
-    });
-    expect(new Set(points.map((point) => `${point?.x},${point?.y}`)).size).toBe(MAX_PLAYERS);
+    const points = room.slots.list().map((slot) => unitOf(room, slot.playerId));
+    expect(new Set(points.map((point) => `${point.x},${point.y}`)).size).toBe(MAX_PLAYERS);
   });
 
   it("frees a slot on leave so a new client can join a previously full room", async () => {
@@ -330,37 +348,37 @@ describe("game-server integration", () => {
       type: "COMMAND_REJECTED",
       reason: "invalid_schema",
     });
-    expect(room.simulationHost?.pendingCommandCount() ?? 0).toBe(0);
+    expect(runtimeOf(room).readMetrics().pendingCommandCount).toBe(0);
   });
 
-  it("maps validated MOVE into SimulationCommand through SimulationHost", async () => {
+  it("creates the shared MatchRuntime from room seed/map and slot participants", async () => {
     const room = (await colyseus.createRoom(FOUNDATION_ROOM_NAME, {
       ...compatibleOptions,
       seed: 77,
       mapId: "mapper-map",
     })) as FoundationRoom;
+    const probe = installRuntimeProbe(room, { held: true });
     const client = await colyseus.connectTo(room, compatibleOptions);
 
     expect(room.startMatch()).toBe(true);
     expect(room.phase).toBe("RUNNING");
-    expect(room.simulationHost).not.toBeNull();
-    expect(room.simulationHost?.seed).toBe(77);
-    expect(room.simulationHost?.mapId).toBe("mapper-map");
+    expect(probe.setups).toEqual([
+      { seed: 77, mapId: "mapper-map", participants: [{ playerId: 0 }] },
+    ]);
 
-    const unitId = room.simulationHost!.primitiveUnits.getEntityId(0)!;
+    const unitId = unitOf(room, 0).entityId;
     const waitServer = room.waitForMessage(COMMAND_MESSAGE);
     client.send(
       COMMAND_MESSAGE,
       createMove({ commandId: "mapped-1", clientSequence: 42, entityIds: [unitId] }),
     );
     await waitServer;
+    expect(runtimeOf(room).readMetrics().pendingCommandCount).toBe(1);
 
-    const host = room.simulationHost!;
-    if (host.pendingCommandCount() > 0) {
-      host.step();
-    }
-    expect(host.pendingCommandCount()).toBe(0);
-    expect(host.tick).toBeGreaterThanOrEqual(1);
+    probe.allowSteps(1);
+    await vi.waitFor(() => {
+      expect(runtimeOf(room).readMetrics()).toMatchObject({ tick: 1, pendingCommandCount: 0 });
+    });
   });
 
   it("starts simulation via client start message with seed/map", async () => {
@@ -376,8 +394,8 @@ describe("game-server integration", () => {
     await waitStart;
 
     expect(room.phase).toBe("RUNNING");
-    expect(room.simulationHost?.seed).toBe(5);
-    expect(room.simulationHost?.mapId).toBe("start-map");
+    expect(room.matchRuntime).not.toBeNull();
+    expect(room.metadata).toMatchObject({ phase: "RUNNING", seed: 5, mapId: "start-map" });
   });
 
   it("survives client leave without crashing the room/process", async () => {
@@ -396,18 +414,15 @@ describe("game-server integration", () => {
 
     room.startMatch();
     expect(room.phase).toBe("RUNNING");
-    const unitId = room.simulationHost!.primitiveUnits.getEntityId(
-      room.slots.getBySessionId(clientB.sessionId)!.playerId,
-    )!;
-    const waitServer = room.waitForMessage(COMMAND_MESSAGE);
-    clientB.send(COMMAND_MESSAGE, createMove({ commandId: "after-leave", entityIds: [unitId] }));
-    await waitServer;
-
-    const host = room.simulationHost!;
-    if (host.pendingCommandCount() > 0) {
-      host.step();
-    }
-    expect(host.tick).toBeGreaterThanOrEqual(1);
+    const unit = unitOf(room, room.slots.getBySessionId(clientB.sessionId)!.playerId);
+    const moved = waitForState(clientB, (view) =>
+      view.entities.some((entity) => entity.entityId === unit.entityId && entity.x !== unit.x),
+    );
+    clientB.send(
+      COMMAND_MESSAGE,
+      createMove({ commandId: "after-leave", entityIds: [unit.entityId] }),
+    );
+    expect((await moved).tick).toBeGreaterThanOrEqual(1);
   });
 
   it("replicates authoritative MOVE movement to both clients", async () => {
@@ -419,10 +434,9 @@ describe("game-server integration", () => {
     const clientB = await colyseus.connectTo(room, compatibleOptions);
 
     room.startMatch();
-    const host = room.simulationHost!;
     const playerA = room.slots.getBySessionId(clientA.sessionId)!.playerId;
-    const unitA = host.primitiveUnits.getEntityId(playerA)!;
-    const start = host.world.positions.get(unitA)!;
+    const start = unitOf(room, playerA);
+    const unitA = start.entityId;
     const target = { x: start.x + 2, y: start.y };
 
     const atTarget = (view: GameStateView): boolean => {
@@ -436,7 +450,6 @@ describe("game-server integration", () => {
     const waitA = waitForState(clientA, atTarget);
     const waitB = waitForState(clientB, atTarget);
 
-    const waitServer = room.waitForMessage(COMMAND_MESSAGE);
     clientA.send(
       COMMAND_MESSAGE,
       createMove({
@@ -445,12 +458,6 @@ describe("game-server integration", () => {
         target,
       }),
     );
-    await waitServer;
-
-    while (host.pendingCommandCount() > 0 || host.world.movements.has(unitA)) {
-      host.step();
-    }
-    room.broadcastState();
 
     const [viewA, viewB] = await Promise.all([waitA, waitB]);
     const entityA = viewA.entities.find((e) => e.entityId === unitA)!;
@@ -460,7 +467,7 @@ describe("game-server integration", () => {
     expect(entityA.x).toBeCloseTo(target.x, 5);
     expect(viewA.localPlayerId).toBe(playerA);
     expect(viewB.localPlayerId).not.toBe(viewA.localPlayerId);
-    expect(host.primitiveUnits.size).toBe(2);
+    expect(viewA.entities.filter((entity) => entity.kind === "unit")).toHaveLength(2);
 
     const objectivesA = viewA.entities.filter((entity) => entity.kind === "objective");
     const objectivesB = viewB.entities.filter((entity) => entity.kind === "objective");
@@ -481,64 +488,148 @@ describe("game-server integration", () => {
     });
   });
 
-  it("rejects out-of-bounds MOVE and foreign-unit MOVE without crashing", async () => {
+  it("delivers simulation-generated COMMAND_REJECTED on the tick boundary", async () => {
     const room = (await colyseus.createRoom(
       FOUNDATION_ROOM_NAME,
       compatibleOptions,
     )) as FoundationRoom;
+    const probe = installRuntimeProbe(room, { held: true });
     const clientA = await colyseus.connectTo(room, compatibleOptions);
     const clientB = await colyseus.connectTo(room, compatibleOptions);
     room.startMatch();
 
-    const host = room.simulationHost!;
     const playerA = room.slots.getBySessionId(clientA.sessionId)!.playerId;
     const playerB = room.slots.getBySessionId(clientB.sessionId)!.playerId;
-    const unitA = host.primitiveUnits.getEntityId(playerA)!;
-    const unitB = host.primitiveUnits.getEntityId(playerB)!;
+    const unitA = unitOf(room, playerA).entityId;
+    const unitB = unitOf(room, playerB).entityId;
+    const objective = objectiveOf(room);
 
-    const oob = clientA.waitForMessage(EVENT_MESSAGE);
-    clientA.send(
-      COMMAND_MESSAGE,
+    const received: unknown[] = [];
+    const peerEvents: unknown[] = [];
+    clientA.onMessage(EVENT_MESSAGE, (event) => received.push(event));
+    clientB.onMessage(EVENT_MESSAGE, (event) => peerEvents.push(event));
+
+    const moves = [
       createMove({
         commandId: "oob",
         entityIds: [unitA],
         target: { x: FOUNDATION_MAP_HALF_EXTENT + 5, y: 0 },
       }),
-    );
-    expect(await oob).toMatchObject({ type: "COMMAND_REJECTED", reason: "out_of_bounds" });
-
-    const foreign = clientA.waitForMessage(EVENT_MESSAGE);
-    clientA.send(
-      COMMAND_MESSAGE,
-      createMove({
-        commandId: "foreign",
-        entityIds: [unitB],
-        target: { x: 1, y: 1 },
-      }),
-    );
-    expect(await foreign).toMatchObject({ type: "COMMAND_REJECTED", reason: "not_your_unit" });
-
-    const objectiveId = host.world
-      .entityIds()
-      .find((entityId) => host.world.objectives.has(entityId));
-    expect(objectiveId).toBeDefined();
-    const objectiveMove = clientA.waitForMessage(EVENT_MESSAGE);
-    clientA.send(
-      COMMAND_MESSAGE,
+      createMove({ commandId: "foreign", entityIds: [unitB], target: { x: 1, y: 1 } }),
       createMove({
         commandId: "objective",
-        entityIds: [objectiveId!],
+        entityIds: [objective.entityId],
         target: { x: 1, y: 1 },
       }),
-    );
-    expect(await objectiveMove).toMatchObject({
-      type: "COMMAND_REJECTED",
-      reason: "not_your_unit",
-    });
-    expect(host.world.positions.get(objectiveId!)).toEqual({ x: 0, y: 0 });
+    ];
+    for (const move of moves) {
+      const waitServer = room.waitForMessage(COMMAND_MESSAGE);
+      clientA.send(COMMAND_MESSAGE, move);
+      await waitServer;
+    }
 
+    // Admission accepted all three; nothing is rejected before the tick.
+    expect(runtimeOf(room).readMetrics().pendingCommandCount).toBe(3);
+    expect(received).toEqual([]);
+
+    probe.allowSteps(1);
+    await vi.waitFor(() => {
+      expect(received).toHaveLength(3);
+    });
+    expect(received).toEqual([
+      { type: "COMMAND_REJECTED", commandId: "oob", reason: "out_of_bounds" },
+      { type: "COMMAND_REJECTED", commandId: "foreign", reason: "not_your_unit" },
+      { type: "COMMAND_REJECTED", commandId: "objective", reason: "not_your_unit" },
+    ]);
+    expect(peerEvents).toEqual([]);
+    expect(objectiveOf(room)).toMatchObject({ x: 0, y: 0 });
     expect(room.phase).toBe("RUNNING");
-    expect(host.pendingCommandCount()).toBe(0);
+    expect(runtimeOf(room).readMetrics().pendingCommandCount).toBe(0);
     expect(room.clients.length).toBe(2);
+  });
+
+  it("reads one runtime snapshot per broadcast for every recipient", async () => {
+    const room = (await colyseus.createRoom(
+      FOUNDATION_ROOM_NAME,
+      compatibleOptions,
+    )) as FoundationRoom;
+    const probe = installRuntimeProbe(room, { held: true });
+    const clients = [
+      await colyseus.connectTo(room, compatibleOptions),
+      await colyseus.connectTo(room, compatibleOptions),
+      await colyseus.connectTo(room, compatibleOptions),
+    ];
+    room.startMatch();
+
+    const before = probe.readSnapshotCalls;
+    const views = clients.map((client) => client.waitForMessage(STATE_MESSAGE));
+    room.broadcastState();
+    expect(probe.readSnapshotCalls - before).toBe(1);
+    const delivered = (await Promise.all(views)) as GameStateView[];
+    expect(new Set(delivered.map((view) => view.localPlayerId)).size).toBe(3);
+
+    probe.release();
+    const ticksBefore = probe.stepCalls;
+    const snapshotsBefore = probe.readSnapshotCalls;
+    await room.waitForNextTimestep();
+    await room.waitForNextTimestep();
+    const ticks = probe.stepCalls - ticksBefore;
+    expect(ticks).toBeGreaterThanOrEqual(2);
+    expect(probe.readSnapshotCalls - snapshotsBefore).toBe(ticks);
+  });
+
+  it("rejects commands from a player who joined after START as not_participant", async () => {
+    const room = (await colyseus.createRoom(
+      FOUNDATION_ROOM_NAME,
+      compatibleOptions,
+    )) as FoundationRoom;
+    await colyseus.connectTo(room, compatibleOptions);
+    room.startMatch();
+    const late = await colyseus.connectTo(room, compatibleOptions);
+
+    const rejected = late.waitForMessage(EVENT_MESSAGE);
+    late.send(COMMAND_MESSAGE, createMove({ commandId: "late", entityIds: [1] }));
+    expect(await rejected).toEqual({
+      type: "COMMAND_REJECTED",
+      commandId: "late",
+      reason: "not_participant",
+    });
+    expect(runtimeOf(room).readMetrics().pendingCommandCount).toBe(0);
+  });
+
+  it("discards pending commands on consented leave and keeps Owner", async () => {
+    const room = (await colyseus.createRoom(
+      FOUNDATION_ROOM_NAME,
+      compatibleOptions,
+    )) as FoundationRoom;
+    const probe = installRuntimeProbe(room, { held: true });
+    const clientA = await colyseus.connectTo(room, compatibleOptions);
+    await colyseus.connectTo(room, compatibleOptions);
+    room.startMatch();
+    const playerA = room.slots.getBySessionId(clientA.sessionId)!.playerId;
+    const unit = unitOf(room, playerA);
+
+    const waitServer = room.waitForMessage(COMMAND_MESSAGE);
+    clientA.send(COMMAND_MESSAGE, createMove({ commandId: "pending", entityIds: [unit.entityId] }));
+    await waitServer;
+    expect(runtimeOf(room).readMetrics().pendingCommandCount).toBe(1);
+
+    await clientA.leave(true);
+    await vi.waitFor(() => {
+      expect(room.slots.getBySessionId(clientA.sessionId)).toBeUndefined();
+    });
+    expect(runtimeOf(room).readMetrics().pendingCommandCount).toBe(0);
+
+    probe.allowSteps(2);
+    await vi.waitFor(() => {
+      expect(probe.appliedSteps).toBe(2);
+    });
+    expect(unitOf(room, playerA)).toMatchObject({
+      x: unit.x,
+      y: unit.y,
+      ownerPlayerId: playerA,
+      controllerPlayerId: null,
+    });
+    expect(runtimeOf(room).drainEvents()).toEqual([]);
   });
 });

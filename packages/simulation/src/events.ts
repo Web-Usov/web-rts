@@ -1,15 +1,18 @@
-import type { EntityId } from "./types.js";
+import type { CommandRejectionReason } from "./commands.js";
+import type { EntityId, PlayerId } from "./types.js";
 
 export type SimulationEvent =
   | {
       type: "COMMAND_APPLIED";
       commandId: string;
+      playerId: PlayerId;
       tick: number;
     }
   | {
       type: "COMMAND_REJECTED";
       commandId: string;
-      reason: string;
+      playerId: PlayerId;
+      reason: CommandRejectionReason;
       tick: number;
     }
   | {

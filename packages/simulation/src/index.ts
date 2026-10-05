@@ -5,18 +5,32 @@ export {
   type CreateWorldOptions,
   type SimulationConfig,
 } from "./config.js";
-export type { SimulationCommand } from "./commands.js";
-export { CommandQueue } from "./commands.js";
-export { ComponentStore } from "./component-store.js";
+export type {
+  CommandActor,
+  CommandRejectionReason,
+  QueuedCommand,
+  SimulationCommand,
+} from "./commands.js";
 export type { SimulationEvent } from "./events.js";
-export { EventQueue } from "./events.js";
-export { createSeededRng, type Rng } from "./rng.js";
-export { runMovementSystem } from "./systems/movement.js";
+export {
+  createMatchRuntime,
+  type CommandAdmission,
+  type CommandAdmissionRejection,
+  type MatchParticipant,
+  type MatchRuntime,
+  type MatchSetup,
+  type MatchSnapshot,
+  type MatchStatus,
+  type RuntimeEvent,
+  type RuntimeMetrics,
+} from "./match-runtime.js";
+export type { MatchEntitySnapshot } from "./snapshot.js";
 export {
   OBJECTIVE_STATES,
   OBJECTIVE_TYPES,
   type Controller,
   type EntityId,
+  type MapBounds,
   type Movement,
   type Objective,
   type ObjectiveState,
@@ -26,12 +40,5 @@ export {
   type Position,
   type Vec2,
 } from "./types.js";
-export { canIssueMove, createWorld, World } from "./world.js";
-export {
-  assessFoundationMove,
-  placeFoundationObjective,
-  spawnFoundationUnits,
-  type FoundationMoveDecision,
-  type FoundationMoveRefusal,
-} from "./foundation-match.js";
-export { readWorldSnapshot, type WorldEntitySnapshot, type WorldSnapshot } from "./snapshot.js";
+/** Low-level kernel for tests/testkit. Production shells use MatchRuntime. */
+export { createWorld, World } from "./world.js";

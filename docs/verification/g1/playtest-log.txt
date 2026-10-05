@@ -1,0 +1,12 @@
+saved 01-local-lobby.png
+saved 02-local-running.png
+saved 03-local-after-move.png
+local: phase=RUNNING moved=15.9px lastEvent=—
+local errors: []
+saved 04-remote-lobby-a.png
+saved 05-remote-running-a.png
+saved 06-remote-running-b.png
+saved 07-remote-after-move-a.png
+saved 08-remote-after-move-b.png
+remote: room=8EqM_IOrA phaseA=RUNNING phaseB=RUNNING movedOnB=68.6px
+remote errors: []
