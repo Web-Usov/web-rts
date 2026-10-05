@@ -414,6 +414,22 @@ Concepts ниже фиксируют **направление формы, пло
 | Hybrid fortification / Tower | `30a33938-8ec7-4995-9dbe-219a03c6b0d2` | pale stone + timber wall language, oversized physical engineering, readable Tower silhouette |
 | Hybrid Sacred Site | `eae1fb02-e2ea-45f1-99d3-e39cc932b931` | ancient tree + deformed stone monument + restrained supernatural glow |
 
+#### Hybrid strategic overview
+
+![Hybrid strategic overview](./art/concepts/hybrid-overview.jpg)
+
+#### Hybrid Town Hall / economy
+
+![Hybrid Town Hall / economy](./art/concepts/hybrid-town-hall.jpg)
+
+#### Hybrid fortification / Tower
+
+![Hybrid fortification / Tower](./art/concepts/hybrid-fortification.jpg)
+
+#### Hybrid Sacred Site
+
+![Hybrid Sacred Site](./art/concepts/hybrid-sacred-site.jpg)
+
 Эти четыре кадра являются главным visual acceptance input для G13 (#66). Их не следует интерпретировать как точный map layout, production meshes или обязательный набор decorative props.
 
 ### Earlier exploration references
