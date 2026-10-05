@@ -3,6 +3,8 @@ import { boot, type ColyseusTestServer } from "@colyseus/testing";
 import { FOUNDATION_MAP_HALF_EXTENT } from "@web-rts/game-data";
 import {
   GAME_DATA_VERSION,
+  MAX_COMMAND_ID_LENGTH,
+  MAX_MOVE_ENTITY_IDS,
   PROTOCOL_VERSION,
   STATE_MESSAGE,
   SYNC_MESSAGE,
@@ -15,6 +17,7 @@ import {
   COMMAND_MESSAGE,
   EVENT_MESSAGE,
   FOUNDATION_ROOM_NAME,
+  MAX_CLIENT_MESSAGES_PER_SECOND,
   MAX_PLAYERS,
   START_MESSAGE,
 } from "../constants.js";
@@ -578,23 +581,163 @@ describe("game-server integration", () => {
     expect(probe.readSnapshotCalls - snapshotsBefore).toBe(ticks);
   });
 
-  it("rejects commands from a player who joined after START as not_participant", async () => {
+  it("rejects a new join after START and keeps the running match intact", async () => {
     const room = (await colyseus.createRoom(
       FOUNDATION_ROOM_NAME,
       compatibleOptions,
     )) as FoundationRoom;
     await colyseus.connectTo(room, compatibleOptions);
+    expect(room.locked).toBe(false);
     room.startMatch();
-    const late = await colyseus.connectTo(room, compatibleOptions);
+    expect(room.locked).toBe(true);
 
-    const rejected = late.waitForMessage(EVENT_MESSAGE);
-    late.send(COMMAND_MESSAGE, createMove({ commandId: "late", entityIds: [1] }));
-    expect(await rejected).toEqual({
-      type: "COMMAND_REJECTED",
-      commandId: "late",
-      reason: "not_participant",
+    await expect(colyseus.connectTo(room, compatibleOptions)).rejects.toThrow();
+    expect(room.slots.size).toBe(1);
+    expect(room.clients.length).toBe(1);
+    expect(room.phase).toBe("RUNNING");
+  });
+
+  it("rejects a seat reserved in LOBBY that completes its join after START", async () => {
+    const room = (await colyseus.createRoom(
+      FOUNDATION_ROOM_NAME,
+      compatibleOptions,
+    )) as FoundationRoom;
+    await colyseus.connectTo(room, compatibleOptions);
+    // Simulates the race lock() cannot close: the seat exists, onJoin runs later.
+    room.phase = "RUNNING";
+    await expect(colyseus.connectTo(room, compatibleOptions)).rejects.toThrow(/match_locked/);
+    expect(room.slots.size).toBe(1);
+  });
+
+  it("rejects oversized commandId/entityIds and non-finite targets without crashing", async () => {
+    const room = (await colyseus.createRoom(
+      FOUNDATION_ROOM_NAME,
+      compatibleOptions,
+    )) as FoundationRoom;
+    installRuntimeProbe(room, { held: true });
+    const client = await colyseus.connectTo(room, compatibleOptions);
+    room.startMatch();
+
+    const received: unknown[] = [];
+    client.onMessage(EVENT_MESSAGE, (event) => received.push(event));
+    const payloads: unknown[] = [
+      createMove({ commandId: "x".repeat(MAX_COMMAND_ID_LENGTH + 1) }),
+      createMove({
+        commandId: "too-many",
+        entityIds: Array.from({ length: MAX_MOVE_ENTITY_IDS + 1 }, (_, index) => index),
+      }),
+      createMove({ commandId: "huge-id", entityIds: [Number.MAX_SAFE_INTEGER] }),
+      // JSON-like transports turn NaN/Infinity into null; msgpack keeps them.
+      createMove({ commandId: "nan", target: { x: Number.NaN, y: 0 } }),
+      createMove({ commandId: "inf", target: { x: 0, y: Number.POSITIVE_INFINITY } }),
+    ];
+    for (const payload of payloads) {
+      const waitServer = room.waitForMessage(COMMAND_MESSAGE);
+      client.send(COMMAND_MESSAGE, payload);
+      await waitServer;
+    }
+
+    await vi.waitFor(() => {
+      expect(received).toHaveLength(payloads.length);
     });
+    expect(received).toEqual(
+      ["unknown", "too-many", "huge-id", "nan", "inf"].map((commandId) => ({
+        type: "COMMAND_REJECTED",
+        commandId,
+        reason: "invalid_schema",
+      })),
+    );
     expect(runtimeOf(room).readMetrics().pendingCommandCount).toBe(0);
+    expect(room.clients.length).toBe(1);
+    expect(room.phase).toBe("RUNNING");
+  });
+
+  it("drops a client whose frame exceeds the transport payload cap, not the room", async () => {
+    const room = (await colyseus.createRoom(
+      FOUNDATION_ROOM_NAME,
+      compatibleOptions,
+    )) as FoundationRoom;
+    const sender = await colyseus.connectTo(room, compatibleOptions);
+    const peer = await colyseus.connectTo(room, compatibleOptions);
+    room.startMatch();
+    sender.reconnection.enabled = false;
+
+    // Colyseus WebSocketTransport closes frames above its 4 KiB maxPayload default.
+    sender.send(COMMAND_MESSAGE, createMove({ commandId: "x".repeat(64 * 1024) }));
+
+    await vi.waitFor(() => {
+      expect(room.slots.getBySessionId(sender.sessionId)?.connected).toBe(false);
+    });
+    expect(room.phase).toBe("RUNNING");
+    expect([...room.clients].map((client) => client.sessionId)).toEqual([peer.sessionId]);
+  });
+
+  it("bounds the Remote pending queue and answers overflow with queue_full", async () => {
+    const room = (await colyseus.createRoom(
+      FOUNDATION_ROOM_NAME,
+      compatibleOptions,
+    )) as FoundationRoom;
+    const probe = installRuntimeProbe(room, {
+      held: true,
+      runtimeConfig: { maxPendingCommandsPerPlayer: 2 },
+    });
+    const client = await colyseus.connectTo(room, compatibleOptions);
+    room.startMatch();
+    const unit = unitOf(room, 0);
+
+    const received: unknown[] = [];
+    client.onMessage(EVENT_MESSAGE, (event) => received.push(event));
+    for (const commandId of ["q1", "q2", "q3"]) {
+      const waitServer = room.waitForMessage(COMMAND_MESSAGE);
+      client.send(COMMAND_MESSAGE, createMove({ commandId, entityIds: [unit.entityId] }));
+      await waitServer;
+    }
+
+    await vi.waitFor(() => {
+      expect(received).toEqual([
+        { type: "COMMAND_REJECTED", commandId: "q3", reason: "queue_full" },
+      ]);
+    });
+    expect(runtimeOf(room).readMetrics().pendingCommandCount).toBe(2);
+
+    probe.allowSteps(1);
+    await vi.waitFor(() => {
+      expect(runtimeOf(room).readMetrics()).toMatchObject({ tick: 1, pendingCommandCount: 0 });
+    });
+    expect(unitOf(room, 0).x).not.toBe(unit.x);
+    expect(received).toHaveLength(1);
+    expect(room.phase).toBe("RUNNING");
+  });
+
+  it("configures a finite message rate and disconnects a flooding client only", async () => {
+    const room = (await colyseus.createRoom(
+      FOUNDATION_ROOM_NAME,
+      compatibleOptions,
+    )) as FoundationRoom;
+    expect(room.maxMessagesPerSecond).toBe(MAX_CLIENT_MESSAGES_PER_SECOND);
+    expect(Number.isFinite(room.maxMessagesPerSecond)).toBe(true);
+
+    const probe = installRuntimeProbe(room, { held: true });
+    const flooder = await colyseus.connectTo(room, compatibleOptions);
+    const peer = await colyseus.connectTo(room, compatibleOptions);
+    room.startMatch();
+    const flooderSession = flooder.sessionId;
+    flooder.reconnection.enabled = false;
+
+    for (let index = 0; index < MAX_CLIENT_MESSAGES_PER_SECOND * 3; index += 1) {
+      flooder.send(COMMAND_MESSAGE, { type: "MOVE", broken: index });
+    }
+
+    await vi.waitFor(() => {
+      expect(room.slots.getBySessionId(flooderSession)?.connected).toBe(false);
+    });
+    expect(room.phase).toBe("RUNNING");
+    expect([...room.clients].map((client) => client.sessionId)).toEqual([peer.sessionId]);
+
+    const peerRejected = peer.waitForMessage(EVENT_MESSAGE);
+    peer.send(COMMAND_MESSAGE, createMove({ commandId: "peer-ok", entityIds: [999] }));
+    probe.allowSteps(1);
+    await expect(peerRejected).resolves.toMatchObject({ commandId: "peer-ok" });
   });
 
   it("discards pending commands on consented leave and keeps Owner", async () => {

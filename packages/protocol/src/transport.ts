@@ -60,6 +60,18 @@ export interface GameTransport {
   subscribeEvent(listener: EventListener): Unsubscribe;
   subscribeConnection(listener: ConnectionListener): Unsubscribe;
   /**
+   * Session control: asks the host to leave LOBBY and start the match.
+   * Not a gameplay {@link GameCommand}; rejection arrives as a `COMMAND_REJECTED` event.
+   */
+  startMatch(): void;
+  /** Room/match id of the live session, `null` when not connected. */
+  readonly connectedRoomId: string | null;
+  /**
+   * True when this transport can try {@link resumePreviousSession}. The opaque
+   * token itself is never exposed. Local transport has no resume token.
+   */
+  hasResumeToken(): boolean;
+  /**
    * Latest measured round-trip in milliseconds.
    * `null` means unavailable: no live session yet, or this transport cannot measure RTT.
    * Future LocalGameTransport returns `null`. This is not a Colyseus type and not a wire field.

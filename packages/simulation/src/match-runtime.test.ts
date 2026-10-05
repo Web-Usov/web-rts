@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { foundationUnitSpawnPosition } from "@web-rts/game-data";
 import type { SimulationCommand } from "./commands.js";
-import { createMatchRuntime, type MatchRuntime, type MatchSnapshot } from "./match-runtime.js";
+import {
+  DEFAULT_MAX_PENDING_COMMANDS_PER_PLAYER,
+  createMatchRuntime,
+  resolveRuntimeConfig,
+  type MatchRuntime,
+  type MatchSnapshot,
+} from "./match-runtime.js";
 
 function move(commandId: string, entityIds: number[], target = { x: 2, y: 2 }): SimulationCommand {
   return { type: "MOVE", commandId, entityIds, target };
@@ -182,6 +188,70 @@ describe("MatchRuntime", () => {
       reason: "not_participant",
     });
     expect(runtime.readMetrics().pendingCommandCount).toBe(0);
+  });
+
+  it("bounds each player's pending queue with the default cap", () => {
+    const runtime = twoPlayerRuntime();
+    for (let index = 0; index < DEFAULT_MAX_PENDING_COMMANDS_PER_PLAYER; index += 1) {
+      expect(runtime.submitCommand({ playerId: 0 }, move(`m${index}`, [1]))).toEqual({
+        accepted: true,
+      });
+    }
+    expect(runtime.submitCommand({ playerId: 0 }, move("overflow", [1]))).toEqual({
+      accepted: false,
+      reason: "queue_full",
+    });
+    expect(runtime.readMetrics().pendingCommandCount).toBe(DEFAULT_MAX_PENDING_COMMANDS_PER_PLAYER);
+  });
+
+  it("rejects overflow as queue_full without evicting queued commands or touching others", () => {
+    const runtime = createMatchRuntime(
+      { seed: 7, mapId: "foundation", participants: [{ playerId: 0 }, { playerId: 1 }] },
+      { maxPendingCommandsPerPlayer: 2 },
+    );
+    const before = runtime.readSnapshot();
+    const unit0 = unitOf(before, 0);
+    const unit1 = unitOf(before, 1);
+
+    expect(runtime.submitCommand({ playerId: 0 }, move("first", [unit0.entityId]))).toEqual({
+      accepted: true,
+    });
+    expect(runtime.submitCommand({ playerId: 0 }, move("second", [999]))).toEqual({
+      accepted: true,
+    });
+    expect(runtime.submitCommand({ playerId: 0 }, move("third", [unit0.entityId]))).toEqual({
+      accepted: false,
+      reason: "queue_full",
+    });
+    // Another player's queue is independent.
+    expect(runtime.submitCommand({ playerId: 1 }, move("peer", [unit1.entityId]))).toEqual({
+      accepted: true,
+    });
+    expect(runtime.readMetrics().pendingCommandCount).toBe(3);
+    // queue_full is admission only: nothing was applied or emitted.
+    expect(runtime.readSnapshot()).toEqual(before);
+    expect(runtime.drainEvents()).toEqual([]);
+
+    runtime.step();
+
+    // The queued head and its successor ran; the rejected command never did.
+    expect(unitOf(runtime.readSnapshot(), 0).x).not.toBe(unit0.x);
+    expect(unitOf(runtime.readSnapshot(), 1).x).not.toBe(unit1.x);
+    expect(runtime.drainEvents().map((event) => event.commandId)).toEqual(["second"]);
+    expect(runtime.submitCommand({ playerId: 0 }, move("after-drain", [unit0.entityId]))).toEqual({
+      accepted: true,
+    });
+  });
+
+  it("requires a finite positive pending cap", () => {
+    expect(resolveRuntimeConfig()).toEqual({
+      maxPendingCommandsPerPlayer: DEFAULT_MAX_PENDING_COMMANDS_PER_PLAYER,
+    });
+    for (const value of [0, -1, 1.5, Number.POSITIVE_INFINITY, Number.NaN]) {
+      expect(() => resolveRuntimeConfig({ maxPendingCommandsPerPlayer: value })).toThrow(
+        RangeError,
+      );
+    }
   });
 
   it("removePlayer discards pending commands, emits nothing, and releases Controller only", () => {

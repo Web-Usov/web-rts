@@ -8,11 +8,20 @@ export {
 } from "./versions.js";
 
 export {
+  commandIdSchema,
   gameCommandSchema,
   moveCommandSchema,
   type GameCommand,
   type MoveCommand,
 } from "./commands.js";
+
+export {
+  COMMAND_ID_PATTERN,
+  MAX_COMMAND_ID_LENGTH,
+  MAX_ENTITY_ID,
+  MAX_MOVE_ENTITY_IDS,
+  MAX_WORLD_COORDINATE_ABS,
+} from "./limits.js";
 
 export {
   commandRejectedEventSchema,
@@ -50,6 +59,8 @@ export {
   parseGameCommand,
   parseGameEvent,
   parseGameStateView,
+  readRejectedCommandId,
+  UNKNOWN_COMMAND_ID,
   type ProtocolParseFailure,
   type ProtocolParseResult,
   type ProtocolParseSuccess,

@@ -3,6 +3,7 @@ import {
   PROTOCOL_VERSION,
   checkProtocolCompatibility,
   parseGameCommand,
+  readRejectedCommandId,
   type GameEvent,
   type MatchPhase,
 } from "@web-rts/protocol";
@@ -169,7 +170,7 @@ export function createLocalMatchRuntime(
     }
     const parsed = parseGameCommand(message.command);
     if (!parsed.success) {
-      rejectCommand(readCommandId(message.command), "invalid_schema");
+      rejectCommand(readRejectedCommandId(message.command), "invalid_schema");
       return;
     }
     if (!runtime || phase !== "RUNNING") {
@@ -207,15 +208,4 @@ export function createLocalMatchRuntime(
       resetMatch();
     },
   };
-}
-
-function readCommandId(payload: unknown): string {
-  if (
-    payload !== null &&
-    typeof payload === "object" &&
-    typeof (payload as Record<string, unknown>)["commandId"] === "string"
-  ) {
-    return (payload as Record<string, unknown>)["commandId"] as string;
-  }
-  return "unknown";
 }

@@ -1,4 +1,24 @@
 import { z } from "zod";
+import {
+  COMMAND_ID_PATTERN,
+  MAX_COMMAND_ID_LENGTH,
+  MAX_ENTITY_ID,
+  MAX_MOVE_ENTITY_IDS,
+  MAX_WORLD_COORDINATE_ABS,
+} from "./limits.js";
+
+export const commandIdSchema = z
+  .string()
+  .min(1)
+  .max(MAX_COMMAND_ID_LENGTH)
+  .regex(COMMAND_ID_PATTERN);
+
+const entityIdSchema = z.int().nonnegative().max(MAX_ENTITY_ID);
+
+const worldCoordinateSchema = z
+  .number()
+  .min(-MAX_WORLD_COORDINATE_ABS)
+  .max(MAX_WORLD_COORDINATE_ABS);
 
 /**
  * Client MOVE intent: target point for controlled entities.
@@ -10,13 +30,15 @@ import { z } from "zod";
 export const moveCommandSchema = z
   .object({
     type: z.literal("MOVE"),
-    commandId: z.string().min(1),
-    clientSequence: z.number().int().nonnegative(),
-    entityIds: z.array(z.number().int().nonnegative()).min(1),
-    target: z.object({
-      x: z.number().finite(),
-      y: z.number().finite(),
-    }),
+    commandId: commandIdSchema,
+    clientSequence: z.int().nonnegative(),
+    entityIds: z.array(entityIdSchema).min(1).max(MAX_MOVE_ENTITY_IDS),
+    target: z
+      .object({
+        x: worldCoordinateSchema,
+        y: worldCoordinateSchema,
+      })
+      .strict(),
   })
   .strict();
 

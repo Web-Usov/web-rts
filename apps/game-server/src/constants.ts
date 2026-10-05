@@ -11,6 +11,13 @@ export const MAX_PLAYERS = 4;
  */
 export const DEFAULT_RECONNECT_GRACE_SECONDS = 30;
 
+/**
+ * Colyseus `maxMessagesPerSecond` for every client (Spec #002 §22.13, TV §35).
+ * Exceeding it disconnects the client as an unexpected drop; reconnect grace applies.
+ * Normal play sends a few commands per second plus SYNC and RTT pings.
+ */
+export const MAX_CLIENT_MESSAGES_PER_SECOND = 30;
+
 /** Default HTTP/WebSocket listen port. */
 export const DEFAULT_PORT = 2567;
 
@@ -37,3 +44,6 @@ export const AUTH_ERROR_CODE = 400 as const;
  * 4010 is MAY_TRY_RECONNECT — never use it for protocol mismatch.
  */
 export const ROOM_FULL_ERROR_CODE = 4011 as const;
+
+/** New join after START. Reserved reconnect does not go through onJoin. */
+export const MATCH_LOCKED_ERROR_CODE = 4012 as const;

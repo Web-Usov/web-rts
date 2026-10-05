@@ -1,9 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
   GAME_DATA_VERSION,
+  MAX_COMMAND_ID_LENGTH,
+  MAX_ENTITY_ID,
+  MAX_MOVE_ENTITY_IDS,
+  MAX_WORLD_COORDINATE_ABS,
   PROTOCOL_VERSION,
+  UNKNOWN_COMMAND_ID,
   checkProtocolCompatibility,
   parseGameCommand,
+  readRejectedCommandId,
   parseGameEvent,
   parseGameStateView,
   type ConnectOptions,
@@ -104,6 +110,76 @@ describe("parseGameCommand", () => {
         target: { x: 0, y: 0 },
       }).success,
     ).toBe(false);
+  });
+});
+
+describe("command ingress bounds", () => {
+  it("accepts payloads exactly at the limits", () => {
+    const result = parseGameCommand({
+      ...validMove,
+      commandId: "c".repeat(MAX_COMMAND_ID_LENGTH),
+      entityIds: Array.from({ length: MAX_MOVE_ENTITY_IDS }, (_, index) => index),
+      target: { x: MAX_WORLD_COORDINATE_ABS, y: -MAX_WORLD_COORDINATE_ABS },
+    });
+    expect(result.success).toBe(true);
+    expect(parseGameCommand({ ...validMove, entityIds: [MAX_ENTITY_ID] }).success).toBe(true);
+  });
+
+  it("rejects an oversized or out-of-domain commandId", () => {
+    expect(
+      parseGameCommand({ ...validMove, commandId: "c".repeat(MAX_COMMAND_ID_LENGTH + 1) }).success,
+    ).toBe(false);
+    expect(parseGameCommand({ ...validMove, commandId: "has space" }).success).toBe(false);
+    expect(parseGameCommand({ ...validMove, commandId: "line\nbreak" }).success).toBe(false);
+    expect(parseGameCommand({ ...validMove, commandId: "кириллица" }).success).toBe(false);
+  });
+
+  it("rejects an oversized entityIds array without throwing", () => {
+    const huge = Array.from({ length: 100_000 }, (_, index) => index);
+    expect(() => parseGameCommand({ ...validMove, entityIds: huge })).not.toThrow();
+    expect(parseGameCommand({ ...validMove, entityIds: huge }).success).toBe(false);
+    expect(
+      parseGameCommand({
+        ...validMove,
+        entityIds: Array.from({ length: MAX_MOVE_ENTITY_IDS + 1 }, () => 1),
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects entity ids outside the identifier domain", () => {
+    for (const entityId of [MAX_ENTITY_ID + 1, -1, 1.5, Number.NaN, "1"]) {
+      expect(parseGameCommand({ ...validMove, entityIds: [entityId] }).success).toBe(false);
+    }
+  });
+
+  it("rejects non-finite and out-of-domain coordinates", () => {
+    for (const value of [
+      Number.NaN,
+      Number.POSITIVE_INFINITY,
+      Number.NEGATIVE_INFINITY,
+      MAX_WORLD_COORDINATE_ABS + 1,
+      -MAX_WORLD_COORDINATE_ABS - 1,
+    ]) {
+      expect(parseGameCommand({ ...validMove, target: { x: value, y: 0 } }).success).toBe(false);
+      expect(parseGameCommand({ ...validMove, target: { x: 0, y: value } }).success).toBe(false);
+    }
+    expect(parseGameCommand({ ...validMove, target: { x: 0, y: 0, z: 1 } }).success).toBe(false);
+  });
+
+  it("rejects a non-safe-integer clientSequence", () => {
+    expect(
+      parseGameCommand({ ...validMove, clientSequence: Number.MAX_SAFE_INTEGER + 2 }).success,
+    ).toBe(false);
+  });
+
+  it("echoes only an in-domain commandId for a rejected payload", () => {
+    expect(readRejectedCommandId({ commandId: "cmd-7", broken: true })).toBe("cmd-7");
+    expect(readRejectedCommandId({ commandId: "c".repeat(MAX_COMMAND_ID_LENGTH + 1) })).toBe(
+      UNKNOWN_COMMAND_ID,
+    );
+    expect(readRejectedCommandId({ commandId: 42 })).toBe(UNKNOWN_COMMAND_ID);
+    expect(readRejectedCommandId(null)).toBe(UNKNOWN_COMMAND_ID);
+    expect(readRejectedCommandId("MOVE")).toBe(UNKNOWN_COMMAND_ID);
   });
 });
 
@@ -221,7 +297,7 @@ describe("parseGameEvent / parseGameStateView", () => {
 });
 
 describe("GameTransport contract", () => {
-  it("describes connect/resume/subscriptions/disconnect without Colyseus types", () => {
+  it("describes connect/resume/session/subscriptions/disconnect without Colyseus types", () => {
     const connectOptions: ConnectOptions = {
       protocolVersion: PROTOCOL_VERSION,
       gameDataVersion: GAME_DATA_VERSION,
@@ -257,6 +333,13 @@ describe("GameTransport contract", () => {
           /* no-op */
         };
       },
+      startMatch() {
+        /* session control, not a GameCommand */
+      },
+      connectedRoomId: null,
+      hasResumeToken() {
+        return false;
+      },
       readRoundTripMs() {
         return null;
       },
@@ -272,6 +355,9 @@ describe("GameTransport contract", () => {
     expect(typeof transport.subscribeState).toBe("function");
     expect(typeof transport.subscribeEvent).toBe("function");
     expect(typeof transport.subscribeConnection).toBe("function");
+    expect(typeof transport.startMatch).toBe("function");
+    expect(transport.connectedRoomId).toBeNull();
+    expect(transport.hasResumeToken()).toBe(false);
     expect(transport.readRoundTripMs()).toBeNull();
     expect(typeof transport.disconnect).toBe("function");
   });

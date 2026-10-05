@@ -8,6 +8,8 @@ import {
   STATE_MESSAGE,
   SYNC_MESSAGE,
   parseGameCommand,
+  readRejectedCommandId,
+  UNKNOWN_COMMAND_ID,
   type CommandRejectedEvent,
   type GameEvent,
   type MatchPhase,
@@ -24,6 +26,8 @@ import {
 import {
   AUTH_ERROR_CODE,
   DEFAULT_RECONNECT_GRACE_SECONDS,
+  MATCH_LOCKED_ERROR_CODE,
+  MAX_CLIENT_MESSAGES_PER_SECOND,
   MAX_PLAYERS,
   ROOM_FULL_ERROR_CODE,
 } from "../constants.js";
@@ -52,6 +56,8 @@ type ClientUserData = {
  */
 export class FoundationRoom extends Room {
   override maxClients = MAX_PLAYERS;
+  /** Finite per-client message rate; Colyseus disconnects a client above it. */
+  override maxMessagesPerSecond = MAX_CLIENT_MESSAGES_PER_SECOND;
 
   phase: MatchPhase = "LOBBY";
   seed = 0;
@@ -144,6 +150,14 @@ export class FoundationRoom extends Room {
 
   override onJoin(client: Client, options?: unknown): void {
     void options;
+    // lock() closes matchmaking; this also covers a seat reserved before START.
+    if (this.phase !== "LOBBY") {
+      this.emitMatchLog(
+        { level: "warn", event: "join_rejected", reason: "match_locked" },
+        { sessionId: client.sessionId },
+      );
+      throw new ServerError(MATCH_LOCKED_ERROR_CODE, "match_locked");
+    }
     const slot = this.slots.allocate(client.sessionId);
     if (!slot) {
       this.emitMatchLog(
@@ -241,6 +255,14 @@ export class FoundationRoom extends Room {
     });
     this.matchRuntime = runtime;
     this.phase = "RUNNING";
+    // New joins stay locked for the rest of the match; reserved reconnects still work.
+    this.lock().catch((error: unknown) => {
+      this.emitMatchLog({
+        level: "error",
+        event: "internal_error",
+        error: error instanceof Error ? error.message : "room_lock_failed",
+      });
+    });
     this.emitMatchLog({
       level: "info",
       event: "match_started",
@@ -363,13 +385,13 @@ export class FoundationRoom extends Room {
             level: "warn",
             event: "command_rejected",
             reason: "no_session",
-            commandId: "unknown",
+            commandId: UNKNOWN_COMMAND_ID,
           },
           { sessionId: client.sessionId },
         );
         this.sendEvent(client, {
           type: "COMMAND_REJECTED",
-          commandId: "unknown",
+          commandId: UNKNOWN_COMMAND_ID,
           reason: "no_session",
         });
         return;
@@ -377,12 +399,7 @@ export class FoundationRoom extends Room {
 
       const parsed = parseGameCommand(payload);
       if (!parsed.success) {
-        const commandId =
-          payload !== null &&
-          typeof payload === "object" &&
-          typeof (payload as Record<string, unknown>)["commandId"] === "string"
-            ? ((payload as Record<string, unknown>)["commandId"] as string)
-            : "unknown";
+        const commandId = readRejectedCommandId(payload);
         this.emitMatchLog(
           {
             level: "warn",
@@ -454,7 +471,7 @@ export class FoundationRoom extends Room {
       );
       this.sendEvent(client, {
         type: "COMMAND_REJECTED",
-        commandId: "unknown",
+        commandId: UNKNOWN_COMMAND_ID,
         reason: "internal_error",
       });
     }
