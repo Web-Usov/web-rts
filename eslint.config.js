@@ -20,4 +20,23 @@ export default defineConfig(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   eslintConfigPrettier,
+  {
+    files: ["apps/**/src/**/*.{ts,tsx}"],
+    ignores: ["**/*.test.ts", "apps/game-server/src/integration/**"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@web-rts/simulation",
+              importNames: ["World", "createWorld"],
+              message:
+                "Production apps не читают low-level World (ADR-009, Spec #002 §26.12): используйте MatchRuntime / createMatchRuntime.",
+            },
+          ],
+        },
+      ],
+    },
+  },
 );

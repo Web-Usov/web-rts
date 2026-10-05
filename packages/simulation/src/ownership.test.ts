@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canIssueMove, createWorld } from "./index.js";
+import { canIssueMove, createWorld } from "./world.js";
 
 describe("owner and controller", () => {
   it("stores Owner and Controller independently", () => {

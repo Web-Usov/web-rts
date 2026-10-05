@@ -1,3 +1,5 @@
+import type { MapBounds } from "./types.js";
+
 /** Default simulation tick rate (ADR-004). */
 export const DEFAULT_TICK_HZ = 10;
 
@@ -10,12 +12,15 @@ export interface SimulationConfig {
   readonly tickDurationSeconds: number;
   readonly seed: number;
   readonly defaultMoveSpeed: number;
+  /** Inclusive MOVE target bounds. `null` disables the check (low-level kernel tests). */
+  readonly mapBounds: MapBounds | null;
 }
 
 export interface CreateWorldOptions {
   seed?: number;
   tickHz?: number;
   defaultMoveSpeed?: number;
+  mapBounds?: MapBounds | null;
 }
 
 export function resolveSimulationConfig(options: CreateWorldOptions = {}): SimulationConfig {
@@ -25,5 +30,6 @@ export function resolveSimulationConfig(options: CreateWorldOptions = {}): Simul
     tickDurationSeconds: 1 / tickHz,
     seed: options.seed ?? 0,
     defaultMoveSpeed: options.defaultMoveSpeed ?? DEFAULT_MOVE_SPEED,
+    mapBounds: options.mapBounds ?? null,
   };
 }

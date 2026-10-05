@@ -1,20 +1,9 @@
-import {
-  FOUNDATION_OBJECTIVE_POSITION,
-  foundationUnitSpawnPosition,
-  isWithinFoundationBounds,
-  type GroundPoint,
-} from "@web-rts/game-data";
+import { FOUNDATION_OBJECTIVE_POSITION, foundationUnitSpawnPosition } from "@web-rts/game-data";
 import type { EntityId } from "./types.js";
-import { canIssueMove, type World } from "./world.js";
+import type { World } from "./world.js";
 
-/**
- * Shared foundation match layout for the multiplayer host and the local worker.
- * Map constants stay in game-data; applying them to a World lives with simulation.
- */
-
-export type FoundationMoveRefusal = "out_of_bounds" | "not_your_unit";
-
-export type FoundationMoveDecision = { ok: true } | { ok: false; reason: FoundationMoveRefusal };
+// Foundation match layout. Called only by MatchRuntime bootstrap, so Local and
+// Remote cannot diverge. Map constants stay in game-data.
 
 /**
  * One controllable primitive unit per player, indexed by spawn slot among the
@@ -46,23 +35,4 @@ export function placeFoundationObjective(world: World): EntityId {
   });
   world.objectives.set(objectiveId, { type: "SACRED_SITE", state: "ACTIVE" });
   return objectiveId;
-}
-
-/**
- * Foundation MOVE gate: map bounds, then Controller permission.
- * Does not enqueue and does not read Owner.
- */
-export function assessFoundationMove(
-  world: World,
-  playerId: number,
-  entityIds: readonly number[],
-  target: GroundPoint,
-): FoundationMoveDecision {
-  if (!isWithinFoundationBounds(target)) {
-    return { ok: false, reason: "out_of_bounds" };
-  }
-  if (!canIssueMove(world, playerId, entityIds)) {
-    return { ok: false, reason: "not_your_unit" };
-  }
-  return { ok: true };
 }

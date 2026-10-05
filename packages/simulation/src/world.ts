@@ -1,4 +1,10 @@
-import { CommandQueue, type SimulationCommand } from "./commands.js";
+import { isWithinFoundationBounds } from "@web-rts/game-data";
+import {
+  CommandQueue,
+  type CommandRejectionReason,
+  type QueuedCommand,
+  type SimulationCommand,
+} from "./commands.js";
 import { ComponentStore } from "./component-store.js";
 import {
   resolveSimulationConfig,
@@ -79,11 +85,23 @@ export class World {
   }
 
   /**
-   * Queue a command. It is applied on the next {@link World.step} tick boundary,
-   * not immediately.
+   * Queue a trusted command. Gameplay validation (bounds, Controller) runs on the
+   * next {@link World.step} tick boundary against the world state at that moment.
    */
-  enqueueCommand(command: SimulationCommand): void {
-    this.commands.enqueue(command);
+  enqueueCommand(queued: QueuedCommand): void {
+    this.commands.enqueue(queued);
+  }
+
+  /**
+   * Drops active control for one player after permanent leave.
+   * Does not destroy entities, Owner, or Objective components.
+   */
+  releaseControlForPlayer(playerId: PlayerId): void {
+    for (const [entityId, controller] of this.controllers.entries()) {
+      if (controller.controllerPlayerId === playerId) {
+        this.controllers.remove(entityId);
+      }
+    }
   }
 
   pendingCommandCount(): number {
@@ -122,16 +140,21 @@ export class World {
     }
   }
 
-  private applyCommand(command: SimulationCommand): void {
-    this.applyMoveCommand(command);
+  private applyCommand(queued: QueuedCommand): void {
+    this.applyMoveCommand(queued.actor.playerId, queued.command);
   }
 
-  private applyMoveCommand(command: Extract<SimulationCommand, { type: "MOVE" }>): void {
-    if (command.entityIds.length === 0) {
+  private applyMoveCommand(
+    playerId: PlayerId,
+    command: Extract<SimulationCommand, { type: "MOVE" }>,
+  ): void {
+    const refusal = this.assessMove(playerId, command);
+    if (refusal !== null) {
       this.events.push({
         type: "COMMAND_REJECTED",
         commandId: command.commandId,
-        reason: "empty_entity_ids",
+        playerId,
+        reason: refusal,
         tick: this.tickCount,
       });
       return;
@@ -154,6 +177,7 @@ export class World {
       this.events.push({
         type: "COMMAND_REJECTED",
         commandId: command.commandId,
+        playerId,
         reason: "no_valid_entities",
         tick: this.tickCount,
       });
@@ -163,8 +187,27 @@ export class World {
     this.events.push({
       type: "COMMAND_APPLIED",
       commandId: command.commandId,
+      playerId,
       tick: this.tickCount,
     });
+  }
+
+  /** Order matters: wire reasons are stable and parity-tested across Local/Remote. */
+  private assessMove(
+    playerId: PlayerId,
+    command: Extract<SimulationCommand, { type: "MOVE" }>,
+  ): CommandRejectionReason | null {
+    if (command.entityIds.length === 0) {
+      return "empty_entity_ids";
+    }
+    const bounds = this.config.mapBounds;
+    if (bounds !== null && !isWithinFoundationBounds(command.target, bounds)) {
+      return "out_of_bounds";
+    }
+    if (!canIssueMove(this, playerId, command.entityIds)) {
+      return "not_your_unit";
+    }
+    return null;
   }
 }
 
@@ -174,11 +217,8 @@ export function createWorld(options?: CreateWorldOptions): World {
 
 /**
  * MOVE is allowed only when every target has a Controller whose player matches
- * the session player. Missing Controller (objectives, bare entities) rejects
- * the whole command. Owner is not consulted.
- *
- * This is the gameplay permission rule. The kernel still applies commands that
- * the application boundary has already authorized (Foundation Spec §8).
+ * the actor. Missing Controller (objectives, bare entities) rejects the whole
+ * command. Owner is not consulted. Checked by World on the tick boundary.
  */
 export function canIssueMove(
   world: World,

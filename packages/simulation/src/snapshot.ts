@@ -2,10 +2,10 @@ import type { EntityId, ObjectiveState, ObjectiveType } from "./types.js";
 import type { World } from "./world.js";
 
 /**
- * Transport-neutral read of a World. Replication adapters copy this into
- * GameStateView. It is not a wire DTO and does not import protocol.
+ * Transport-neutral entity read. match-adapter projects it into GameStateView.
+ * It is not a wire DTO and does not import protocol.
  */
-export type WorldEntitySnapshot = {
+export type MatchEntitySnapshot = {
   entityId: EntityId;
   kind: "unit" | "objective";
   x: number;
@@ -16,14 +16,12 @@ export type WorldEntitySnapshot = {
   objectiveState: ObjectiveState | null;
 };
 
-export type WorldSnapshot = {
-  tick: number;
-  entities: WorldEntitySnapshot[];
-};
-
-/** Entities without a position are omitted. Component stores are not exposed. */
-export function readWorldSnapshot(world: World): WorldSnapshot {
-  const entities: WorldEntitySnapshot[] = [];
+/**
+ * Fresh plain objects on every call. Entities without a position are omitted.
+ * Component stores are not exposed.
+ */
+export function readWorldEntities(world: World): MatchEntitySnapshot[] {
+  const entities: MatchEntitySnapshot[] = [];
   for (const entityId of world.entityIds()) {
     const position = world.positions.get(entityId);
     if (position === undefined) {
@@ -43,5 +41,5 @@ export function readWorldSnapshot(world: World): WorldSnapshot {
       objectiveState: objective?.state ?? null,
     });
   }
-  return { tick: world.tick, entities };
+  return entities;
 }

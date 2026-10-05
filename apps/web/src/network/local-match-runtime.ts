@@ -3,22 +3,11 @@ import {
   PROTOCOL_VERSION,
   checkProtocolCompatibility,
   parseGameCommand,
-  type EntityView,
-  type GameCommand,
   type GameEvent,
-  type GameStateView,
   type MatchPhase,
 } from "@web-rts/protocol";
-import {
-  assessFoundationMove,
-  createWorld,
-  placeFoundationObjective,
-  readWorldSnapshot,
-  spawnFoundationUnits,
-  type SimulationCommand,
-  type World,
-  type WorldEntitySnapshot,
-} from "@web-rts/simulation";
+import { projectGameStateView, toGameEvent, toSimulationCommand } from "@web-rts/match-adapter";
+import { createMatchRuntime, type MatchRuntime, type MatchSetup } from "@web-rts/simulation";
 import {
   LOCAL_PLAYER_ID,
   LOCAL_ROOM_ID,
@@ -26,7 +15,7 @@ import {
   type WorkerToMainMessage,
 } from "./local-protocol.js";
 
-/** Cancels the host tick timer. Gameplay time still advances only via World.step. */
+/** Cancels the host tick timer. Gameplay time still advances only via MatchRuntime.step. */
 export type LocalTickSchedule = (tick: () => void) => () => void;
 
 export type LocalMatchRuntime = {
@@ -34,18 +23,27 @@ export type LocalMatchRuntime = {
   dispose(): void;
 };
 
+export type LocalMatchRuntimeOptions = {
+  /** Tests may substitute the shared runtime; production uses createMatchRuntime. */
+  createRuntime?: (setup: MatchSetup) => MatchRuntime;
+};
+
 /**
- * Worker-side foundation match. Uses the shared simulation, foundation placement,
- * and GameStateView projection. The interval that calls `step` is only a scheduler.
+ * Worker-side session shell over the shared MatchRuntime. Owns the local lobby,
+ * the trusted Local PlayerId, and the tick scheduler; gameplay rules and
+ * projection are shared with the Remote room.
  */
 export function createLocalMatchRuntime(
   post: (message: WorkerToMainMessage) => void,
   schedule: LocalTickSchedule,
+  options: LocalMatchRuntimeOptions = {},
 ): LocalMatchRuntime {
+  const createRuntime = options.createRuntime ?? createMatchRuntime;
   let sessionId: number | null = null;
   let phase: MatchPhase = "LOBBY";
   let seed = 0;
-  let world: World | null = null;
+  let mapId = "";
+  let runtime: MatchRuntime | null = null;
   let stopTicks: (() => void) | null = null;
 
   const publishState = (): void => {
@@ -55,7 +53,15 @@ export function createLocalMatchRuntime(
     post({
       type: "state",
       sessionId,
-      state: projectLocalState(world, phase),
+      state: projectGameStateView(
+        runtime?.readSnapshot() ?? null,
+        { localPlayerId: LOCAL_PLAYER_ID },
+        {
+          roomId: LOCAL_ROOM_ID,
+          phase,
+          players: [{ playerId: LOCAL_PLAYER_ID, connected: true }],
+        },
+      ),
     });
   };
 
@@ -66,19 +72,11 @@ export function createLocalMatchRuntime(
     post({ type: "event", sessionId, event });
   };
 
-  const drainCommandRejections = (): void => {
-    if (!world) {
-      return;
-    }
-    for (const simEvent of world.drainEvents()) {
-      if (simEvent.type !== "COMMAND_REJECTED") {
-        continue;
+  const deliverRuntimeEvents = (active: MatchRuntime): void => {
+    for (const event of active.drainEvents()) {
+      if (event.recipientPlayerId === LOCAL_PLAYER_ID) {
+        publishEvent(toGameEvent(event));
       }
-      publishEvent({
-        type: "COMMAND_REJECTED",
-        commandId: simEvent.commandId,
-        reason: simEvent.reason,
-      });
     }
   };
 
@@ -87,41 +85,22 @@ export function createLocalMatchRuntime(
     stopTicks = null;
   };
 
+  const finishIfRuntimeFinished = (): void => {
+    if (phase === "RUNNING" && runtime?.status === "FINISHED") {
+      phase = "FINISHED";
+      stopSchedule();
+    }
+  };
+
   const resetMatch = (): void => {
     stopSchedule();
-    world = null;
+    runtime = null;
     phase = "LOBBY";
     sessionId = null;
   };
 
   const rejectCommand = (commandId: string, reason: string): void => {
     publishEvent({ type: "COMMAND_REJECTED", commandId, reason });
-  };
-
-  const enqueueMove = (command: GameCommand): void => {
-    if (!world || phase !== "RUNNING" || sessionId === null) {
-      rejectCommand(command.commandId, "not_running");
-      return;
-    }
-
-    const decision = assessFoundationMove(
-      world,
-      LOCAL_PLAYER_ID,
-      command.entityIds,
-      command.target,
-    );
-    if (!decision.ok) {
-      rejectCommand(command.commandId, decision.reason);
-      return;
-    }
-
-    const mapped: SimulationCommand = {
-      type: "MOVE",
-      commandId: command.commandId,
-      entityIds: [...command.entityIds],
-      target: { x: command.target.x, y: command.target.y },
-    };
-    world.enqueueCommand(mapped);
   };
 
   const handleConnect = (message: Extract<MainToWorkerMessage, { type: "connect" }>): void => {
@@ -147,6 +126,7 @@ export function createLocalMatchRuntime(
     }
 
     seed = Number.isFinite(message.seed) ? Math.trunc(message.seed) : 0;
+    mapId = message.mapId;
     phase = "LOBBY";
     post({ type: "connected", sessionId: message.sessionId, roomId: LOCAL_ROOM_ID });
     publishState();
@@ -162,20 +142,24 @@ export function createLocalMatchRuntime(
     }
 
     phase = "STARTING";
-    world = createWorld({ seed });
-    spawnFoundationUnits(world, [LOCAL_PLAYER_ID]);
-    placeFoundationObjective(world);
-    drainCommandRejections();
+    const active = createRuntime({
+      seed,
+      mapId,
+      participants: [{ playerId: LOCAL_PLAYER_ID }],
+    });
+    runtime = active;
     phase = "RUNNING";
     stopSchedule();
     stopTicks = schedule(() => {
-      if (!world || phase !== "RUNNING") {
+      if (runtime !== active || phase !== "RUNNING") {
         return;
       }
-      world.step();
-      drainCommandRejections();
+      active.step();
+      deliverRuntimeEvents(active);
+      finishIfRuntimeFinished();
       publishState();
     });
+    finishIfRuntimeFinished();
     publishState();
   };
 
@@ -185,11 +169,20 @@ export function createLocalMatchRuntime(
     }
     const parsed = parseGameCommand(message.command);
     if (!parsed.success) {
-      const commandId = readCommandId(message.command);
-      rejectCommand(commandId, "invalid_schema");
+      rejectCommand(readCommandId(message.command), "invalid_schema");
       return;
     }
-    enqueueMove(parsed.data);
+    if (!runtime || phase !== "RUNNING") {
+      rejectCommand(parsed.data.commandId, "not_running");
+      return;
+    }
+    const admission = runtime.submitCommand(
+      { playerId: LOCAL_PLAYER_ID },
+      toSimulationCommand(parsed.data),
+    );
+    if (!admission.accepted) {
+      rejectCommand(parsed.data.commandId, admission.reason);
+    }
   };
 
   return {
@@ -213,33 +206,6 @@ export function createLocalMatchRuntime(
     dispose(): void {
       resetMatch();
     },
-  };
-}
-
-function projectLocalState(world: World | null, phase: MatchPhase): GameStateView {
-  const snapshot = world ? readWorldSnapshot(world) : null;
-  return {
-    protocolVersion: PROTOCOL_VERSION,
-    gameDataVersion: GAME_DATA_VERSION,
-    roomId: LOCAL_ROOM_ID,
-    tick: snapshot?.tick ?? 0,
-    phase,
-    localPlayerId: LOCAL_PLAYER_ID,
-    players: [{ playerId: LOCAL_PLAYER_ID, connected: true }],
-    entities: (snapshot?.entities ?? []).map(toEntityView),
-  };
-}
-
-function toEntityView(entity: WorldEntitySnapshot): EntityView {
-  return {
-    entityId: entity.entityId,
-    kind: entity.kind,
-    x: entity.x,
-    y: entity.y,
-    ownerPlayerId: entity.ownerPlayerId,
-    controllerPlayerId: entity.controllerPlayerId,
-    objectiveType: entity.objectiveType,
-    objectiveState: entity.objectiveState,
   };
 }
 

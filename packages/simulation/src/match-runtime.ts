@@ -1,0 +1,176 @@
+import { FOUNDATION_MAP_BOUNDS } from "@web-rts/game-data";
+import type {
+  CommandActor,
+  CommandRejectionReason,
+  QueuedCommand,
+  SimulationCommand,
+} from "./commands.js";
+import { placeFoundationObjective, spawnFoundationUnits } from "./foundation-match.js";
+import { readWorldEntities, type MatchEntitySnapshot } from "./snapshot.js";
+import type { PlayerId } from "./types.js";
+import { createWorld, type World } from "./world.js";
+
+export type MatchParticipant = {
+  readonly playerId: PlayerId;
+};
+
+/** Trusted setup resolved by the host shell when leaving its lobby. */
+export type MatchSetup = {
+  readonly seed: number;
+  readonly mapId: string;
+  readonly participants: readonly MatchParticipant[];
+};
+
+/** Gameplay lifecycle owned by the runtime. LOBBY/STARTING stay in the shells. */
+export type MatchStatus = "RUNNING" | "FINISHED";
+
+export type CommandAdmissionRejection = "not_participant" | "not_running";
+
+export type CommandAdmission =
+  | { readonly accepted: true }
+  | { readonly accepted: false; readonly reason: CommandAdmissionRejection };
+
+/** Transport-neutral event addressed to one player. Shells only deliver it. */
+export type RuntimeEvent = {
+  readonly type: "COMMAND_REJECTED";
+  readonly recipientPlayerId: PlayerId;
+  readonly commandId: string;
+  readonly reason: CommandRejectionReason;
+  readonly tick: number;
+};
+
+export type MatchSnapshot = {
+  readonly tick: number;
+  readonly status: MatchStatus;
+  readonly entities: readonly MatchEntitySnapshot[];
+};
+
+export type RuntimeMetrics = {
+  readonly tick: number;
+  readonly entityCount: number;
+  readonly pendingCommandCount: number;
+};
+
+/**
+ * Production facade of gameplay execution shared by the Remote room and the
+ * Local worker. It has no timers: the host scheduler calls {@link MatchRuntime.step}.
+ */
+export interface MatchRuntime {
+  readonly status: MatchStatus;
+  /**
+   * Admits a trusted command into the actor's FIFO queue. Gameplay validation
+   * happens later, on the tick boundary.
+   */
+  submitCommand(actor: CommandActor, command: SimulationCommand): CommandAdmission;
+  /** Schedules pending commands into the World, runs systems, drains World events. */
+  step(): void;
+  drainEvents(): RuntimeEvent[];
+  readSnapshot(): MatchSnapshot;
+  readMetrics(): RuntimeMetrics;
+  /**
+   * Permanent leave/timeout: discards the player's not-yet-applied commands,
+   * removes participation, releases Controller. Emits no events.
+   */
+  removePlayer(playerId: PlayerId): void;
+}
+
+export function createMatchRuntime(setup: MatchSetup): MatchRuntime {
+  return new FoundationMatchRuntime(setup);
+}
+
+class FoundationMatchRuntime implements MatchRuntime {
+  private readonly world: World;
+  /** Per-player FIFO ingress. Key presence means the player still participates. */
+  private readonly queues = new Map<PlayerId, SimulationCommand[]>();
+  private readonly outbox: RuntimeEvent[] = [];
+
+  constructor(setup: MatchSetup) {
+    // mapId is carried for the shells; Foundation has a single layout until G3.
+    this.world = createWorld({ seed: setup.seed, mapBounds: FOUNDATION_MAP_BOUNDS });
+    const playerIds = setup.participants.map((participant) => participant.playerId);
+    for (const playerId of playerIds) {
+      this.queues.set(playerId, []);
+    }
+    spawnFoundationUnits(this.world, playerIds);
+    placeFoundationObjective(this.world);
+    this.world.drainEvents();
+  }
+
+  get status(): MatchStatus {
+    return "RUNNING";
+  }
+
+  submitCommand(actor: CommandActor, command: SimulationCommand): CommandAdmission {
+    if (this.status !== "RUNNING") {
+      return { accepted: false, reason: "not_running" };
+    }
+    const queue = this.queues.get(actor.playerId);
+    if (queue === undefined) {
+      return { accepted: false, reason: "not_participant" };
+    }
+    queue.push(command);
+    return { accepted: true };
+  }
+
+  step(): void {
+    if (this.status !== "RUNNING") {
+      return;
+    }
+    // G1 scheduling: ascending playerId, FIFO within a player, everything pending.
+    const playerIds = [...this.queues.keys()].sort((left, right) => left - right);
+    for (const playerId of playerIds) {
+      const queue = this.queues.get(playerId)!;
+      for (const command of queue.splice(0, queue.length)) {
+        const queued: QueuedCommand = { actor: { playerId }, command };
+        this.world.enqueueCommand(queued);
+      }
+    }
+    this.world.step();
+    for (const event of this.world.drainEvents()) {
+      if (event.type !== "COMMAND_REJECTED") {
+        continue;
+      }
+      this.outbox.push({
+        type: "COMMAND_REJECTED",
+        recipientPlayerId: event.playerId,
+        commandId: event.commandId,
+        reason: event.reason,
+        tick: event.tick,
+      });
+    }
+  }
+
+  drainEvents(): RuntimeEvent[] {
+    return this.outbox.splice(0, this.outbox.length);
+  }
+
+  readSnapshot(): MatchSnapshot {
+    return {
+      tick: this.world.tick,
+      status: this.status,
+      entities: readWorldEntities(this.world),
+    };
+  }
+
+  readMetrics(): RuntimeMetrics {
+    let pendingCommandCount = this.world.pendingCommandCount();
+    for (const queue of this.queues.values()) {
+      pendingCommandCount += queue.length;
+    }
+    return {
+      tick: this.world.tick,
+      entityCount: this.world.entityIds().length,
+      pendingCommandCount,
+    };
+  }
+
+  removePlayer(playerId: PlayerId): void {
+    this.queues.delete(playerId);
+    for (let index = this.outbox.length - 1; index >= 0; index -= 1) {
+      if (this.outbox[index]!.recipientPlayerId === playerId) {
+        this.outbox.splice(index, 1);
+      }
+    }
+    this.world.releaseControlForPlayer(playerId);
+  }
+}

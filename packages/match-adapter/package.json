@@ -1,5 +1,5 @@
 {
-  "name": "@web-rts/testkit",
+  "name": "@web-rts/match-adapter",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -19,17 +19,15 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "@web-rts/match-adapter": "workspace:^",
     "@web-rts/protocol": "workspace:^",
-    "@web-rts/simulation": "workspace:*"
+    "@web-rts/simulation": "workspace:^"
   },
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "@types/node": "^22.20.4",
-    "eslint": "^10.11.0",
-    "eslint-config-prettier": "^10.1.8",
+    "@eslint/js": "^10",
+    "eslint": "^10",
+    "eslint-config-prettier": "^10",
     "typescript": "5",
-    "typescript-eslint": "^8.70.1",
-    "vitest": "^5.0.1"
+    "typescript-eslint": "^8",
+    "vitest": "^5"
   }
 }
