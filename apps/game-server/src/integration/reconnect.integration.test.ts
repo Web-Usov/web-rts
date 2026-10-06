@@ -103,12 +103,12 @@ describe("reconnect integration", () => {
     const unitA = runtime!
       .readSnapshot()
       .entities.find(
-        (entity) => entity.kind === "unit" && entity.ownerPlayerId === playerA,
+        (entity) => entity.kind === "UNIT" && entity.ownerPlayerId === playerA,
       )?.entityId;
     expect(unitA).toBeDefined();
     const objectiveId = runtime!
       .readSnapshot()
-      .entities.find((entity) => entity.kind === "objective")?.entityId;
+      .entities.find((entity) => entity.kind === "OBJECTIVE")?.entityId;
     expect(objectiveId).toBeDefined();
     return {
       room,
@@ -243,7 +243,7 @@ describe("reconnect integration", () => {
     );
     restored.send(SYNC_MESSAGE, {});
     const view = await resumed;
-    expect(view.entities.filter((entity) => entity.kind === "objective")).toHaveLength(1);
+    expect(view.entities.filter((entity) => entity.kind === "OBJECTIVE")).toHaveLength(1);
 
     const start = entityOf(room, unitA)!;
     const target = { x: start.x + 2, y: start.y };
@@ -328,7 +328,8 @@ describe("reconnect integration", () => {
       controllerPlayerId: null,
     });
     expect(entityOf(room, objectiveId)).toMatchObject({
-      kind: "objective",
+      kind: "OBJECTIVE",
+      definitionId: "sacred_site",
       controllerPlayerId: null,
     });
     expect(room.phase).toBe("RUNNING");

@@ -1,6 +1,9 @@
+import type { EntityKindView } from "@web-rts/protocol";
+
 /** Plain presentation data. This is not simulation state and not a network contract. */
 
-export type PresentationKind = "unit" | "objective";
+/** Broad replicated kind; concrete visuals by definitionId arrive with presentation stages. */
+export type PresentationKind = EntityKindView;
 
 export interface PresentationVec3 {
   readonly x: number;

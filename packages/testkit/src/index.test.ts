@@ -100,7 +100,12 @@ describe("@web-rts/testkit", () => {
     expect(outcome.rejections).toEqual(FOUNDATION_PARITY_FIXTURE.expectedRejections);
     expect(outcome.finalView.tick).toBe(FOUNDATION_PARITY_FIXTURE.ticks);
     const unit = outcome.finalView.entities.find((entity) => entity.entityId === 1);
-    expect(unit).toMatchObject({ kind: "unit", ownerPlayerId: 0, controllerPlayerId: 0 });
+    expect(unit).toMatchObject({
+      kind: "UNIT",
+      definitionId: "foundation_unit",
+      ownerPlayerId: 0,
+      controllerPlayerId: 0,
+    });
     expect(unit?.x).not.toBe(-6);
     expect(runParityReference(FOUNDATION_PARITY_FIXTURE)).toEqual(outcome);
   });

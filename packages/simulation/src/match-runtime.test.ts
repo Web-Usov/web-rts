@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { foundationUnitSpawnPosition } from "@web-rts/game-data";
+import { FOUNDATION_MAP } from "@web-rts/game-data";
 import type { SimulationCommand } from "./commands.js";
 import {
   DEFAULT_MAX_PENDING_COMMANDS_PER_PLAYER,
@@ -15,14 +15,14 @@ function move(commandId: string, entityIds: number[], target = { x: 2, y: 2 }): 
 
 function unitOf(snapshot: MatchSnapshot, playerId: number) {
   const unit = snapshot.entities.find(
-    (entity) => entity.kind === "unit" && entity.ownerPlayerId === playerId,
+    (entity) => entity.kind === "UNIT" && entity.ownerPlayerId === playerId,
   );
   expect(unit).toBeDefined();
   return unit!;
 }
 
 function objectiveOf(snapshot: MatchSnapshot) {
-  const objective = snapshot.entities.find((entity) => entity.kind === "objective");
+  const objective = snapshot.entities.find((entity) => entity.kind === "OBJECTIVE");
   expect(objective).toBeDefined();
   return objective!;
 }
@@ -44,11 +44,11 @@ describe("MatchRuntime", () => {
     expect(snapshot.tick).toBe(0);
     expect(snapshot.status).toBe("RUNNING");
     expect(unitOf(snapshot, 0)).toMatchObject({
-      ...foundationUnitSpawnPosition(0),
+      ...FOUNDATION_MAP.playerSpawns[0]!.unitPosition,
       controllerPlayerId: 0,
     });
     expect(unitOf(snapshot, 1)).toMatchObject({
-      ...foundationUnitSpawnPosition(1),
+      ...FOUNDATION_MAP.playerSpawns[1]!.unitPosition,
       controllerPlayerId: 1,
     });
     expect(objectiveOf(snapshot)).toMatchObject({ x: 0, y: 0, controllerPlayerId: null });

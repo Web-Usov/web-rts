@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { FOUNDATION_MAP_BOUNDS } from "@web-rts/game-data";
+import { FOUNDATION_MAP } from "@web-rts/game-data";
 import type { QueuedCommand } from "./commands.js";
 import { createWorld, type World } from "./world.js";
 
 function controlledUnit(world: World, playerId: number): number {
-  const entityId = world.createEntity();
+  const entityId = world.createEntity({ kind: "UNIT", definitionId: "foundation_unit" });
   world.positions.set(entityId, { x: 0, y: 0 });
   world.owners.set(entityId, { ownerPlayerId: playerId });
   world.controllers.set(entityId, { controllerPlayerId: playerId });
@@ -32,7 +32,7 @@ function rejections(world: World): Array<{ commandId: string; playerId: number; 
 
 describe("tick-boundary MOVE validation", () => {
   it("rejects MOVE whose Controller was released after enqueue and before apply", () => {
-    const world = createWorld({ seed: 1, mapBounds: FOUNDATION_MAP_BOUNDS });
+    const world = createWorld({ seed: 1, map: FOUNDATION_MAP });
     const unit = controlledUnit(world, 0);
     world.drainEvents();
 
@@ -55,10 +55,10 @@ describe("tick-boundary MOVE validation", () => {
   });
 
   it("checks reasons in order: empty, bounds, controller, valid entities", () => {
-    const world = createWorld({ seed: 1, mapBounds: FOUNDATION_MAP_BOUNDS });
+    const world = createWorld({ seed: 1, map: FOUNDATION_MAP });
     const own = controlledUnit(world, 0);
     const foreign = controlledUnit(world, 1);
-    const unplaced = world.createEntity();
+    const unplaced = world.createEntity({ kind: "UNIT", definitionId: "foundation_unit" });
     world.controllers.set(unplaced, { controllerPlayerId: 0 });
     world.drainEvents();
 
@@ -81,7 +81,24 @@ describe("tick-boundary MOVE validation", () => {
     expect(world.movements.has(foreign)).toBe(false);
   });
 
-  it("skips the bounds check when mapBounds is null", () => {
+  it("validates MOVE targets against half-open MapDefinition bounds", () => {
+    const world = createWorld({ seed: 1, map: FOUNDATION_MAP });
+    const unit = controlledUnit(world, 0);
+    world.drainEvents();
+    world.enqueueCommand(move(0, "min-edge", [unit], { x: -20, y: -20 }));
+    world.enqueueCommand(move(0, "inside-max", [unit], { x: 19.999, y: 19.999 }));
+    world.enqueueCommand(move(0, "max-x", [unit], { x: 20, y: 0 }));
+    world.enqueueCommand(move(0, "max-y", [unit], { x: 0, y: 20 }));
+    world.enqueueCommand(move(0, "below-min", [unit], { x: -20.001, y: 0 }));
+    world.step();
+    expect(rejections(world)).toEqual([
+      { commandId: "max-x", playerId: 0, reason: "out_of_bounds" },
+      { commandId: "max-y", playerId: 0, reason: "out_of_bounds" },
+      { commandId: "below-min", playerId: 0, reason: "out_of_bounds" },
+    ]);
+  });
+
+  it("skips the bounds check when the world has no map", () => {
     const world = createWorld({ seed: 1 });
     const unit = controlledUnit(world, 0);
     world.drainEvents();
@@ -92,7 +109,7 @@ describe("tick-boundary MOVE validation", () => {
   });
 
   it("checks Controller against the actor of each queued command", () => {
-    const world = createWorld({ seed: 1, mapBounds: FOUNDATION_MAP_BOUNDS });
+    const world = createWorld({ seed: 1, map: FOUNDATION_MAP });
     const unit = controlledUnit(world, 0);
     world.drainEvents();
     world.enqueueCommand(move(1, "other-player", [unit]));

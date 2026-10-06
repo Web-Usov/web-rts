@@ -1,4 +1,4 @@
-import type { EntityId, ObjectiveState, ObjectiveType } from "./types.js";
+import type { EntityId, EntityKind, Objective, ObjectiveState, ObjectiveType } from "./types.js";
 import type { World } from "./world.js";
 
 /**
@@ -7,32 +7,45 @@ import type { World } from "./world.js";
  */
 export type MatchEntitySnapshot = {
   entityId: EntityId;
-  kind: "unit" | "objective";
+  kind: EntityKind;
+  definitionId: string;
   x: number;
   y: number;
   ownerPlayerId: number | null;
   controllerPlayerId: number | null;
+  /** Generic objective role targeting this entity, if any. */
   objectiveType: ObjectiveType | null;
   objectiveState: ObjectiveState | null;
 };
 
 /**
- * Fresh plain objects on every call. Entities without a position are omitted.
+ * Fresh plain objects on every call, in ascending entity id order. Kind and
+ * definitionId come from the Identity component. Entities without a position
+ * are omitted until a discriminated location lands (G11).
  * Component stores are not exposed.
  */
 export function readWorldEntities(world: World): MatchEntitySnapshot[] {
+  const objectiveByTarget = new Map<EntityId, Objective>();
+  for (const [, objective] of world.objectiveEntries()) {
+    if (!objectiveByTarget.has(objective.targetEntityId)) {
+      objectiveByTarget.set(objective.targetEntityId, objective);
+    }
+  }
+
   const entities: MatchEntitySnapshot[] = [];
   for (const entityId of world.entityIds()) {
+    const identity = world.identities.get(entityId);
     const position = world.positions.get(entityId);
-    if (position === undefined) {
+    if (identity === undefined || position === undefined) {
       continue;
     }
-    const objective = world.objectives.get(entityId);
+    const objective = objectiveByTarget.get(entityId);
     const owner = world.owners.get(entityId);
     const controller = world.controllers.get(entityId);
     entities.push({
       entityId,
-      kind: objective === undefined ? "unit" : "objective",
+      kind: identity.kind,
+      definitionId: identity.definitionId,
       x: position.x,
       y: position.y,
       ownerPlayerId: owner?.ownerPlayerId ?? null,

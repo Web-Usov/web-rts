@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_TICK_HZ, createWorld } from "./index.js";
 import { createSeededRng } from "./rng.js";
 
+const UNIT = { kind: "UNIT", definitionId: "foundation_unit" } as const;
+
 describe("simulation kernel", () => {
   it("uses fixed 10 Hz tick by default", () => {
     const world = createWorld({ seed: 1 });
@@ -20,7 +22,7 @@ describe("simulation kernel", () => {
 
   it("applies commands on tick boundaries, not immediately", () => {
     const world = createWorld({ seed: 1 });
-    const entityId = world.createEntity();
+    const entityId = world.createEntity(UNIT);
     world.positions.set(entityId, { x: 0, y: 0 });
     world.controllers.set(entityId, { controllerPlayerId: 0 });
     world.drainEvents();
@@ -59,7 +61,7 @@ describe("simulation kernel", () => {
 
   it("moves an entity toward the MOVE target over ticks", () => {
     const world = createWorld({ seed: 7, defaultMoveSpeed: 5 });
-    const entityId = world.createEntity();
+    const entityId = world.createEntity(UNIT);
     world.positions.set(entityId, { x: 0, y: 0 });
     world.controllers.set(entityId, { controllerPlayerId: 0 });
     world.enqueueCommand({
@@ -82,7 +84,7 @@ describe("simulation kernel", () => {
   it("produces the same result for the same seed, state, and commands", () => {
     const run = (): { tick: number; x: number; y: number; samples: number[] } => {
       const world = createWorld({ seed: 42 });
-      const entityId = world.createEntity();
+      const entityId = world.createEntity(UNIT);
       world.positions.set(entityId, { x: 0, y: 0 });
       world.controllers.set(entityId, { controllerPlayerId: 0 });
       world.enqueueCommand({

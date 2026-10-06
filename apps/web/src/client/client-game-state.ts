@@ -92,7 +92,7 @@ export class ClientGameState {
       return null;
     }
     const unit = this.view.entities.find(
-      (entity) => entity.kind === "unit" && entity.controllerPlayerId === localPlayerId,
+      (entity) => entity.kind === "UNIT" && entity.controllerPlayerId === localPlayerId,
     );
     return unit?.entityId ?? null;
   }

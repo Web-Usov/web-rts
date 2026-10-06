@@ -1,3 +1,5 @@
+import type { EntityKindView } from "@web-rts/protocol";
+
 /**
  * Snapshot interpolation between authoritative entity positions.
  * Independent of Babylon; caller passes explicit render/interpolation time.
@@ -7,7 +9,7 @@ export type EntitySnapshotPose = {
   readonly entityId: number;
   readonly x: number;
   readonly y: number;
-  readonly kind: "unit" | "objective";
+  readonly kind: EntityKindView;
   readonly ownerPlayerId: number | null;
   readonly controllerPlayerId: number | null;
 };
@@ -23,7 +25,7 @@ export type InterpolatedPose = {
   readonly entityId: number;
   readonly x: number;
   readonly y: number;
-  readonly kind: "unit" | "objective";
+  readonly kind: EntityKindView;
   readonly ownerPlayerId: number | null;
   readonly controllerPlayerId: number | null;
 };

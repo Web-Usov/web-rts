@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { foundationUnitSpawnPosition } from "@web-rts/game-data";
+import { FOUNDATION_MAP } from "@web-rts/game-data";
 import {
   GAME_DATA_VERSION,
   MAX_COMMAND_ID_LENGTH,
@@ -87,10 +87,10 @@ describe("local match runtime", () => {
     const running = match.states.at(-1);
     expect(running?.phase).toBe("RUNNING");
     expect(running?.players).toEqual([{ playerId: 0, connected: true }]);
-    const unit = running?.entities.find((entity) => entity.kind === "unit");
-    const objective = running?.entities.find((entity) => entity.kind === "objective");
+    const unit = running?.entities.find((entity) => entity.kind === "UNIT");
+    const objective = running?.entities.find((entity) => entity.kind === "OBJECTIVE");
     expect(unit).toMatchObject({
-      ...foundationUnitSpawnPosition(0),
+      ...FOUNDATION_MAP.playerSpawns[0]!.unitPosition,
       ownerPlayerId: 0,
       controllerPlayerId: 0,
       objectiveType: null,
@@ -98,8 +98,9 @@ describe("local match runtime", () => {
     expect(objective).toMatchObject({
       x: 0,
       y: 0,
-      kind: "objective",
-      objectiveType: "SACRED_SITE",
+      kind: "OBJECTIVE",
+      definitionId: "sacred_site",
+      objectiveType: "PROTECT",
       objectiveState: "ACTIVE",
       controllerPlayerId: null,
     });
@@ -120,10 +121,10 @@ describe("local match runtime", () => {
     const moved = match.states
       .at(-1)
       ?.entities.find((entity) => entity.entityId === unit!.entityId);
-    expect(moved?.x).not.toBe(foundationUnitSpawnPosition(0).x);
+    expect(moved?.x).not.toBe(FOUNDATION_MAP.playerSpawns[0]!.unitPosition.x);
     expect(match.states.at(-1)?.tick).toBe(1);
     expect(
-      objective && match.states.at(-1)?.entities.find((entity) => entity.kind === "objective"),
+      objective && match.states.at(-1)?.entities.find((entity) => entity.kind === "OBJECTIVE"),
     ).toMatchObject({
       x: 0,
       y: 0,
@@ -149,7 +150,7 @@ describe("local match runtime", () => {
     ]);
 
     match.handle({ type: "start", sessionId: 1 });
-    const unitId = match.states.at(-1)?.entities.find((entity) => entity.kind === "unit")?.entityId;
+    const unitId = match.states.at(-1)?.entities.find((entity) => entity.kind === "UNIT")?.entityId;
     match.handle({
       type: "command",
       sessionId: 1,
@@ -248,7 +249,7 @@ describe("local match runtime", () => {
     const match = harness((setup) => createMatchRuntime(setup, { maxPendingCommandsPerPlayer: 2 }));
     match.handle(connectMessage);
     match.handle({ type: "start", sessionId: 1 });
-    const unitId = match.states.at(-1)!.entities.find((entity) => entity.kind === "unit")!.entityId;
+    const unitId = match.states.at(-1)!.entities.find((entity) => entity.kind === "UNIT")!.entityId;
     for (const commandId of ["q1", "q2", "q3"]) {
       match.handle({
         type: "command",
@@ -326,7 +327,7 @@ describe("local match runtime", () => {
     match.handle({ type: "start", sessionId: 1 });
     const objectiveId = match.states
       .at(-1)
-      ?.entities.find((entity) => entity.kind === "objective")?.entityId;
+      ?.entities.find((entity) => entity.kind === "OBJECTIVE")?.entityId;
     match.handle({
       type: "command",
       sessionId: 1,

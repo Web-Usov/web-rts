@@ -27,8 +27,8 @@ const validMove: MoveCommand = {
 
 describe("versions", () => {
   it("exports protocol and game-data versions for mismatch detection", () => {
-    expect(PROTOCOL_VERSION).toBe(3);
-    expect(GAME_DATA_VERSION).toBe("0.0.0");
+    expect(PROTOCOL_VERSION).toBe(4);
+    expect(GAME_DATA_VERSION).toBe("0.1.0");
   });
 
   it("detects compatible and incompatible handshakes", () => {
@@ -218,7 +218,8 @@ describe("parseGameEvent / parseGameStateView", () => {
       entities: [
         {
           entityId: 1,
-          kind: "unit",
+          kind: "UNIT",
+          definitionId: "foundation_unit",
           x: 1,
           y: 2,
           ownerPlayerId: 0,
@@ -228,17 +229,55 @@ describe("parseGameEvent / parseGameStateView", () => {
         },
         {
           entityId: 2,
-          kind: "objective",
+          kind: "OBJECTIVE",
+          definitionId: "sacred_site",
           x: 0,
           y: 0,
           ownerPlayerId: null,
           controllerPlayerId: null,
-          objectiveType: "SACRED_SITE",
+          objectiveType: "PROTECT",
           objectiveState: "ACTIVE",
         },
       ],
     });
     expect(result.success).toBe(true);
+  });
+
+  it("rejects legacy kinds, SACRED_SITE objective type and missing definitionId", () => {
+    const entity = {
+      entityId: 2,
+      kind: "OBJECTIVE",
+      definitionId: "sacred_site",
+      x: 0,
+      y: 0,
+      ownerPlayerId: null,
+      controllerPlayerId: null,
+      objectiveType: "PROTECT",
+      objectiveState: "ACTIVE",
+    };
+    const parse = (candidate: Record<string, unknown>): boolean =>
+      parseGameStateView({
+        protocolVersion: PROTOCOL_VERSION,
+        gameDataVersion: GAME_DATA_VERSION,
+        roomId: "room-1",
+        tick: 0,
+        phase: "RUNNING",
+        localPlayerId: 0,
+        players: [],
+        entities: [candidate],
+      }).success;
+
+    expect(parse(entity)).toBe(true);
+    expect(parse({ ...entity, kind: "BUILDING" })).toBe(true);
+    expect(parse({ ...entity, kind: "RESOURCE", objectiveType: null, objectiveState: null })).toBe(
+      true,
+    );
+    expect(parse({ ...entity, kind: "objective" })).toBe(false);
+    expect(parse({ ...entity, objectiveType: "SACRED_SITE" })).toBe(false);
+    expect(parse({ ...entity, definitionId: "" })).toBe(false);
+    const withoutDefinition: Record<string, unknown> = { ...entity };
+    delete withoutDefinition["definitionId"];
+    expect(parse(withoutDefinition)).toBe(false);
   });
 
   it("rejects an objective view that omits type and state", () => {
@@ -254,7 +293,8 @@ describe("parseGameEvent / parseGameStateView", () => {
         entities: [
           {
             entityId: 2,
-            kind: "objective",
+            kind: "OBJECTIVE",
+            definitionId: "sacred_site",
             x: 0,
             y: 0,
             ownerPlayerId: null,

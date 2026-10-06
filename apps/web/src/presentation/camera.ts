@@ -1,10 +1,11 @@
+import type { GroundExtent } from "./map-layout.js";
+
 /** Fixed isometric yaw/pitch. Pan and zoom move the target and radius only. */
 export const RTS_CAMERA_ALPHA = -Math.PI / 4;
 export const RTS_CAMERA_BETA = Math.PI / 3;
 
 export const RTS_CAMERA_MIN_RADIUS = 12;
 export const RTS_CAMERA_MAX_RADIUS = 48;
-export const RTS_MAP_HALF_EXTENT = 20;
 
 export interface RtsCameraPose {
   readonly targetX: number;
@@ -12,10 +13,11 @@ export interface RtsCameraPose {
   readonly radius: number;
 }
 
-export function createRtsCameraPose(): RtsCameraPose {
+/** Starts centered on the map. */
+export function createRtsCameraPose(extent: GroundExtent): RtsCameraPose {
   return {
-    targetX: 0,
-    targetZ: 0,
+    targetX: (extent.minX + extent.maxX) / 2,
+    targetZ: (extent.minZ + extent.maxZ) / 2,
     radius: 28,
   };
 }
@@ -44,11 +46,11 @@ export function panRtsCamera(
   pose: RtsCameraPose,
   deltaX: number,
   deltaZ: number,
-  halfExtent: number = RTS_MAP_HALF_EXTENT,
+  extent: GroundExtent,
 ): RtsCameraPose {
   return {
-    targetX: clamp(pose.targetX + deltaX, -halfExtent, halfExtent),
-    targetZ: clamp(pose.targetZ + deltaZ, -halfExtent, halfExtent),
+    targetX: clamp(pose.targetX + deltaX, extent.minX, extent.maxX),
+    targetZ: clamp(pose.targetZ + deltaZ, extent.minZ, extent.maxZ),
     radius: pose.radius,
   };
 }

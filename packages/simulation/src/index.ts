@@ -29,13 +29,26 @@ export {
 } from "./match-runtime.js";
 export type { MatchEntitySnapshot } from "./snapshot.js";
 export {
+  SpatialGrid,
+  cellToWorldCenter,
+  footprintWorldCenter,
+  worldToCell,
+  type FootprintPlacement,
+  type FootprintPlacementRefusal,
+  type SpatialFootprint,
+} from "./spatial-grid.js";
+export {
+  ENTITY_KINDS,
   OBJECTIVE_STATES,
   OBJECTIVE_TYPES,
   type Controller,
   type EntityId,
+  type EntityIdentity,
+  type EntityKind,
   type MapBounds,
   type Movement,
   type Objective,
+  type ObjectiveId,
   type ObjectiveState,
   type ObjectiveType,
   type Owner,
@@ -44,4 +57,4 @@ export {
   type Vec2,
 } from "./types.js";
 /** Low-level kernel for tests/testkit. Production shells use MatchRuntime. */
-export { createWorld, World } from "./world.js";
+export { createWorld, World, type SolidPlacement, type SolidPlacementRefusal } from "./world.js";
