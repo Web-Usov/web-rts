@@ -200,7 +200,7 @@ describe("MatchRuntime bootstrap spatial state", () => {
       { playerId: 0 },
       { type: "MOVE", commandId: "go", entityIds: [unit.entityId], target: { x: 6, y: 6 } },
     );
-    for (let tick = 0; tick < 40; tick += 1) {
+    for (let tick = 0; tick < 80; tick += 1) {
       runtime.step();
     }
     expect(runtime.drainEvents()).toEqual([]);

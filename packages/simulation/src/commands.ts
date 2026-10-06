@@ -24,7 +24,12 @@ export type QueuedCommand = {
 
 /** Stable machine-readable reasons produced by tick-boundary validation. */
 export type CommandRejectionReason =
-  "empty_entity_ids" | "out_of_bounds" | "not_your_unit" | "no_valid_entities";
+  | "empty_entity_ids"
+  | "out_of_bounds"
+  | "blocked_target"
+  | "not_your_unit"
+  | "no_valid_entities"
+  | "no_path";
 
 export class CommandQueue {
   private readonly pending: QueuedCommand[] = [];

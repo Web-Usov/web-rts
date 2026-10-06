@@ -1,5 +1,5 @@
 import type { ComponentStore } from "../component-store.js";
-import type { Movement, Position } from "../types.js";
+import type { EntityId, Movement, Position } from "../types.js";
 
 const ARRIVAL_EPSILON = 1e-6;
 
@@ -11,8 +11,12 @@ export function runMovementSystem(
   positions: ComponentStore<Position>,
   movements: ComponentStore<Movement>,
   tickDurationSeconds: number,
+  skip?: { has(entityId: EntityId): boolean },
 ): void {
   for (const [entityId, movement] of movements.entries()) {
+    if (skip?.has(entityId)) {
+      continue;
+    }
     const position = positions.get(entityId);
     if (position === undefined) {
       movements.remove(entityId);

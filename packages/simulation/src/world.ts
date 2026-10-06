@@ -11,6 +11,7 @@ import {
   type SimulationConfig,
 } from "./config.js";
 import { EventQueue, type SimulationEvent } from "./events.js";
+import { followNavigationTasks, planMove, type NavigationTask } from "./navigation.js";
 import { createSeededRng, type Rng } from "./rng.js";
 import {
   SpatialGrid,
@@ -47,6 +48,8 @@ export class World {
   readonly identities = new ComponentStore<EntityIdentity>();
   readonly positions = new ComponentStore<Position>();
   readonly movements = new ComponentStore<Movement>();
+  /** Grid route for an in-progress MOVE. Absent from snapshots and replication. */
+  private readonly navigations = new ComponentStore<NavigationTask>();
   readonly owners = new ComponentStore<Owner>();
   readonly controllers = new ComponentStore<Controller>();
 
@@ -90,6 +93,7 @@ export class World {
     this.identities.remove(entityId);
     this.positions.remove(entityId);
     this.movements.remove(entityId);
+    this.navigations.remove(entityId);
     this.owners.remove(entityId);
     this.controllers.remove(entityId);
   }
@@ -176,6 +180,25 @@ export class World {
   }
 
   /**
+   * Copy of the simulation-internal navigation task, if the entity is following a path.
+   * Not part of {@link MatchSnapshot} or the protocol.
+   */
+  readNavigation(entityId: EntityId): NavigationTask | undefined {
+    const task = this.navigations.get(entityId);
+    if (task === undefined) {
+      return undefined;
+    }
+    return {
+      destinationX: task.destinationX,
+      destinationY: task.destinationY,
+      pathCells: task.pathCells.map((cell) => ({ x: cell.x, y: cell.y })),
+      waypoints: task.waypoints.map((point) => ({ x: point.x, y: point.y })),
+      waypointIndex: task.waypointIndex,
+      plannedRevision: task.plannedRevision,
+    };
+  }
+
+  /**
    * Queue a trusted command. Gameplay validation (bounds, Controller) runs on the
    * next {@link World.step} tick boundary against the world state at that moment.
    */
@@ -207,7 +230,21 @@ export class World {
    */
   step(): void {
     this.applyCommands();
-    runMovementSystem(this.positions, this.movements, this.config.tickDurationSeconds);
+    if (this.grid !== null) {
+      followNavigationTasks(
+        this.positions,
+        this.movements,
+        this.navigations,
+        this.grid,
+        this.config.tickDurationSeconds,
+      );
+    }
+    runMovementSystem(
+      this.positions,
+      this.movements,
+      this.config.tickDurationSeconds,
+      this.navigations,
+    );
     this.tickCount += 1;
   }
 
@@ -251,36 +288,59 @@ export class World {
       return;
     }
 
-    let appliedAny = false;
+    const applicable: EntityId[] = [];
     for (const entityId of command.entityIds) {
-      if (!this.living.has(entityId) || !this.positions.has(entityId)) {
-        continue;
+      if (this.living.has(entityId) && this.positions.has(entityId)) {
+        applicable.push(entityId);
       }
-      this.movements.set(entityId, {
-        targetX: command.target.x,
-        targetY: command.target.y,
-        speed: this.config.defaultMoveSpeed,
-      });
-      appliedAny = true;
     }
-
-    if (!appliedAny) {
-      this.events.push({
-        type: "COMMAND_REJECTED",
-        commandId: command.commandId,
-        playerId,
-        reason: "no_valid_entities",
-        tick: this.tickCount,
-      });
+    if (applicable.length === 0) {
+      this.rejectMove(playerId, command.commandId, "no_valid_entities");
       return;
     }
 
-    this.events.push({
-      type: "COMMAND_APPLIED",
-      commandId: command.commandId,
-      playerId,
-      tick: this.tickCount,
-    });
+    const speed = this.config.defaultMoveSpeed;
+    if (this.grid === null) {
+      for (const entityId of applicable) {
+        this.navigations.remove(entityId);
+        this.movements.set(entityId, {
+          targetX: command.target.x,
+          targetY: command.target.y,
+          speed,
+        });
+      }
+      this.acceptMove(playerId, command.commandId);
+      return;
+    }
+
+    const planned: Array<{ entityId: EntityId; task: NavigationTask }> = [];
+    for (const entityId of applicable) {
+      const position = this.positions.get(entityId);
+      if (position === undefined) {
+        continue;
+      }
+      const task = planMove(this.grid, position, command.target);
+      if (task === null) {
+        this.rejectMove(playerId, command.commandId, "no_path");
+        return;
+      }
+      planned.push({ entityId, task });
+    }
+
+    for (const { entityId, task } of planned) {
+      this.navigations.set(entityId, task);
+      const waypoint = task.waypoints[0];
+      if (waypoint === undefined) {
+        continue;
+      }
+      this.movements.set(entityId, {
+        targetX: waypoint.x,
+        targetY: waypoint.y,
+        speed,
+      });
+    }
+
+    this.acceptMove(playerId, command.commandId);
   }
 
   /** Order matters: wire reasons are stable and parity-tested across Local/Remote. */
@@ -294,10 +354,32 @@ export class World {
     if (this.grid !== null && !this.grid.containsWorldPoint(command.target)) {
       return "out_of_bounds";
     }
+    if (this.grid !== null && !this.grid.isWalkable(this.grid.worldToCell(command.target))) {
+      return "blocked_target";
+    }
     if (!canIssueMove(this, playerId, command.entityIds)) {
       return "not_your_unit";
     }
     return null;
+  }
+
+  private rejectMove(playerId: PlayerId, commandId: string, reason: CommandRejectionReason): void {
+    this.events.push({
+      type: "COMMAND_REJECTED",
+      commandId,
+      playerId,
+      reason,
+      tick: this.tickCount,
+    });
+  }
+
+  private acceptMove(playerId: PlayerId, commandId: string): void {
+    this.events.push({
+      type: "COMMAND_APPLIED",
+      commandId,
+      playerId,
+      tick: this.tickCount,
+    });
   }
 }
 

@@ -126,7 +126,11 @@ describe("MatchRuntime", () => {
     const unitId = unitOf(runtime.readSnapshot(), 0).entityId;
 
     for (let tick = 0; tick < 20; tick += 1) {
-      runtime.submitCommand({ playerId: 0 }, move(`ok-${tick}`, [unitId], { x: tick % 3, y: 0 }));
+      // South of the Sacred Site. (0, 0) is inside its solid footprint.
+      runtime.submitCommand(
+        { playerId: 0 },
+        move(`ok-${tick}`, [unitId], { x: 4 + (tick % 3), y: -8 }),
+      );
       runtime.step();
     }
     expect(runtime.drainEvents()).toEqual([]);
