@@ -51,14 +51,22 @@ GitHub Issues остаются источником implementation scope и acce
 
 Architecture/spec phase завершена: Art Direction #48/#49 и Gameplay Spec #002/ADR changes из PR #52 уже merged в `main`. Статус #002 — **ACCEPTED / implementation in progress**.
 
+Implementation checkpoint:
+- G1 / #54 — completed (PR #73);
+- G2 / #55 — completed (PR #74);
+- G3 / #56 — completed (PR #76);
+- **current gameplay stage: G4a / #57 — Deterministic navigation / MOVE core**.
+
+Art Direction дополнительно уточнён через #75 / PR #77: основной production-style target — **Stylized Low-Poly / Soft Hand-Painted**.
+
 GitHub epic #50 является актуальным tracker implementation decomposition. Архитектурные G4 и G12 остаются логическими stages в Spec, но фактическая реализация разделена на небольшие reviewable PR:
 
 ```text
-#54 G1 Shared MatchRuntime / host hardening
- ├─ #55 G2 Session/input hardening
- └─ #56 G3 Entity/Objective/Map spatial foundation
+#54 G1 Shared MatchRuntime / host hardening ✅
+ ├─ #55 G2 Session/input hardening ✅
+ └─ #56 G3 Entity/Objective/Map spatial foundation ✅
        ↓
-     #57 G4a Navigation / MOVE core
+     #57 G4a Navigation / MOVE core ← CURRENT
        ├─ #68 G4b Fair scheduling / path budgets
        └─ #69 G4c Breach-aware planner
             ↓
@@ -83,7 +91,7 @@ GitHub epic #50 является актуальным tracker implementation dec
              #67 G14 Full Local/Remote E2E
 ```
 
-После #54 задачи #55 и #56 могут идти параллельно. После #57 — #68 и #69. После #68 — #58 и #59. Практический максимум остаётся **2 Coding Agents одновременно**.
+G1–G3 уже завершены. Сейчас следующий обязательный stage — #57 G4a. После #57 можно параллельно запускать #68 G4b и #69 G4c; после #68 — #58 G5 и #59 G6. Практический максимум остаётся **2 Coding Agents одновременно**.
 
 Критические границы decomposition:
 
