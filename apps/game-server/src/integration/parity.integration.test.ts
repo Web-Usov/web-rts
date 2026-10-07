@@ -58,8 +58,26 @@ describe("Local/Remote parity (Remote shell)", () => {
     await colyseus.cleanup();
   });
 
-  it("matches the shared parity reference for the same fixture", async () => {
-    const fixture = FOUNDATION_PARITY_FIXTURE;
+  it.each([
+    FOUNDATION_PARITY_FIXTURE,
+    {
+      ...FOUNDATION_PARITY_FIXTURE,
+      ticks: 30,
+      steps: [
+        {
+          atTick: 0,
+          payload: {
+            type: "MOVE",
+            commandId: "blocked-target",
+            clientSequence: 1,
+            entityIds: [1],
+            target: { x: 0.8, y: 0.1 },
+          },
+        },
+      ],
+      expectedRejections: [],
+    },
+  ])("matches the shared parity reference for fixture %#", async (fixture) => {
     const room = (await colyseus.createRoom(FOUNDATION_ROOM_NAME, {
       ...compatibleOptions,
       seed: fixture.seed,

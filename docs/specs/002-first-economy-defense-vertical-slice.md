@@ -329,7 +329,7 @@ tick
 └─ remaining gameplay systems
 ```
 
-Если новый footprint блокирует следующий waypoint движущегося entity, path должен быть пересчитан до movement этого tick.
+Если новый footprint блокирует текущий smoothed segment движущегося entity, path должен быть пересчитан до movement этого tick.
 
 ## 8. Navigation — APPROVED
 
@@ -361,18 +361,21 @@ world target
 
 A* строит последовательность cells.
 
-Movement идёт через центры промежуточных path cells, но финальная точка остаётся исходной точной world-space целью MOVE.
+Cell centers задают canonical unsmoothed route. Execution route deterministically сглаживается: из текущей world position выбирается максимально дальняя безопасная точка canonical route либо exact destination. Entity не обязана посещать каждый cell center.
+
+На unobstructed terrain MOVE не должен визуально раскрывать grid-shaped path и должен, где это возможно, идти прямым continuous world-space segment к exact destination. Smoothing не использует RNG и не пересекает solid/non-walkable cells. Консервативный deterministic grid traversal учитывает касания edge/corner; corner-cutting через blocked geometry запрещён.
 
 Пример:
 
 ```text
 click exact world point
-→ A* cell path
-→ intermediate cell centers
-→ exact clicked destination
+→ deterministic A* cell path
+→ deterministic path smoothing
+→ world-space movement waypoints
+→ exact valid destination / resolved blocked-target destination
 ```
 
-Текущий continuous movement layer не должен заменяться grid teleport/snapping.
+Текущий continuous movement layer не должен заменяться grid teleport/snapping. Только Movement layer реализует continuous stepping и изменение Position; остаток distance budget расходуется через несколько waypoints в том же tick.
 
 Архитектурное разделение:
 
@@ -396,9 +399,11 @@ continuous movement system
 - non-walkable cell;
 - другую недопустимую navigation cell;
 
-обычный MOVE отклоняется явной gameplay reason вроде `blocked_target`.
+simulation выбирает ближайшую достижимую допустимую world-space точку относительно исходного marker target. Это обычный MOVE, без автоматического GATHER/GARRISON/BUILD.
 
-Simulation не ищет магически ближайшую свободную клетку для обычного MOVE.
+После bounds и authorization validation navigation обходит 4-neighbor connected component стартовой клетки. Для каждой достижимой клетки исходный target проецируется внутрь прямоугольника клетки с inset `0.0001` world units от границ. Выбор: минимальная squared Euclidean distance до исходного target, при равенстве — минимальный row-major cellId. Inset обеспечивает консервативную edge/corner semantics и не является collision radius. Такой же fallback применяется к target на blocked edge/corner. На свободной местности exact target сохраняется; свободная, но недостижимая цель по-прежнему даёт `no_path`.
+
+Client marker остаётся в исходной точке клика. Effective destination вычисляется отдельно для каждого unit и фиксируется на срок task; lazy replan идёт к ней, не запускает новый fallback. Group MOVE остаётся атомарным. Если безопасный route не найден, команда отклоняется с `no_path`. Out-of-bounds target не корректируется.
 
 Semantic interactions используют отдельные intents:
 
@@ -457,12 +462,15 @@ Navigation выбирает deterministic reachable goal из допустимо
 Перед использованием следующего navigation waypoint:
 
 ```text
-next path cell still traversable?
-├─ yes → continue
-└─ no  → replan
+topology unchanged → continue active smoothed segment
+topology changed / next segment
+→ validate all touched cells of remaining segment
+├─ traversable → continue without replan
+└─ blocked → replan from current world position → smooth again
+             └─ no route → stop before blocker
 ```
 
-Это базовая invalidation policy #002.
+Это базовая invalidation policy #002. Unrelated topology changes не вызывают replan. Проверка выполняется до movement; failed replan снимает movement/navigation без ретроактивного COMMAND_REJECTED.
 
 ### 8.7 PvE blocker selection / breach-aware planning — APPROVED
 

@@ -31,7 +31,7 @@ Units не являются A* blockers в #002 и не резервируют c
 
 ### Navigation
 
-MOVE остаётся world-space intent.
+MOVE остаётся world-space intent. Доступный exact target сохраняется. Если target занят solid/static non-walkable terrain либо касается blocked edge/corner, simulation выбирает ближайшую достижимую допустимую world-space точку. Поиск ограничен 4-neighbor connected component стартовой клетки; для каждой клетки target проецируется внутрь её прямоугольника с inset `0.0001` world units от границ. Минимизируется squared Euclidean distance до исходного target, при равенстве — row-major cellId. Inset задаёт безопасный endpoint для консервативной segment validation, не unit collision radius. Выбранная effective destination фиксируется на срок task; replan не подменяет её снова. Client marker сохраняет исходную точку клика. Out-of-bounds и authorization checks выполняются до поиска; если route отсутствует, MOVE получает `no_path`.
 
 4-neighbor A*:
 
@@ -41,13 +41,29 @@ MOVE остаётся world-space intent.
 - deterministic tie-break: f → h → cell id;
 - fixed neighbour order.
 
-Path использует cell centers как intermediate waypoints, но exact valid MOVE target остаётся final world destination.
+Execution contract:
+
+```text
+4-neighbor A*
+→ deterministic cell route / navigation corridor
+→ deterministic path smoothing
+→ world-space execution waypoints
+→ continuous Movement layer
+```
+
+Cell centers задают canonical unsmoothed route, но entity не обязана посещать каждый center. Smoothing детерминированно выбирает максимально дальнюю безопасную точку canonical route либо exact valid MOVE destination. На свободной местности MOVE выполняется прямым continuous world-space segment к exact destination; у blockers сохраняются необходимые точки обхода.
+
+Grid остаётся authoritative для traversability. Проверка segment консервативная: учитываются все затронутые клетки, включая обе стороны grid edge и все клетки при касании corner. Solid/non-walkable cells пересекать или срезать по углу нельзя. Smoothing не использует gameplay RNG.
+
+Navigation планирует/валидирует route и выбирает waypoint; только Movement layer расходует distance budget и изменяет Position. Остаток `speed * tickDurationSeconds` используется на следующих waypoints в том же tick.
 
 Interactions с occupied targets используют deterministic set of approach goal cells.
 
 ### Replan / topology
 
-Current path проверяется лениво перед следующим blocked waypoint. Solid add/remove увеличивает monotonic `topologyRevision`.
+Solid add/remove увеличивает monotonic `topologyRevision`. При изменении revision проверяются все клетки оставшегося active smoothed segment до movement. Если segment безопасен, он сохраняется без replan; unrelated topology changes не перестраивают route. При переходе к следующему segment он также проверяется против текущей topology.
+
+Если segment стал unsafe, navigation replans из текущей world position к исходной exact destination и снова применяет smoothing. Если route отсутствует, movement/navigation прекращаются до входа в blocker; ретроактивный COMMAND_REJECTED не создаётся. Continuous movement отделён от navigation planning.
 
 ### Breach-aware PvE planning
 
@@ -145,7 +161,7 @@ Multi-stage planner хранит только deterministic high-level phase; с
 Минусы:
 
 - units могут визуально overlap;
-- 4-neighbor paths могут выглядеть угловато;
+- raw 4-neighbor route угловатый; deterministic smoothing скрывает grid-shaped execution там, где segment безопасен;
 - per-query A* позже может потребовать optimization.
 
 Flow fields/navmesh/RVO/resumable A* добавляются только после measurement.
