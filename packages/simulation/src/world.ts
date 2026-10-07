@@ -11,7 +11,7 @@ import {
   type SimulationConfig,
 } from "./config.js";
 import { EventQueue, type SimulationEvent } from "./events.js";
-import { followNavigationTasks, planMove, type NavigationTask } from "./navigation.js";
+import { planMove, type NavigationTask } from "./navigation.js";
 import { createSeededRng, type Rng } from "./rng.js";
 import {
   SpatialGrid,
@@ -195,6 +195,7 @@ export class World {
       waypoints: task.waypoints.map((point) => ({ x: point.x, y: point.y })),
       waypointIndex: task.waypointIndex,
       plannedRevision: task.plannedRevision,
+      validatedRevision: task.validatedRevision,
     };
   }
 
@@ -230,20 +231,11 @@ export class World {
    */
   step(): void {
     this.applyCommands();
-    if (this.grid !== null) {
-      followNavigationTasks(
-        this.positions,
-        this.movements,
-        this.navigations,
-        this.grid,
-        this.config.tickDurationSeconds,
-      );
-    }
     runMovementSystem(
       this.positions,
       this.movements,
       this.config.tickDurationSeconds,
-      this.navigations,
+      this.grid === null ? undefined : { tasks: this.navigations, grid: this.grid },
     );
     this.tickCount += 1;
   }
@@ -354,11 +346,11 @@ export class World {
     if (this.grid !== null && !this.grid.containsWorldPoint(command.target)) {
       return "out_of_bounds";
     }
-    if (this.grid !== null && !this.grid.isWalkable(this.grid.worldToCell(command.target))) {
-      return "blocked_target";
-    }
     if (!canIssueMove(this, playerId, command.entityIds)) {
       return "not_your_unit";
+    }
+    if (this.grid !== null && !this.grid.isWalkable(this.grid.worldToCell(command.target))) {
+      return "blocked_target";
     }
     return null;
   }

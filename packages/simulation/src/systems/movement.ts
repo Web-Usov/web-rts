@@ -1,43 +1,91 @@
 import type { ComponentStore } from "../component-store.js";
-import type { EntityId, Movement, Position } from "../types.js";
+import { prepareNavigation, type NavigationTask } from "../navigation.js";
+import type { SpatialGrid } from "../spatial-grid.js";
+import type { Movement, Position } from "../types.js";
 
 const ARRIVAL_EPSILON = 1e-6;
 
-/**
- * Advances entities with Position + Movement toward their targets.
- * Displacement uses fixed tick duration from config, never wall-clock time.
- */
+/** The sole continuous displacement primitive, shared by direct and routed MOVE. */
+export function advanceToward(
+  position: Position,
+  target: Position,
+  budget: number,
+): {
+  position: Position;
+  remaining: number;
+  arrived: boolean;
+} {
+  const dx = target.x - position.x;
+  const dy = target.y - position.y;
+  const distance = Math.hypot(dx, dy);
+  if (distance <= budget || distance <= ARRIVAL_EPSILON) {
+    return { position: { ...target }, remaining: Math.max(0, budget - distance), arrived: true };
+  }
+  const ratio = budget / distance;
+  return {
+    position: { x: position.x + dx * ratio, y: position.y + dy * ratio },
+    remaining: 0,
+    arrived: false,
+  };
+}
+
+/** Movement owns Position integration and preserves budget across waypoint arrivals. */
 export function runMovementSystem(
   positions: ComponentStore<Position>,
   movements: ComponentStore<Movement>,
   tickDurationSeconds: number,
-  skip?: { has(entityId: EntityId): boolean },
+  navigation?: { tasks: ComponentStore<NavigationTask>; grid: SpatialGrid },
 ): void {
   for (const [entityId, movement] of movements.entries()) {
-    if (skip?.has(entityId)) {
-      continue;
-    }
-    const position = positions.get(entityId);
+    let position = positions.get(entityId);
     if (position === undefined) {
       movements.remove(entityId);
+      navigation?.tasks.remove(entityId);
       continue;
     }
-
-    const dx = movement.targetX - position.x;
-    const dy = movement.targetY - position.y;
-    const distance = Math.hypot(dx, dy);
-    const step = movement.speed * tickDurationSeconds;
-
-    if (distance <= step || distance <= ARRIVAL_EPSILON) {
-      positions.set(entityId, { x: movement.targetX, y: movement.targetY });
-      movements.remove(entityId);
-      continue;
+    let task = navigation?.tasks.get(entityId);
+    let remaining = movement.speed * tickDurationSeconds;
+    while (true) {
+      if (task !== undefined && navigation !== undefined) {
+        const prepared = prepareNavigation(navigation.grid, task, position);
+        if (prepared === null) {
+          navigation.tasks.remove(entityId);
+          movements.remove(entityId);
+          break;
+        }
+        task = prepared;
+      }
+      const waypoint = task?.waypoints[task.waypointIndex] ?? {
+        x: movement.targetX,
+        y: movement.targetY,
+      };
+      const step = advanceToward(position, waypoint, remaining);
+      position = step.position;
+      positions.set(entityId, position);
+      remaining = step.remaining;
+      if (!step.arrived) {
+        if (task !== undefined && navigation !== undefined) {
+          navigation.tasks.set(entityId, task);
+          movements.set(entityId, {
+            targetX: waypoint.x,
+            targetY: waypoint.y,
+            speed: movement.speed,
+          });
+        }
+        break;
+      }
+      if (task === undefined || task.waypointIndex + 1 >= task.waypoints.length) {
+        navigation?.tasks.remove(entityId);
+        movements.remove(entityId);
+        break;
+      }
+      // Every newly active segment must be validated, even if an earlier segment
+      // was already checked against this topology revision.
+      task = { ...task, waypointIndex: task.waypointIndex + 1, validatedRevision: -1 };
+      navigation?.tasks.set(entityId, task);
+      const next = task.waypoints[task.waypointIndex]!;
+      movements.set(entityId, { targetX: next.x, targetY: next.y, speed: movement.speed });
+      if (remaining <= 0) break;
     }
-
-    const ratio = step / distance;
-    positions.set(entityId, {
-      x: position.x + dx * ratio,
-      y: position.y + dy * ratio,
-    });
   }
 }

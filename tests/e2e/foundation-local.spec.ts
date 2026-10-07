@@ -85,6 +85,47 @@ test.describe("F11 local GameTransport browser smoke", () => {
   });
 });
 
+/** Regression: observe the rendered trajectory, without inspecting simulation state. */
+test("G4a open-terrain diagonal MOVE stays on a straight rendered line", async ({ page }) => {
+  const errors = attachPageErrorCapture(page);
+  await page.goto("/?transport=local");
+  await page.getByRole("button", { name: "Create room" }).click();
+  await expectHud(page, "Status", "connected");
+  await page.getByRole("button", { name: "Start" }).click();
+  await expectHud(page, "Phase", "RUNNING");
+  await selectLocalUnitByCanvasClick(page);
+  const start = await findLocalUnitCentroid(page);
+  // Same unobstructed ground point used by the internal browser playtest.
+  await canvasRightClick(page, { x: 950, y: 300 });
+  await expectHud(page, "Destination", "marked");
+  const samples = [start];
+  let stable = 0;
+  for (let index = 0; index < 50 && stable < 3; index += 1) {
+    const sample = await findLocalUnitCentroid(page);
+    stable = cssDistance(samples.at(-1)!, sample) < 1 ? stable + 1 : 0;
+    samples.push(sample);
+  }
+  expect(stable, "unit must arrive and stop").toBe(3);
+  const end = samples.at(-1)!;
+  const length = cssDistance(start, end);
+  expect(length).toBeGreaterThan(300);
+  // The fixed camera projects a straight world segment to a straight screen line.
+  // A few pixels accommodate anti-aliasing of the primitive's centroid.
+  for (const sample of samples) {
+    const cross =
+      (sample.x - start.x) * (end.y - start.y) - (sample.y - start.y) * (end.x - start.x);
+    expect(Math.abs(cross) / length, "trajectory must not expose a grid-shaped turn").toBeLessThan(
+      4,
+    );
+  }
+  expect(
+    samples.filter((sample) => cssDistance(start, sample) > 30 && cssDistance(end, sample) > 30)
+      .length,
+  ).toBeGreaterThanOrEqual(2);
+  await expectHud(page, "Last event", "—");
+  errors.assertClean();
+});
+
 async function saveLocalShot(page: Page, fileName: string): Promise<void> {
   const { mkdir } = await import("node:fs/promises");
   const path = await import("node:path");

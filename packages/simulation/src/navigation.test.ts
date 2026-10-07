@@ -1,6 +1,13 @@
 import type { MapDefinition } from "@web-rts/game-data";
 import { describe, expect, it } from "vitest";
-import { NEIGHBOR_OFFSETS, approachGoalCells, findPath, type WalkGrid } from "./navigation.js";
+import {
+  NEIGHBOR_OFFSETS,
+  approachGoalCells,
+  findPath,
+  planMove,
+  segmentIsTraversable,
+  type WalkGrid,
+} from "./navigation.js";
 import { SpatialGrid, type SpatialFootprint } from "./spatial-grid.js";
 
 function testMap(
@@ -205,5 +212,94 @@ describe("approach goals", () => {
       { x: 1, y: 0 },
       { x: 1, y: 1 },
     ]);
+  });
+});
+
+describe("deterministic execution smoothing", () => {
+  it.each([
+    [
+      { x: 0.2, y: 0.3 },
+      { x: 5.7, y: 4.8 },
+    ],
+    [
+      { x: 0.2, y: 1.3 },
+      { x: 5.7, y: 1.3 },
+    ],
+    [
+      { x: 1.2, y: 0.3 },
+      { x: 1.2, y: 4.8 },
+    ],
+    [
+      { x: 5.7, y: 4.8 },
+      { x: 0.2, y: 0.3 },
+    ],
+  ])("uses one exact world segment on open terrain", (start, destination) => {
+    const grid = new SpatialGrid(testMap(7, 6));
+    const task = planMove(grid, start, destination)!;
+    expect(task.waypoints).toEqual([destination]);
+    expect(planMove(grid, start, destination)).toEqual(task);
+    assertOrthogonal(task.pathCells);
+  });
+
+  it("smooths a canonical route around solid and static terrain without crossing either", () => {
+    for (const terrain of [false, true]) {
+      const grid = new SpatialGrid(
+        testMap(
+          7,
+          5,
+          terrain ? [{ x: 3, y: 1, width: 1, height: 2, walkable: false, buildable: false }] : [],
+        ),
+      );
+      if (!terrain) grid.addFootprint(1, solid(3, 1, 1, 2));
+      const start = { x: 0.5, y: 2.5 };
+      const target = { x: 6.2, y: 2.3 };
+      expect(segmentIsTraversable(grid, start, target)).toBe(false);
+      const task = planMove(grid, start, target)!;
+      expect(task.waypoints.length).toBeLessThan(task.pathCells.length - 1);
+      expect(task.waypoints.at(-1)).toEqual(target);
+      let previous = start;
+      for (const point of task.waypoints) {
+        expect(segmentIsTraversable(grid, previous, point)).toBe(true);
+        previous = point;
+      }
+    }
+  });
+
+  it("rejects blocked corners, edge grazing and endpoint touches in both directions", () => {
+    const grid = new SpatialGrid(testMap(5, 5));
+    grid.addFootprint(1, solid(2, 1));
+    for (const [start, end] of [
+      [
+        { x: 1.5, y: 1.5 },
+        { x: 2.5, y: 2.5 },
+      ],
+      [
+        { x: 1.5, y: 2 },
+        { x: 3.5, y: 2 },
+      ],
+      [
+        { x: 1.5, y: 2.5 },
+        { x: 2, y: 2 },
+      ],
+      [
+        { x: 2, y: 2 },
+        { x: 1.5, y: 2.5 },
+      ],
+    ]) {
+      expect(segmentIsTraversable(grid, start!, end!)).toBe(false);
+      expect(segmentIsTraversable(grid, end!, start!)).toBe(false);
+    }
+    const task = planMove(grid, { x: 1.5, y: 1.5 }, { x: 2.5, y: 2.5 })!;
+    expect(task.waypoints.length).toBeGreaterThan(1);
+  });
+
+  it("handles map edges, translated origins, near-corners and zero-length segments", () => {
+    const grid = new SpatialGrid({ ...testMap(5, 5), originX: -3, originY: -7 });
+    grid.addFootprint(1, solid(2, 1));
+    expect(segmentIsTraversable(grid, { x: -3, y: -7 }, { x: -3, y: -3 })).toBe(true);
+    expect(segmentIsTraversable(grid, { x: -1.5, y: -5.5 }, { x: -0.5, y: -4.5 })).toBe(false);
+    expect(segmentIsTraversable(grid, { x: -2.5, y: -5 }, { x: 0.5, y: -5 + 1e-12 })).toBe(false);
+    expect(segmentIsTraversable(grid, { x: -2.5, y: -6.5 }, { x: -2.5, y: -6.5 })).toBe(true);
+    expect(segmentIsTraversable(grid, { x: -1, y: -5 }, { x: -1, y: -5 })).toBe(false);
   });
 });

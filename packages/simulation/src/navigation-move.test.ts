@@ -1,6 +1,8 @@
 import { FOUNDATION_MAP, type MapDefinition } from "@web-rts/game-data";
 import { describe, expect, it } from "vitest";
 import type { QueuedCommand } from "./commands.js";
+import { planMove, segmentIsTraversable } from "./navigation.js";
+import { advanceToward } from "./systems/movement.js";
 import { createMatchRuntime } from "./match-runtime.js";
 import { readWorldEntities } from "./snapshot.js";
 import { type SpatialFootprint } from "./spatial-grid.js";
@@ -82,7 +84,7 @@ describe("MOVE navigation", () => {
     expect(terrain.positions.get(terrainUnit)).toEqual({ x: 0.5, y: 0.5 });
   });
 
-  it("checks blocked_target after bounds and before controller", () => {
+  it("checks authorization after bounds and before blocked_target", () => {
     const world = createWorld({ seed: 1, map: testMap(4, 4) });
     const own = unitAt(world, 0.5, 0.5);
     const foreign = unitAt(world, 0.5, 0.5, 1);
@@ -96,11 +98,7 @@ describe("MOVE navigation", () => {
     world.enqueueCommand(move([own], { x: 1.5, y: 0.5 }, "ok"));
     world.step();
 
-    expect(rejectionReasons(world)).toEqual([
-      "empty_entity_ids",
-      "out_of_bounds",
-      "blocked_target",
-    ]);
+    expect(rejectionReasons(world)).toEqual(["empty_entity_ids", "out_of_bounds", "not_your_unit"]);
     expect(world.movements.has(own)).toBe(true);
     expect(world.movements.has(foreign)).toBe(false);
   });
@@ -126,7 +124,7 @@ describe("MOVE navigation", () => {
     expect(world.readNavigation(trapped)).toBeUndefined();
   });
 
-  it("reaches the exact world destination and spends leftover budget past a waypoint", () => {
+  it("reaches the exact world destination using a single smoothed segment", () => {
     const world = createWorld({
       seed: 1,
       map: testMap(6, 1),
@@ -137,8 +135,9 @@ describe("MOVE navigation", () => {
     world.enqueueCommand(move([unit], { x: 3.2, y: 0.5 }));
     world.step();
 
-    expect(world.positions.get(unit)).toEqual({ x: 2, y: 0.5 });
-    expect(world.readNavigation(unit)?.waypoints.map((point) => point.x)).toEqual([1.5, 2.5, 3.2]);
+    expect(world.positions.get(unit)!.x).toBeCloseTo(2, 12);
+    expect(world.positions.get(unit)!.y).toBe(0.5);
+    expect(world.readNavigation(unit)?.waypoints.map((point) => point.x)).toEqual([3.2]);
 
     world.stepN(4);
     expect(world.positions.get(unit)).toEqual({ x: 3.2, y: 0.5 });
@@ -349,5 +348,102 @@ describe("MOVE navigation", () => {
     };
 
     expect(sample()).toEqual(sample());
+  });
+});
+
+describe("smoothed movement regressions", () => {
+  it("matches direct Movement displacement on an open diagonal", () => {
+    const options = { seed: 1, defaultMoveSpeed: 5 };
+    const direct = createWorld(options);
+    const routed = createWorld({ ...options, map: testMap(8, 8) });
+    const a = unitAt(direct, 0.2, 0.3);
+    const b = unitAt(routed, 0.2, 0.3);
+    const target = { x: 6.7, y: 5.8 };
+    direct.enqueueCommand(move([a], target));
+    routed.enqueueCommand(move([b], target));
+    for (let tick = 0; tick < 20; tick += 1) {
+      direct.step();
+      routed.step();
+      expect(routed.positions.get(b)).toEqual(direct.positions.get(a));
+    }
+    expect(routed.positions.get(b)).toEqual(target);
+  });
+
+  it("spends the full tick budget through multiple smoothed turns in Movement", () => {
+    const world = createWorld({ seed: 1, map: testMap(7, 5), defaultMoveSpeed: 65 });
+    const unit = unitAt(world, 0.5, 2.5);
+    const blocker = world.createEntity({ kind: "BUILDING", definitionId: "test_wall" });
+    world.placeSolidFootprint(blocker, solid(3, 1, 1, 2));
+    const target = { x: 6.2, y: 2.3 };
+    const route = planMove(world.grid!, world.positions.get(unit)!, target)!;
+    expect(route.waypoints.length).toBeGreaterThan(1);
+    let expected = world.positions.get(unit)!;
+    let budget = 6.5;
+    let arrived = 0;
+    for (const point of route.waypoints) {
+      const step = advanceToward(expected, point, budget);
+      expected = step.position;
+      budget = step.remaining;
+      if (!step.arrived) break;
+      arrived += 1;
+    }
+    expect(arrived).toBeGreaterThan(1);
+    world.enqueueCommand(move([unit], target));
+    world.step();
+    expect(world.positions.get(unit)).toEqual(expected);
+  });
+
+  it("invalidates a blocker far inside the active segment and smooths the replan", () => {
+    const world = createWorld({ seed: 1, map: testMap(9, 5), defaultMoveSpeed: 5 });
+    const unit = unitAt(world, 0.5, 2.5);
+    world.enqueueCommand(move([unit], { x: 8.2, y: 2.5 }));
+    world.step();
+    const before = world.readNavigation(unit)!;
+    expect(before.waypoints).toHaveLength(1);
+    const blocker = world.createEntity({ kind: "BUILDING", definitionId: "test_wall" });
+    world.placeSolidFootprint(blocker, solid(5, 2));
+    world.step();
+    const after = world.readNavigation(unit)!;
+    expect(after.plannedRevision).toBe(world.topologyRevision);
+    expect(after.pathCells).not.toContainEqual({ x: 5, y: 2 });
+    expect(after.waypoints.length).toBeLessThan(after.pathCells.length);
+    let previous = world.positions.get(unit)!;
+    while (world.movements.has(unit)) {
+      world.step();
+      const current = world.positions.get(unit)!;
+      expect(segmentIsTraversable(world.grid!, previous, current)).toBe(true);
+      previous = current;
+    }
+    expect(previous).toEqual({ x: 8.2, y: 2.5 });
+  });
+});
+
+describe("future segment topology validation", () => {
+  it("keeps a safe active segment but replans before an unsafe later segment", () => {
+    const world = createWorld({ seed: 1, map: testMap(7, 6), defaultMoveSpeed: 5 });
+    const unit = unitAt(world, 0.5, 0.5);
+    const original = world.createEntity({ kind: "BUILDING", definitionId: "test_wall" });
+    world.placeSolidFootprint(original, solid(1, 0, 1, 3));
+    world.enqueueCommand(move([unit], { x: 6.5, y: 3.5 }));
+    world.step();
+    const before = world.readNavigation(unit)!;
+    expect(before.waypoints.length).toBeGreaterThan(1);
+    const blocker = world.createEntity({ kind: "BUILDING", definitionId: "test_wall" });
+    world.placeSolidFootprint(blocker, solid(4, 3));
+    world.step();
+    expect(world.readNavigation(unit)!.plannedRevision).toBe(before.plannedRevision);
+    let replanned = false;
+    let previous = world.positions.get(unit)!;
+    for (let tick = 0; tick < 50; tick += 1) {
+      world.step();
+      const current = world.positions.get(unit)!;
+      expect(segmentIsTraversable(world.grid!, previous, current)).toBe(true);
+      previous = current;
+      const task = world.readNavigation(unit);
+      if (task && task.plannedRevision > before.plannedRevision) replanned = true;
+      if (!world.movements.has(unit)) break;
+    }
+    expect(replanned).toBe(true);
+    expect(previous).toEqual({ x: 6.5, y: 3.5 });
   });
 });

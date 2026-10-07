@@ -1,7 +1,6 @@
 import type { CellCoord } from "@web-rts/game-data";
-import type { ComponentStore } from "./component-store.js";
 import type { SpatialFootprint, SpatialGrid } from "./spatial-grid.js";
-import type { Movement, Position, Vec2 } from "./types.js";
+import type { Vec2 } from "./types.js";
 
 /**
  * Deterministic 4-neighbor navigation (Spec #002 §8.1–8.6, ADR-008).
@@ -16,8 +15,6 @@ export const NEIGHBOR_OFFSETS: readonly CellCoord[] = [
   { x: 0, y: -1 },
 ];
 
-const ARRIVAL_EPSILON = 1e-6;
-
 /** Grid surface the path query reads. `SpatialGrid` satisfies it. */
 export interface WalkGrid {
   readonly widthCells: number;
@@ -29,7 +26,7 @@ export interface WalkGrid {
 
 /**
  * Simulation-internal route from a MOVE. The last waypoint is the exact
- * world-space destination; earlier waypoints are intermediate cell centers.
+ * world-space destination; earlier waypoints are smoothed canonical cell centers.
  */
 export interface NavigationTask {
   readonly destinationX: number;
@@ -39,6 +36,8 @@ export interface NavigationTask {
   readonly waypointIndex: number;
   /** `topologyRevision` captured when this path was planned. */
   readonly plannedRevision: number;
+  /** Revision against which the active execution segment was validated. */
+  readonly validatedRevision: number;
 }
 
 interface OpenNode {
@@ -194,132 +193,116 @@ export function planMove(
   if (pathCells === null) {
     return null;
   }
+  const waypoints = smoothPath(grid, origin, waypointsForPath(grid, pathCells, destination));
+  if (waypoints === null) {
+    return null;
+  }
   return {
     destinationX: destination.x,
     destinationY: destination.y,
     pathCells,
-    waypoints: waypointsForPath(grid, pathCells, destination),
+    waypoints,
     waypointIndex: 0,
     plannedRevision: grid.topologyRevision,
+    validatedRevision: grid.topologyRevision,
   };
 }
 
-export interface NavigationStep {
-  readonly position: Position;
-  /** `null` when the route finished or a replan could not avoid a blocked cell. */
-  readonly task: NavigationTask | null;
+/** Validates the active segment lazily. This function never changes Position. */
+export function prepareNavigation(
+  grid: SpatialGrid,
+  task: NavigationTask,
+  position: Vec2,
+): NavigationTask | null {
+  const waypoint = task.waypoints[task.waypointIndex];
+  if (waypoint === undefined) {
+    return null;
+  }
+  if (task.validatedRevision === grid.topologyRevision) {
+    return task;
+  }
+  if (segmentIsTraversable(grid, position, waypoint)) {
+    return { ...task, validatedRevision: grid.topologyRevision };
+  }
+  return planMove(grid, position, { x: task.destinationX, y: task.destinationY });
+}
+
+/** Farthest-visible string pulling, with a stable descending candidate order. */
+function smoothPath(grid: SpatialGrid, origin: Vec2, canonical: readonly Vec2[]): Vec2[] | null {
+  const result: Vec2[] = [];
+  let current = origin;
+  let next = 0;
+  while (next < canonical.length) {
+    let selected = -1;
+    for (let index = canonical.length - 1; index >= next; index -= 1) {
+      const candidate = canonical[index]!;
+      if (segmentIsTraversable(grid, current, candidate)) {
+        selected = index;
+        break;
+      }
+    }
+    if (selected < 0) {
+      return null;
+    }
+    current = canonical[selected]!;
+    result.push(current);
+    next = selected + 1;
+  }
+  return result;
 }
 
 /**
- * Follows waypoints for one tick, spending the full distance budget across
- * cell centers. Before entering the next path cell, a non-walkable cell
- * triggers one normal replan toward the original world destination.
- * A failed replan stops short of that cell. Later `ACTION_FAILED` is G11.
+ * Conservative supercover equivalent: split at every grid-line crossing, inspect
+ * crossings and interval midpoints. Edge touches check both sides; corner touches
+ * check all four cells. The closed segment includes both endpoints. Only cells
+ * inside the map count at its outer edge (endpoints must still be in bounds).
+ * Near-boundary floating point values are conservatively treated as touching.
  */
-export function followNavigation(
-  grid: SpatialGrid,
-  task: NavigationTask,
-  position: Position,
-  budget: number,
-): NavigationStep {
-  let pathCells = task.pathCells;
-  let waypoints = task.waypoints;
-  let waypointIndex = task.waypointIndex;
-  let plannedRevision = task.plannedRevision;
-  let current: Position = { x: position.x, y: position.y };
-  let remaining = budget;
-
-  while (remaining > ARRIVAL_EPSILON && waypointIndex < waypoints.length) {
-    const enter = pathCells[waypointIndex + 1];
-    if (
-      enter !== undefined &&
-      !sameCell(grid.worldToCell(current), enter) &&
-      !grid.isWalkable(enter)
+export function segmentIsTraversable(grid: SpatialGrid, from: Vec2, to: Vec2): boolean {
+  if (!grid.containsWorldPoint(from) || !grid.containsWorldPoint(to)) {
+    return false;
+  }
+  // ADR-008: one navigation cell = one world unit.
+  const ax = from.x - grid.originX;
+  const ay = from.y - grid.originY;
+  const bx = to.x - grid.originX;
+  const by = to.y - grid.originY;
+  const times = [0, 1];
+  for (const [start, end] of [
+    [ax, bx],
+    [ay, by],
+  ] as const) {
+    if (start === end) continue;
+    for (
+      let line = Math.ceil(Math.min(start, end));
+      line <= Math.floor(Math.max(start, end));
+      line += 1
     ) {
-      const replanned = planMove(grid, current, {
-        x: task.destinationX,
-        y: task.destinationY,
-      });
-      const retryEnter = replanned?.pathCells[replanned.waypointIndex + 1];
-      if (replanned === null || (retryEnter !== undefined && !grid.isWalkable(retryEnter))) {
-        return { position: current, task: null };
-      }
-      pathCells = replanned.pathCells;
-      waypoints = replanned.waypoints;
-      waypointIndex = replanned.waypointIndex;
-      plannedRevision = replanned.plannedRevision;
-      continue;
+      const t = (line - start) / (end - start);
+      if (t > 0 && t < 1) times.push(t);
     }
-
-    const waypoint = waypoints[waypointIndex];
-    if (waypoint === undefined) {
-      break;
-    }
-    const step = advanceToward(current, waypoint.x, waypoint.y, remaining);
-    current = { x: step.x, y: step.y };
-    remaining = step.remaining;
-    if (!step.arrived) {
-      break;
-    }
-    waypointIndex += 1;
   }
-
-  if (waypointIndex >= waypoints.length) {
-    return { position: current, task: null };
-  }
-  return {
-    position: current,
-    task: {
-      destinationX: task.destinationX,
-      destinationY: task.destinationY,
-      pathCells,
-      waypoints,
-      waypointIndex,
-      plannedRevision,
-    },
+  times.sort((a, b) => a - b);
+  const touchedAxis = (value: number): readonly number[] => {
+    const rounded = Math.round(value);
+    return Math.abs(value - rounded) <= 1e-10 ? [rounded - 1, rounded] : [Math.floor(value)];
   };
-}
-
-/** Applies active navigation tasks. Straight-line Movement is handled separately. */
-export function followNavigationTasks(
-  positions: ComponentStore<Position>,
-  movements: ComponentStore<Movement>,
-  tasks: ComponentStore<NavigationTask>,
-  grid: SpatialGrid,
-  tickDurationSeconds: number,
-): void {
-  const pending = [...tasks.entries()];
-  for (const [entityId, task] of pending) {
-    const position = positions.get(entityId);
-    const movement = movements.get(entityId);
-    if (position === undefined || movement === undefined) {
-      tasks.remove(entityId);
-      if (position === undefined) {
-        movements.remove(entityId);
+  const clearAt = (t: number): boolean => {
+    for (const y of touchedAxis(ay + (by - ay) * t)) {
+      for (const x of touchedAxis(ax + (bx - ax) * t)) {
+        const cell = { x, y };
+        if (grid.isCellInBounds(cell) && !grid.isWalkable(cell)) return false;
       }
-      continue;
     }
-
-    const result = followNavigation(grid, task, position, movement.speed * tickDurationSeconds);
-    positions.set(entityId, result.position);
-    if (result.task === null) {
-      tasks.remove(entityId);
-      movements.remove(entityId);
-      continue;
-    }
-    tasks.set(entityId, result.task);
-    const waypoint = result.task.waypoints[result.task.waypointIndex];
-    if (waypoint === undefined) {
-      tasks.remove(entityId);
-      movements.remove(entityId);
-      continue;
-    }
-    movements.set(entityId, {
-      targetX: waypoint.x,
-      targetY: waypoint.y,
-      speed: movement.speed,
-    });
+    return true;
+  };
+  for (let index = 0; index < times.length; index += 1) {
+    const t = times[index]!;
+    if (!clearAt(t)) return false;
+    const next = times[index + 1];
+    if (next !== undefined && !clearAt((t + next) / 2)) return false;
   }
+  return true;
 }
 
 function waypointsForPath(
@@ -328,7 +311,7 @@ function waypointsForPath(
   destination: Vec2,
 ): Vec2[] {
   const waypoints: Vec2[] = [];
-  for (let index = 1; index < pathCells.length - 1; index += 1) {
+  for (let index = 0; index < pathCells.length; index += 1) {
     const cell = pathCells[index];
     if (cell !== undefined) {
       waypoints.push(grid.cellToWorldCenter(cell));
@@ -373,42 +356,6 @@ function reconstruct(
 function cellFromId(cellId: number, width: number): CellCoord {
   const x = cellId % width;
   return { x, y: Math.floor(cellId / width) };
-}
-
-function sameCell(left: CellCoord, right: CellCoord): boolean {
-  return left.x === right.x && left.y === right.y;
-}
-
-interface AdvanceStep {
-  readonly x: number;
-  readonly y: number;
-  readonly remaining: number;
-  readonly arrived: boolean;
-}
-
-/** Continuous step toward one world point. Unused budget is returned for the next waypoint. */
-function advanceToward(
-  position: Position,
-  targetX: number,
-  targetY: number,
-  budget: number,
-): AdvanceStep {
-  const dx = targetX - position.x;
-  const dy = targetY - position.y;
-  const distance = Math.hypot(dx, dy);
-  if (distance <= ARRIVAL_EPSILON) {
-    return { x: targetX, y: targetY, remaining: budget, arrived: true };
-  }
-  if (distance <= budget) {
-    return { x: targetX, y: targetY, remaining: Math.max(0, budget - distance), arrived: true };
-  }
-  const ratio = budget / distance;
-  return {
-    x: position.x + dx * ratio,
-    y: position.y + dy * ratio,
-    remaining: 0,
-    arrived: false,
-  };
 }
 
 function openComesBefore(left: OpenNode, right: OpenNode): boolean {
