@@ -11,7 +11,7 @@ import {
   type SimulationConfig,
 } from "./config.js";
 import { EventQueue, type SimulationEvent } from "./events.js";
-import { planMove, type NavigationTask } from "./navigation.js";
+import { planMoveToTarget, type NavigationTask } from "./navigation.js";
 import { createSeededRng, type Rng } from "./rng.js";
 import {
   SpatialGrid,
@@ -311,7 +311,7 @@ export class World {
       if (position === undefined) {
         continue;
       }
-      const task = planMove(this.grid, position, command.target);
+      const task = planMoveToTarget(this.grid, position, command.target);
       if (task === null) {
         this.rejectMove(playerId, command.commandId, "no_path");
         return;
@@ -348,9 +348,6 @@ export class World {
     }
     if (!canIssueMove(this, playerId, command.entityIds)) {
       return "not_your_unit";
-    }
-    if (this.grid !== null && !this.grid.isWalkable(this.grid.worldToCell(command.target))) {
-      return "blocked_target";
     }
     return null;
   }

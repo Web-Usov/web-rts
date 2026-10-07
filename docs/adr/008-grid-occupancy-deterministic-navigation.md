@@ -31,7 +31,7 @@ Units не являются A* blockers в #002 и не резервируют c
 
 ### Navigation
 
-MOVE остаётся world-space intent.
+MOVE остаётся world-space intent. Доступный exact target сохраняется. Если target занят solid/static non-walkable terrain либо касается blocked edge/corner, simulation выбирает ближайшую достижимую допустимую world-space точку. Поиск ограничен 4-neighbor connected component стартовой клетки; для каждой клетки target проецируется внутрь её прямоугольника с inset `0.0001` world units от границ. Минимизируется squared Euclidean distance до исходного target, при равенстве — row-major cellId. Inset задаёт безопасный endpoint для консервативной segment validation, не unit collision radius. Выбранная effective destination фиксируется на срок task; replan не подменяет её снова. Client marker сохраняет исходную точку клика. Out-of-bounds и authorization checks выполняются до поиска; если route отсутствует, MOVE получает `no_path`.
 
 4-neighbor A*:
 

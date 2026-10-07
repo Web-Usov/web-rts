@@ -14,3 +14,14 @@
 Кадры 01–06 сохранены как evidence исходного G4a до smoothing. Для актуального execution behavior используются 07–14.
 
 Automated regression `G4a open-terrain diagonal MOVE stays on a straight rendered line` в `tests/e2e/foundation-local.spec.ts` проверяет промежуточные положения по пикселям Babylon canvas и отклонение от прямой, без чтения simulation/transport state.
+
+## Blocked-target fallback
+
+Повторная проверка тем же внутренним браузером на `/?transport=local`:
+
+1. Create room → Start → выбрать unit (15-blocked-target-start.jpg).
+2. Right click `(668, 362)` — видимая земля справа от конуса, внутри solid footprint Sacred Site. Unit переместился с исходной позиции, обошёл footprint и остановился в ближайшей достижимой точке; marker остался на исходном click (16-blocked-target-arrived.jpg). HUD Last event `—`, отказа нет.
+3. Right click `(950, 300)` на свободной местности — обычный MOVE достиг исходного marker (17-valid-target-after-fallback.jpg).
+4. Console/runtime error/warn в этом flow отсутствуют.
+
+Новый automated browser regression `G4a blocked ground target moves to a nearby reachable point` проверяет движение, остановку рядом с marker и отсутствие rejection по rendered canvas/HUD. Simulation tests отдельно проверяют ближайшую continuous точку, static/solid blockers, corners, repeatability, tie-break и разные reachable components для group MOVE.

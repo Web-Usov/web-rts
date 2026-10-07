@@ -183,6 +183,53 @@ export function findPath(
   return null;
 }
 
+/** Resolve only blocked endpoints; a valid but unreachable exact target stays no_path. */
+export function planMoveToTarget(
+  grid: SpatialGrid,
+  origin: Vec2,
+  requested: Vec2,
+): NavigationTask | null {
+  if (!grid.containsWorldPoint(requested)) return null;
+  if (segmentIsTraversable(grid, requested, requested)) {
+    return planMove(grid, origin, requested);
+  }
+  const start = grid.worldToCell(origin);
+  if (!grid.isCellInBounds(start) || !grid.isWalkable(start)) return null;
+
+  const visited = new Uint8Array(grid.widthCells * grid.heightCells);
+  const queue: CellCoord[] = [start];
+  visited[grid.cellId(start)] = 1;
+  let best: Vec2 | null = null;
+  let bestDistance = Infinity;
+  let bestId = Infinity;
+  // Numerical clearance for endpoint edge/corner checks; not a unit radius.
+  const inset = 0.0001;
+  for (let index = 0; index < queue.length; index += 1) {
+    const cell = queue[index]!;
+    const center = grid.cellToWorldCenter(cell);
+    const point = {
+      x: Math.max(center.x - 0.5 + inset, Math.min(center.x + 0.5 - inset, requested.x)),
+      y: Math.max(center.y - 0.5 + inset, Math.min(center.y + 0.5 - inset, requested.y)),
+    };
+    const distance = (point.x - requested.x) ** 2 + (point.y - requested.y) ** 2;
+    const id = grid.cellId(cell);
+    if (distance < bestDistance || (distance === bestDistance && id < bestId)) {
+      best = point;
+      bestDistance = distance;
+      bestId = id;
+    }
+    for (const offset of NEIGHBOR_OFFSETS) {
+      const next = { x: cell.x + offset.x, y: cell.y + offset.y };
+      if (!grid.isCellInBounds(next) || !grid.isWalkable(next)) continue;
+      const nextId = grid.cellId(next);
+      if (visited[nextId] === 1) continue;
+      visited[nextId] = 1;
+      queue.push(next);
+    }
+  }
+  return best === null ? null : planMove(grid, origin, best);
+}
+
 /** Plans a MOVE from a world position to an exact world destination. */
 export function planMove(
   grid: SpatialGrid,

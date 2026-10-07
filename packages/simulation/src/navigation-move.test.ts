@@ -1,7 +1,7 @@
 import { FOUNDATION_MAP, type MapDefinition } from "@web-rts/game-data";
 import { describe, expect, it } from "vitest";
 import type { QueuedCommand } from "./commands.js";
-import { planMove, segmentIsTraversable } from "./navigation.js";
+import { planMove, planMoveToTarget, segmentIsTraversable } from "./navigation.js";
 import { advanceToward } from "./systems/movement.js";
 import { createMatchRuntime } from "./match-runtime.js";
 import { readWorldEntities } from "./snapshot.js";
@@ -57,7 +57,7 @@ function rejectionReasons(world: World): string[] {
 }
 
 describe("MOVE navigation", () => {
-  it("rejects a blocked direct target and does not search for a nearby cell", () => {
+  it("moves to the nearest reachable point for solid and static blocked targets", () => {
     const world = createWorld({ seed: 1, map: testMap(5, 5) });
     const unit = unitAt(world, 0.5, 0.5);
     const blocker = world.createEntity({ kind: "BUILDING", definitionId: "test_wall" });
@@ -67,10 +67,13 @@ describe("MOVE navigation", () => {
     world.enqueueCommand(move([unit], { x: 3.2, y: 1.4 }, "solid"));
     world.step();
 
-    expect(rejectionReasons(world)).toEqual(["blocked_target"]);
-    expect(world.positions.get(unit)).toEqual({ x: 0.5, y: 0.5 });
+    expect(rejectionReasons(world)).toEqual([]);
+    expect(world.readNavigation(unit)?.destinationX).toBeCloseTo(2.9999, 12);
+    expect(world.readNavigation(unit)?.destinationY).toBe(1.4);
+    world.stepN(30);
+    expect(world.positions.get(unit)!.x).toBeCloseTo(2.9999, 12);
+    expect(world.positions.get(unit)!.y).toBe(1.4);
     expect(world.movements.has(unit)).toBe(false);
-    expect(world.readNavigation(unit)).toBeUndefined();
 
     const terrain = createWorld({
       seed: 1,
@@ -80,11 +83,73 @@ describe("MOVE navigation", () => {
     terrain.drainEvents();
     terrain.enqueueCommand(move([terrainUnit], { x: 2.1, y: 2.1 }, "terrain"));
     terrain.step();
-    expect(rejectionReasons(terrain)).toEqual(["blocked_target"]);
-    expect(terrain.positions.get(terrainUnit)).toEqual({ x: 0.5, y: 0.5 });
+    expect(rejectionReasons(terrain)).toEqual([]);
+    const effective = terrain.readNavigation(terrainUnit)!;
+    expect(effective.destinationX).toBeCloseTo(2.1, 12);
+    expect(effective.destinationY).toBeCloseTo(1.9999, 12);
+    terrain.stepN(30);
+    expect(terrain.positions.get(terrainUnit)!.x).toBeCloseTo(effective.destinationX, 12);
+    expect(terrain.positions.get(terrainUnit)!.y).toBeCloseTo(effective.destinationY, 12);
   });
 
-  it("checks authorization after bounds and before blocked_target", () => {
+  it("chooses the nearest reachable side, skipping closer disconnected cells", () => {
+    const world = createWorld({ seed: 1, map: testMap(5, 3) });
+    const unit = unitAt(world, 0.5, 1.5);
+    for (let y = 0; y < 3; y += 1) {
+      const wall = world.createEntity({ kind: "BUILDING", definitionId: "test_wall" });
+      world.placeSolidFootprint(wall, solid(2, y));
+    }
+    const requested = { x: 2.9, y: 1.5 };
+    const first = planMoveToTarget(world.grid!, world.positions.get(unit)!, requested)!;
+    expect(first.destinationX).toBeCloseTo(1.9999, 12);
+    expect(first.destinationY).toBe(1.5);
+    expect(planMoveToTarget(world.grid!, world.positions.get(unit)!, requested)).toEqual(first);
+    let previous = world.positions.get(unit)!;
+    for (const waypoint of first.waypoints) {
+      expect(segmentIsTraversable(world.grid!, previous, waypoint)).toBe(true);
+      previous = waypoint;
+    }
+  });
+
+  it("resolves blocked edge/corner endpoints without changing valid exact targets", () => {
+    const world = createWorld({ seed: 1, map: testMap(4, 4) });
+    const blocker = world.createEntity({ kind: "BUILDING", definitionId: "test_wall" });
+    world.placeSolidFootprint(blocker, solid(2, 2));
+    const start = { x: 0.5, y: 0.5 };
+    const edge = planMoveToTarget(world.grid!, start, { x: 2, y: 2 })!;
+    expect(segmentIsTraversable(world.grid!, edge.waypoints.at(-1)!, edge.waypoints.at(-1)!)).toBe(
+      true,
+    );
+    const valid = { x: 1.2, y: 1.3 };
+    expect(planMoveToTarget(world.grid!, start, valid)?.waypoints.at(-1)).toEqual(valid);
+    expect(planMoveToTarget(world.grid!, start, { x: 4, y: 2 })).toBeNull();
+    expect(planMoveToTarget(world.grid!, { x: 2.5, y: 2.5 }, { x: 2.5, y: 2.5 })).toBeNull();
+  });
+
+  it("breaks equal-distance ties by cellId and resolves each unit's reachable component", () => {
+    const world = createWorld({ seed: 1, map: testMap(5, 3), defaultMoveSpeed: 50 });
+    const left = unitAt(world, 0.5, 1.5);
+    const right = unitAt(world, 4.5, 1.5);
+    for (let y = 0; y < 3; y += 1) {
+      const blocker = world.createEntity({ kind: "BUILDING", definitionId: "test_wall" });
+      world.placeSolidFootprint(blocker, solid(2, y));
+    }
+    world.drainEvents();
+    world.enqueueCommand(move([left, right], { x: 2.5, y: 1.5 }));
+    world.step();
+    expect(rejectionReasons(world)).toEqual([]);
+    expect(world.positions.get(left)!.x).toBeCloseTo(1.9999, 12);
+    expect(world.positions.get(right)!.x).toBeCloseTo(3.0001, 12);
+
+    const tie = createWorld({ seed: 1, map: testMap(3, 3) });
+    const blocker = tie.createEntity({ kind: "BUILDING", definitionId: "test_wall" });
+    tie.placeSolidFootprint(blocker, solid(1, 1));
+    const route = planMoveToTarget(tie.grid!, { x: 0.5, y: 0.5 }, { x: 1.5, y: 1.5 })!;
+    expect(route.destinationX).toBe(1.5);
+    expect(route.destinationY).toBeCloseTo(0.9999, 12);
+  });
+
+  it("checks authorization after bounds and before resolving blocked targets", () => {
     const world = createWorld({ seed: 1, map: testMap(4, 4) });
     const own = unitAt(world, 0.5, 0.5);
     const foreign = unitAt(world, 0.5, 0.5, 1);

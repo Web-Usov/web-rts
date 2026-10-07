@@ -126,6 +126,36 @@ test("G4a open-terrain diagonal MOVE stays on a straight rendered line", async (
   errors.assertClean();
 });
 
+test("G4a blocked ground target moves to a nearby reachable point", async ({ page }) => {
+  const errors = attachPageErrorCapture(page);
+  await page.goto("/?transport=local");
+  await page.getByRole("button", { name: "Create room" }).click();
+  await expectHud(page, "Status", "connected");
+  await page.getByRole("button", { name: "Start" }).click();
+  await expectHud(page, "Phase", "RUNNING");
+  await selectLocalUnitByCanvasClick(page);
+  const start = await findLocalUnitCentroid(page);
+  // Visible ground just right of the cone, inside its wider 2x2 solid footprint.
+  const marker = { x: 668, y: 362 };
+  await canvasRightClick(page, marker);
+  await expectHud(page, "Destination", "marked");
+  await expect
+    .poll(async () => cssDistance(start, await findLocalUnitCentroid(page)))
+    .toBeGreaterThan(100);
+  let previous = await findLocalUnitCentroid(page);
+  let stable = 0;
+  for (let index = 0; index < 50 && stable < 3; index += 1) {
+    const next = await findLocalUnitCentroid(page);
+    stable = cssDistance(previous, next) < 1 ? stable + 1 : 0;
+    previous = next;
+  }
+  expect(stable, "unit must arrive and stop near the blocked marker").toBe(3);
+  // The visible cube centroid is above its ground position because of its height.
+  expect(cssDistance(marker, previous)).toBeLessThan(60);
+  await expectHud(page, "Last event", "—");
+  errors.assertClean();
+});
+
 async function saveLocalShot(page: Page, fileName: string): Promise<void> {
   const { mkdir } = await import("node:fs/promises");
   const path = await import("node:path");
