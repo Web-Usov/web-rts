@@ -6,9 +6,10 @@
   "scripts": {
     "build": "vite build",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.node.json --noEmit",
-    "test": "vitest run",
+    "test": "vitest run && node --test meshy/tests/*.test.js",
     "lint": "eslint .",
-    "dev": "vite"
+    "dev": "vite",
+    "build:meshy": "vite build --config vite.meshy.config.ts"
   },
   "devDependencies": {
     "@babylonjs/inspector": "^9.29.0",
@@ -31,7 +32,9 @@
     "@web-rts/match-adapter": "workspace:^",
     "@web-rts/protocol": "workspace:^",
     "@web-rts/simulation": "workspace:^",
+    "fflate": "^0.8.3",
     "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "react-dom": "^19.3.0",
+    "three": "^0.186.1"
   }
 }

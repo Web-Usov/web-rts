@@ -1,0 +1,47 @@
+name: Meshy Pages
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "apps/web/meshy/**"
+      - "apps/web/vite.meshy.config.ts"
+      - "apps/web/package.json"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/meshy-pages.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: meshy-pages
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Проверить просмотрщик
+        working-directory: apps/web
+        run: node --test meshy/tests/*.test.js
+      - name: Собрать страницу
+        run: pnpm build:meshy
+      - name: Подготовить корень сайта
+        run: |
+          touch apps/web/dist-pages/.nojekyll
+          printf '%s\n' '<!doctype html><html lang="ru"><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=./meshy/"><title>Mesh Studio</title><a href="./meshy/">Открыть Mesh Studio</a></html>' > apps/web/dist-pages/index.html
+      - name: Опубликовать статическую сборку
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: gh-pages
+          folder: apps/web/dist-pages
+          clean: true

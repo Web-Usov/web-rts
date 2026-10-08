@@ -35,6 +35,8 @@ pnpm dev
 
 ## Docker / LAN
 
+Просмотр и конвертация 3D-ассетов: [Mesh Studio](https://web-usov.github.io/web-rts/meshy/), локально `http://localhost:5173/meshy/`. Импорт по файлу или прямой ссылке, параметры просмотра и шесть форматов экспорта. Сборка Pages: `pnpm build:meshy`. [Инструкция](./docs/meshy-viewer.md).
+
 Свежий clone можно поднять без правки исходников:
 
 ```bash
