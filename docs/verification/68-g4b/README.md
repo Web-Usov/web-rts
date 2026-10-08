@@ -97,9 +97,9 @@ node scripts/benchmark-navigation.mjs docs/verification/68-g4b/benchmark.json
 
 Инструмент: внутренний `mcp__cua_repl`, Codex In-app Browser, desktop viewport 1280×720. Web/server подняты из task worktree. Local: Create room → Start → выделение unit → свободная диагональ → blocked-target к Sacred Site. Remote: две вкладки → create/join → Start → MOVE игрока 0, наблюдение с обоих клиентов. Кадры ниже фиксируют начальное состояние и результаты. Console/runtime ошибки финального flow проверены через tab.dev.logs.
 
-![Local до MOVE](./local-before.png)
-![Local диагональный MOVE](./local-diagonal.png)
-![Local blocked target](./local-blocked.png)
-![Remote до MOVE](./remote-before.png)
-![Remote после MOVE, player 0](./remote-after-a.png)
-![Remote после MOVE, player 1](./remote-after-b.png)
+![Local до MOVE](./local-before.jpg)
+![Local диагональный MOVE](./local-diagonal.jpg)
+![Local blocked target](./local-blocked.jpg)
+![Remote до MOVE](./remote-before.jpg)
+![Remote после MOVE, player 0](./remote-after-a.jpg)
+![Remote после MOVE, player 1](./remote-after-b.jpg)
