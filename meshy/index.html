@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>Mesh Studio — просмотр и экспорт 3D</title>
+    <script type="module" crossorigin src="./assets/index-BzdAl53G.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-CjGESRO0.css">
+  </head>
+  <body>
+    <div class="app">
+      <header class="header">
+        <a class="brand" href="#" aria-label="Mesh Studio"
+          ><svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
+            <path
+              d="M16 2 29 9.5v13L16 30 3 22.5v-13L16 2Z"
+              stroke="currentColor"
+              stroke-width="1.5"
+            />
+            <path
+              d="m3 9.5 13 8 13-8M16 30V17.5M16 2v15.5"
+              stroke="currentColor"
+              stroke-width="1.5"
+            /></svg
+          ><span>MESH<span class="brand-light">STUDIO</span></span></a
+        >
+        <span class="local-label"><i></i> Локально в браузере</span>
+        <div class="header-actions">
+          <button id="url-button" class="button ghost">По ссылке ↗</button
+          ><button id="demo-button" class="button ghost">Открыть пример</button
+          ><button id="open-button" class="button accent">
+            <span aria-hidden="true">＋</span> Открыть модель
+          </button>
+        </div>
+        <input
+          id="file-input"
+          type="file"
+          accept=".meshy,.glb,.gltf,.obj,.mtl,.stl,.ply,.bin,.png,.jpg,.jpeg,.webp"
+          multiple
+          hidden
+        />
+      </header>
+      <main class="workspace">
+        <section id="viewport" class="viewport" aria-label="3D-просмотр модели">
+          <div class="viewport-heading">
+            <span class="eyebrow">РАБОЧАЯ ОБЛАСТЬ</span>
+            <div class="file-heading">
+              <span id="file-title">Нет модели</span
+              ><span id="file-extension" class="file-extension">3D</span>
+            </div>
+          </div>
+          <div class="view-tools" aria-label="Управление камерой">
+            <button
+              id="fit-button"
+              class="icon-button"
+              title="Вписать модель"
+              aria-label="Вписать модель"
+            >
+              ⌖</button
+            ><button
+              id="snapshot-button"
+              class="icon-button"
+              title="Сохранить изображение PNG"
+              aria-label="Сохранить изображение PNG"
+            >
+              ▣
+            </button>
+          </div>
+          <div id="empty-state" class="empty-state" hidden>
+            <span class="empty-symbol">◇</span>
+            <h1>Модель в центре внимания.</h1>
+            <p>Перетащите 3D-файл сюда или откройте его с устройства.</p>
+            <button id="empty-open" class="button accent">Выбрать файл</button
+            ><span class="accepted">MESHY · GLB · glTF · OBJ · STL · PLY</span>
+          </div>
+          <div id="drop-overlay" class="drop-overlay" hidden>
+            <span>Отпустите, чтобы открыть</span
+            ><small>Для glTF и OBJ добавьте связанные файлы вместе с моделью</small>
+          </div>
+          <div id="loading" class="loading" hidden>
+            <span class="spinner"></span><span id="loading-text">Открываем модель…</span>
+          </div>
+          <div class="camera-strip" aria-label="Ракурсы">
+            <span>РАКУРС</span><button data-view="front">Спереди</button
+            ><button data-view="side">Сбоку</button><button data-view="top">Сверху</button
+            ><button data-view="iso" class="active">3/4</button>
+          </div>
+          <div class="viewport-footer">
+            <span>Вращение — мышью <b>·</b> Масштаб — колесом <b>·</b> Сдвиг — правой кнопкой</span
+            ><span class="up-label">Y ↑</span>
+          </div>
+          <button id="mobile-inspector" class="mobile-inspector button">
+            Параметры <span>↗</span>
+          </button>
+        </section>
+        <aside id="inspector" class="inspector" aria-label="Параметры модели">
+          <div class="inspector-header">
+            <span>Инспектор</span
+            ><button id="close-inspector" class="icon-button" aria-label="Закрыть параметры">
+              ×
+            </button>
+          </div>
+          <nav class="tabs" aria-label="Панели">
+            <button id="view-tab" class="tab active" aria-selected="true" role="tab">
+              Просмотр</button
+            ><button id="export-tab" class="tab" aria-selected="false" role="tab">
+              Экспорт <span>↗</span>
+            </button>
+          </nav>
+          <div class="panel-scroll">
+            <div id="view-panel">
+              <section class="control-section">
+                <h2>Отображение</h2>
+                <div class="mode-switch" role="group" aria-label="Режим отображения">
+                  <button class="active" data-mode="material">Материал</button
+                  ><button data-mode="clay">Глина</button><button data-mode="normal">Нормали</button
+                  ><button data-mode="wire">Каркас</button>
+                </div>
+                <label class="toggle-row"
+                  >Автовращение<input id="auto-rotate" type="checkbox" role="switch" /><span
+                    class="toggle"
+                  ></span></label
+                ><label class="toggle-row"
+                  >Сетка<input id="grid-toggle" type="checkbox" role="switch" checked /><span
+                    class="toggle"
+                  ></span></label
+                ><label class="toggle-row"
+                  >Оси координат<input id="axes-toggle" type="checkbox" role="switch" /><span
+                    class="toggle"
+                  ></span></label
+                ><label class="toggle-row"
+                  >Двусторонние поверхности<input
+                    id="double-sided"
+                    type="checkbox"
+                    role="switch" /><span class="toggle"></span
+                ></label>
+              </section>
+              <section class="control-section">
+                <h2>Свет и фон</h2>
+                <label class="range-label" for="exposure"
+                  >Экспозиция<output id="exposure-value">1.0</output></label
+                ><input id="exposure" type="range" min="0.2" max="3" step="0.1" value="1" /><label
+                  class="range-label"
+                  for="environment"
+                  >Окружение<output id="environment-value">1.0</output></label
+                ><input id="environment" type="range" min="0" max="3" step="0.1" value="1" /><label
+                  class="range-label"
+                  for="light"
+                  >Основной свет<output id="light-value">2.0</output></label
+                ><input id="light" type="range" min="0" max="6" step="0.1" value="2" />
+                <div class="range-label background-label">Фон</div>
+                <div class="swatches" aria-label="Цвет фона">
+                  <button
+                    class="swatch active"
+                    data-background="#20242a"
+                    style="--swatch: #20242a"
+                    aria-label="Графитовый фон"
+                    title="Графит"
+                  ></button
+                  ><button
+                    class="swatch"
+                    data-background="#090b0e"
+                    style="--swatch: #090b0e"
+                    aria-label="Чёрный фон"
+                    title="Чёрный"
+                  ></button
+                  ><button
+                    class="swatch"
+                    data-background="#696d73"
+                    style="--swatch: #696d73"
+                    aria-label="Серый фон"
+                    title="Серый"
+                  ></button
+                  ><button
+                    class="swatch"
+                    data-background="#e4e5e7"
+                    style="--swatch: #e4e5e7"
+                    aria-label="Светлый фон"
+                    title="Светлый"
+                  ></button
+                  ><label class="custom-color" title="Свой цвет"
+                    ><input
+                      id="background-color"
+                      type="color"
+                      value="#20242a"
+                      aria-label="Свой цвет фона"
+                    />＋</label
+                  >
+                </div>
+              </section>
+              <section id="animation-section" class="control-section" hidden>
+                <h2>Анимация</h2>
+                <label for="animation-select" class="small-label">Клип</label
+                ><select id="animation-select"></select
+                ><label class="toggle-row"
+                  >Воспроизведение<input
+                    id="animation-play"
+                    type="checkbox"
+                    role="switch"
+                    checked /><span class="toggle"></span></label
+                ><label class="range-label" for="animation-speed"
+                  >Скорость<output id="animation-speed-value">1.0×</output></label
+                ><input id="animation-speed" type="range" min="0.1" max="2" step="0.1" value="1" />
+              </section>
+              <section class="control-section info-section">
+                <h2>О модели <span id="source-size">—</span></h2>
+                <dl class="model-stats">
+                  <div>
+                    <dt>Вершины</dt>
+                    <dd id="vertices">—</dd>
+                  </div>
+                  <div>
+                    <dt>Треугольники</dt>
+                    <dd id="triangles">—</dd>
+                  </div>
+                  <div>
+                    <dt>Меши / материалы</dt>
+                    <dd id="meshes-materials">—</dd>
+                  </div>
+                  <div>
+                    <dt>Текстуры</dt>
+                    <dd id="textures-count">—</dd>
+                  </div>
+                  <div>
+                    <dt>Анимации / скелет</dt>
+                    <dd id="animations-info">—</dd>
+                  </div>
+                </dl>
+                <div id="texture-list" class="texture-list"></div>
+              </section>
+              <button id="reset-button" class="button reset-button">
+                ↺ &nbsp; Сбросить просмотр
+              </button>
+            </div>
+            <div id="export-panel" hidden>
+              <section class="control-section">
+                <h2>Формат файла</h2>
+                <div
+                  id="format-options"
+                  class="format-options"
+                  role="radiogroup"
+                  aria-label="Формат экспорта"
+                ></div>
+                <p id="format-note" class="format-note"></p>
+              </section>
+              <section class="control-section">
+                <h2>Параметры экспорта</h2>
+                <label for="export-name" class="small-label">Имя файла</label
+                ><input
+                  id="export-name"
+                  type="text"
+                  value="model"
+                  maxlength="80"
+                  autocomplete="off"
+                />
+                <div id="texture-size-row">
+                  <label for="texture-size" class="small-label">Размер текстур</label
+                  ><select id="texture-size">
+                    <option value="4096">Оригинал, до 4096 px</option>
+                    <option value="2048">До 2048 px</option>
+                    <option value="1024">До 1024 px</option>
+                    <option value="512">До 512 px</option>
+                  </select>
+                </div>
+                <label id="include-animation-row" class="toggle-row"
+                  >Сохранить анимации<input
+                    id="include-animations"
+                    type="checkbox"
+                    role="switch"
+                    checked /><span class="toggle"></span
+                ></label>
+                <p class="export-hint">
+                  Экспортируется сама модель. Камера, сетка, освещение и режим просмотра в файл не
+                  попадают.
+                </p>
+              </section>
+              <button id="export-button" class="button accent export-button" disabled>
+                Экспортировать GLB <span>↓</span>
+              </button>
+              <p id="export-status" class="export-status" role="status" aria-live="polite"></p>
+            </div>
+          </div>
+          <footer class="inspector-footer"><i></i> Файлы остаются на вашем устройстве</footer>
+        </aside>
+      </main>
+      <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+    </div>
+    <dialog id="url-dialog" aria-labelledby="url-title">
+      <form id="url-form">
+        <h1 id="url-title">Открыть по ссылке</h1>
+        <p>Прямая ссылка на 3D-файл. Модель и текстуры скачиваются в ваш браузер.</p>
+        <label class="small-label" for="model-url">Ссылка на модель</label>
+        <input
+          id="model-url"
+          type="url"
+          required
+          placeholder="https://example.com/model.glb"
+          autocomplete="off"
+        />
+        <label class="small-label" for="url-format">Формат</label>
+        <select id="url-format">
+          <option value="auto">Определить автоматически</option>
+          <option value="meshy">MESHY</option>
+          <option value="glb">GLB</option>
+          <option value="gltf">glTF</option>
+          <option value="obj">OBJ</option>
+          <option value="stl">STL</option>
+          <option value="ply">PLY</option>
+        </select>
+        <p class="export-hint">
+          Сервер должен разрешать загрузку с других сайтов (CORS). Ссылки на страницы просмотра не
+          подходят.
+        </p>
+        <p id="url-status" role="status" aria-live="polite"></p>
+        <div class="dialog-actions">
+          <button id="url-cancel" class="button ghost" type="button">Закрыть</button
+          ><button id="url-submit" class="button accent" type="submit">Скачать и открыть</button>
+        </div>
+      </form>
+    </dialog>
+    <script type="text/plain" id="third-party-notices">
+      Three.js
+      The MIT License
+
+      Copyright © 2010-2026 three.js authors
+
+      Permission is hereby granted, free of charge, to any person obtaining a copy
+      of this software and associated documentation files (the "Software"), to deal
+      in the Software without restriction, including without limitation the rights
+      to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+      copies of the Software, and to permit persons to whom the Software is
+      furnished to do so, subject to the following conditions:
+
+      The above copyright notice and this permission notice shall be included in
+      all copies or substantial portions of the Software.
+
+      THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+      IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+      FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+      AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+      LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+      OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+      THE SOFTWARE.
+
+
+      fflate
+      MIT License
+
+      Copyright (c) 2026 Arjun Barrett
+
+      Permission is hereby granted, free of charge, to any person obtaining a copy
+      of this software and associated documentation files (the "Software"), to deal
+      in the Software without restriction, including without limitation the rights
+      to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+      copies of the Software, and to permit persons to whom the Software is
+      furnished to do so, subject to the following conditions:
+
+      The above copyright notice and this permission notice shall be included in all
+      copies or substantial portions of the Software.
+
+      THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+      IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+      FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+      AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+      LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+      OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+      SOFTWARE.
+
+      meshy2glb — format research and decoder
+      MIT License
+
+      Copyright (c) 2026 Amal David
+
+      Permission is hereby granted, free of charge, to any person obtaining a copy
+      of this software and associated documentation files (the "Software"), to deal
+      in the Software without restriction, including without limitation the rights
+      to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+      copies of the Software, and to permit persons to whom the Software is
+      furnished to do so, subject to the following conditions:
+
+      The above copyright notice and this permission notice shall be included in all
+      copies or substantial portions of the Software.
+
+      THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+      IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+      FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+      AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+      LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+      OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+      SOFTWARE.
+
+
+      meshoptimizer decoder, bundled with Three.js
+      Copyright (C) 2016-2026, by Arseny Kapoulkine. MIT License (permission and warranty terms as above).
+    </script>
+  </body>
+</html>
