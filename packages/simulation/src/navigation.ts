@@ -40,6 +40,12 @@ export interface NavigationTask {
   readonly validatedRevision: number;
 }
 
+/** Optional deterministic benchmark counters; never projected to clients. */
+export interface NavigationWork {
+  astarExpandedCells: number;
+  blockedTargetVisitedCells: number;
+}
+
 interface OpenNode {
   readonly f: number;
   readonly h: number;
@@ -102,6 +108,7 @@ export function findPath(
   grid: WalkGrid,
   start: CellCoord,
   goals: readonly CellCoord[],
+  work?: NavigationWork,
 ): CellCoord[] | null {
   if (!grid.isCellInBounds(start) || !grid.isWalkable(start)) {
     return null;
@@ -152,6 +159,7 @@ export function findPath(
       continue;
     }
     expanded[current.cellId] = 1;
+    if (work) work.astarExpandedCells += 1;
     if (goalIds.has(current.cellId)) {
       const path = reconstruct(cameFrom, current.cellId, startId, width);
       return path.length === 0 ? null : path;
@@ -188,10 +196,11 @@ export function planMoveToTarget(
   grid: SpatialGrid,
   origin: Vec2,
   requested: Vec2,
+  work?: NavigationWork,
 ): NavigationTask | null {
   if (!grid.containsWorldPoint(requested)) return null;
   if (segmentIsTraversable(grid, requested, requested)) {
-    return planMove(grid, origin, requested);
+    return planMove(grid, origin, requested, work);
   }
   const start = grid.worldToCell(origin);
   if (!grid.isCellInBounds(start) || !grid.isWalkable(start)) return null;
@@ -206,6 +215,7 @@ export function planMoveToTarget(
   const inset = 0.0001;
   for (let index = 0; index < queue.length; index += 1) {
     const cell = queue[index]!;
+    if (work) work.blockedTargetVisitedCells += 1;
     const center = grid.cellToWorldCenter(cell);
     const point = {
       x: Math.max(center.x - 0.5 + inset, Math.min(center.x + 0.5 - inset, requested.x)),
@@ -227,7 +237,7 @@ export function planMoveToTarget(
       queue.push(next);
     }
   }
-  return best === null ? null : planMove(grid, origin, best);
+  return best === null ? null : planMove(grid, origin, best, work);
 }
 
 /** Plans a MOVE from a world position to an exact world destination. */
@@ -235,8 +245,9 @@ export function planMove(
   grid: SpatialGrid,
   origin: Vec2,
   destination: Vec2,
+  work?: NavigationWork,
 ): NavigationTask | null {
-  const pathCells = findPath(grid, grid.worldToCell(origin), [grid.worldToCell(destination)]);
+  const pathCells = findPath(grid, grid.worldToCell(origin), [grid.worldToCell(destination)], work);
   if (pathCells === null) {
     return null;
   }
@@ -260,7 +271,8 @@ export function prepareNavigation(
   grid: SpatialGrid,
   task: NavigationTask,
   position: Vec2,
-): NavigationTask | null {
+  reserveReplan: () => boolean,
+): NavigationTask | null | "deferred" {
   const waypoint = task.waypoints[task.waypointIndex];
   if (waypoint === undefined) {
     return null;
@@ -271,6 +283,7 @@ export function prepareNavigation(
   if (segmentIsTraversable(grid, position, waypoint)) {
     return { ...task, validatedRevision: grid.topologyRevision };
   }
+  if (!reserveReplan()) return "deferred";
   return planMove(grid, position, { x: task.destinationX, y: task.destinationY });
 }
 

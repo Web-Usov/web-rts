@@ -12,6 +12,7 @@ import {
 } from "./config.js";
 import { EventQueue, type SimulationEvent } from "./events.js";
 import { planMoveToTarget, type NavigationTask } from "./navigation.js";
+import { EntityPathQueryLane } from "./path-query-lane.js";
 import { createSeededRng, type Rng } from "./rng.js";
 import {
   SpatialGrid,
@@ -53,6 +54,8 @@ export class World {
   readonly owners = new ComponentStore<Owner>();
   readonly controllers = new ComponentStore<Controller>();
 
+  private activeTaskQueries = 0;
+  private aiQueries = 0;
   private tickCount = 0;
   private nextEntityId: EntityId = 1;
   private nextObjectiveId: ObjectiveId = 1;
@@ -223,20 +226,26 @@ export class World {
     return this.commands.size;
   }
 
-  /**
-   * Advance simulation by one fixed tick:
-   * 1) apply queued commands
-   * 2) run systems
-   * 3) increment tick counter
-   */
+  /** Fresh internal diagnostics for the most recently completed tick. */
+  readPathQueryMetrics(): { activeTaskQueries: number; aiQueries: number } {
+    return { activeTaskQueries: this.activeTaskQueries, aiQueries: this.aiQueries };
+  }
+
+  /** Advance one fixed tick: apply commands, run systems, increment tick. */
   step(): void {
+    const activeTaskLane = new EntityPathQueryLane(this.config.pathQueriesPerTick.activeTaskBudget);
+    // G9 will construct its own EntityPathQueryLane(aiBudget) and report usage here.
+    this.aiQueries = 0;
     this.applyCommands();
     runMovementSystem(
       this.positions,
       this.movements,
       this.config.tickDurationSeconds,
-      this.grid === null ? undefined : { tasks: this.navigations, grid: this.grid },
+      this.grid === null
+        ? undefined
+        : { tasks: this.navigations, grid: this.grid, lane: activeTaskLane },
     );
+    this.activeTaskQueries = activeTaskLane.used;
     this.tickCount += 1;
   }
 

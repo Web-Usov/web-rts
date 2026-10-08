@@ -165,3 +165,12 @@ describe("toGameEvent", () => {
     expect(gameEventSchema.safeParse(event).success).toBe(true);
   });
 });
+
+it("checks the MOVE cap at startup without a simulation/protocol dependency", async () => {
+  const { createGameplayRuntime } = await import("./index.js");
+  const setup = { seed: 1, mapId: "foundation", participants: [{ playerId: 0 }] };
+  expect(() =>
+    createGameplayRuntime(setup, {}, { pathQueriesPerTick: { commandBudget: 15 } }),
+  ).toThrow(/MAX_MOVE_ENTITY_IDS/);
+  expect(createGameplayRuntime(setup).readMetrics().commandBudgetRemaining).toBe(16);
+});

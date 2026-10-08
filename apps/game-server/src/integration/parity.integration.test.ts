@@ -10,6 +10,7 @@ import {
 } from "@web-rts/protocol";
 import {
   FOUNDATION_PARITY_FIXTURE,
+  SCHEDULING_PARITY_FIXTURE,
   PARITY_FINISH_AFTER_STEPS,
   createFinishingMatchRuntime,
   normalizeGameStateView,
@@ -59,6 +60,7 @@ describe("Local/Remote parity (Remote shell)", () => {
   });
 
   it.each([
+    SCHEDULING_PARITY_FIXTURE,
     FOUNDATION_PARITY_FIXTURE,
     {
       ...FOUNDATION_PARITY_FIXTURE,

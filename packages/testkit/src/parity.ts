@@ -128,6 +128,28 @@ export const FOUNDATION_PARITY_FIXTURE: MatchParityFixture = {
   ],
 };
 
+/** G4b: 20 syntactically valid commands admitted together, only 16 processed. */
+export const SCHEDULING_PARITY_FIXTURE: MatchParityFixture = {
+  seed: 21,
+  mapId: "foundation",
+  localPlayerId: 0,
+  ticks: 1,
+  steps: Array.from({ length: 20 }, (_, index) => ({
+    atTick: 0,
+    payload: {
+      type: "MOVE",
+      commandId: `budget-${index}`,
+      clientSequence: index + 1,
+      entityIds: [999],
+      target: { x: 0, y: 0 },
+    },
+  })),
+  expectedRejections: Array.from({ length: 16 }, (_, index) => ({
+    commandId: `budget-${index}`,
+    reason: "not_your_unit",
+  })),
+};
+
 export type NormalizedGameStateView = Omit<GameStateView, "roomId" | "players">;
 
 /** Drops shell/transport metadata so Local and Remote gameplay views compare directly. */

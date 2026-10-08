@@ -8,6 +8,7 @@ export {
 } from "./scenario.js";
 export {
   FOUNDATION_PARITY_FIXTURE,
+  SCHEDULING_PARITY_FIXTURE,
   PARITY_FINISH_AFTER_STEPS,
   createFinishingMatchRuntime,
   normalizeGameStateView,

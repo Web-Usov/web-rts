@@ -1,3 +1,4 @@
+import { createGameplayRuntime } from "@web-rts/match-adapter";
 import {
   GAME_DATA_VERSION,
   PROTOCOL_VERSION,
@@ -8,7 +9,7 @@ import {
   type MatchPhase,
 } from "@web-rts/protocol";
 import { projectGameStateView, toGameEvent, toSimulationCommand } from "@web-rts/match-adapter";
-import { createMatchRuntime, type MatchRuntime, type MatchSetup } from "@web-rts/simulation";
+import { type MatchRuntime, type MatchSetup } from "@web-rts/simulation";
 import {
   LOCAL_PLAYER_ID,
   LOCAL_ROOM_ID,
@@ -39,7 +40,7 @@ export function createLocalMatchRuntime(
   schedule: LocalTickSchedule,
   options: LocalMatchRuntimeOptions = {},
 ): LocalMatchRuntime {
-  const createRuntime = options.createRuntime ?? createMatchRuntime;
+  const createRuntime = options.createRuntime ?? createGameplayRuntime;
   let sessionId: number | null = null;
   let phase: MatchPhase = "LOBBY";
   let seed = 0;
