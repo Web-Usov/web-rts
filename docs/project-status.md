@@ -55,7 +55,10 @@ Implementation checkpoint:
 - G1 / #54 — completed (PR #73);
 - G2 / #55 — completed (PR #74);
 - G3 / #56 — completed (PR #76);
-- **current gameplay stage: G4a / #57 — Deterministic navigation / MOVE core**.
+- G4a / #57 — completed (PR #81): deterministic navigation / MOVE core;
+- G4b / #68 — completed (PR #84): fair command scheduling / path budgets;
+- G4c / #69 — completed (PR #83): deterministic breach-aware planner;
+- **next gameplay stages: G5 / #58 (Economy) и G6 / #59 (Combat)** — готовы к параллельной реализации.
 
 Art Direction дополнительно уточнён через #75 / PR #77: основной production-style target — **Stylized Low-Poly / Soft Hand-Painted**.
 
@@ -66,11 +69,11 @@ GitHub epic #50 является актуальным tracker implementation dec
  ├─ #55 G2 Session/input hardening ✅
  └─ #56 G3 Entity/Objective/Map spatial foundation ✅
        ↓
-     #57 G4a Navigation / MOVE core ← CURRENT
-       ├─ #68 G4b Fair scheduling / path budgets
-       └─ #69 G4c Breach-aware planner
+     #57 G4a Navigation / MOVE core ✅
+       ├─ #68 G4b Fair scheduling / path budgets ✅
+       └─ #69 G4c Breach-aware planner ✅
             ↓
-       #58 G5 Economy  ||  #59 G6 Combat
+       #58 G5 Economy  ||  #59 G6 Combat ← NEXT (parallel)
             ↓
           #60 G7 Construction
           ├─ #61 G8 Garrison
@@ -91,7 +94,11 @@ GitHub epic #50 является актуальным tracker implementation dec
              #67 G14 Full Local/Remote E2E
 ```
 
-G1–G3 уже завершены. Сейчас следующий обязательный stage — #57 G4a. После #57 можно параллельно запускать #68 G4b и #69 G4c; после #68 — #58 G5 и #59 G6. Практический максимум остаётся **2 Coding Agents одновременно**.
+G1–G4 завершены. После G4b разблокированы #58 G5 (Economy) и #59 G6 (Combat), которые можно вести параллельно. Для G9 дополнительно требуется уже завершённый G4c (#69). Практический максимум остаётся **2 Coding Agents одновременно**.
+
+Отдельные follow-up задачи не входят в критический путь G4→G5/G6: #87 — измеренная CPU-стоимость blocked-target resolution на больших картах (важно решить до масштабирования карт/AI), #82 — UX обратной связи для скорректированной MOVE destination. Оба вопроса не отменяют завершённый контракт G4.
+
+Параллельный art track: #80 — Core #002 Visual Pack для Worker, Soldier, зданий и Sacred Site; визуальным источником истины остаётся `docs/art-direction.md`. Это подготовка к G13 (#66), не самостоятельное расширение gameplay scope.
 
 Критические границы decomposition:
 
