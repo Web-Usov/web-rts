@@ -149,3 +149,44 @@ test("abort prevents requests and is preserved as cancellation", async () => {
   );
   assert.equal(fetched, false);
 });
+
+test("animation downloads accept FBX and glTF, reject static formats, and share the byte budget", async () => {
+  const fbx = await fetchModel("https://host/walk.fbx?download=1", {
+    animation: true,
+    fetcher: async (url) => response("; FBX 7.4.0 project file", url),
+  });
+  assert.equal(fbx.files[0].name, "walk.fbx");
+  assert.equal(fbx.resources.size, 0);
+  await assert.rejects(
+    fetchModel("https://host/model.obj", {
+      animation: true,
+      fetcher: async (url) => response("v 0 0 0", url),
+    }),
+    /GLB.*glTF.*FBX/,
+  );
+  await assert.rejects(
+    fetchModel("https://host/walk.fbx", {
+      animation: true,
+      maxBytes: 5,
+      fetcher: async (url) => response("; FBX 7.4.0 project file", url),
+    }),
+    /лимит/,
+  );
+});
+
+test("animation glTF only downloads motion buffers, never appearance-only images", async () => {
+  const calls = [];
+  const json = JSON.stringify({
+    asset: { version: "2.0" },
+    buffers: [{ uri: "motion.bin" }],
+    images: [{ uri: "private-texture.png" }],
+  });
+  await fetchModel("https://host/motion.gltf", {
+    animation: true,
+    fetcher: async (url) => {
+      calls.push(url);
+      return response(url.endsWith(".gltf") ? json : "bin", url);
+    },
+  });
+  assert.deepEqual(calls, ["https://host/motion.gltf", "https://host/motion.bin"]);
+});

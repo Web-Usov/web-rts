@@ -5,6 +5,7 @@ import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { loadFiles, disposeModel } from "./loaders.js";
 import { formats, exportModel, safeName, download, textureCanvas } from "./exports.js";
 import { createRigEditor } from "./rig-editor.js";
+import { createAnimationEditor } from "./animation-editor.js";
 import { fetchModel } from "./remote.js";
 import { demoBase64 } from "./demo.js";
 
@@ -66,6 +67,7 @@ let currentView = "iso",
   displaySize = new THREE.Vector3(1, 1, 1),
   animationAction = null;
 let rigEditor = null;
+let animationEditor = null;
 const formatNumber = new Intl.NumberFormat("ru-RU");
 const sizeLabel = (bytes) =>
   bytes >= 1024 * 1024
@@ -87,6 +89,7 @@ function toast(message, error = false) {
 function loading(value, message = "Открываем модель…") {
   busy = value;
   rigEditor?.setBusy(value);
+  animationEditor?.setBusy(value);
   $("loading").hidden = !value;
   $("loading-text").textContent = message;
   $("url-button").disabled = value;
@@ -169,7 +172,14 @@ function resetView() {
 function setAnimation(index) {
   mixer?.stopAllAction();
   if (!mixer || !model.animations[index]) return;
+  $("animation-select").value = String(index);
   animationAction = mixer.clipAction(model.animations[index]);
+  animationAction.reset();
+  animationAction.setLoop(
+    $("animation-loop").checked ? THREE.LoopRepeat : THREE.LoopOnce,
+    $("animation-loop").checked ? Infinity : 1,
+  );
+  animationAction.clampWhenFinished = true;
   animationAction.play();
   animationAction.paused = !$("animation-play").checked;
 }
@@ -298,6 +308,7 @@ function replaceRigRoot(root, animations) {
   setMode(currentMode);
   inspectModel();
   updateExportOptions();
+  animationEditor?.modelChanged();
 }
 
 async function openFiles(files, { onError } = {}) {
@@ -327,6 +338,7 @@ async function openFiles(files, { onError } = {}) {
     displayGroup.add(model.root);
     displayGroup.updateMatrixWorld(true);
     prepareAnimations(true);
+    animationEditor?.modelChanged();
     $("file-title").textContent = model.file.name;
     $("file-extension").textContent = model.extension.toUpperCase();
     $("export-name").value = safeName(model.file.name);
@@ -352,7 +364,7 @@ function openDemo() {
   return openFiles([new File([data], "warrior.meshy", { type: "application/octet-stream" })]);
 }
 function setPanel(panel) {
-  for (const name of ["view", "rig", "export"]) {
+  for (const name of ["view", "rig", "motion", "export"]) {
     const selected = name === panel;
     $(`${name}-panel`).hidden = !selected;
     $(`${name}-tab`).classList.toggle("active", selected);
@@ -503,6 +515,7 @@ $("file-input").addEventListener("change", (event) => openFiles(event.target.fil
 $("demo-button").addEventListener("click", openDemo);
 $("view-tab").addEventListener("click", () => setPanel("view"));
 $("rig-tab").addEventListener("click", () => setPanel("rig"));
+$("motion-tab").addEventListener("click", () => setPanel("motion"));
 $("export-tab").addEventListener("click", () => setPanel("export"));
 $("mobile-inspector").addEventListener("click", () => $("inspector").classList.add("open"));
 $("close-inspector").addEventListener("click", () => $("inspector").classList.remove("open"));
@@ -567,10 +580,20 @@ $("animation-select").addEventListener("change", (event) =>
 );
 $("animation-play").addEventListener("change", (event) => {
   if (animationAction) animationAction.paused = !event.target.checked;
+  else if (event.target.checked) setAnimation(Number($("animation-select").value));
 });
 $("animation-speed").addEventListener("input", (event) => {
   if (mixer) mixer.timeScale = Number(event.target.value);
   $("animation-speed-value").textContent = `${Number(event.target.value).toFixed(1)}×`;
+});
+$("animation-loop").addEventListener("change", () =>
+  setAnimation(Number($("animation-select").value)),
+);
+$("animation-rest").addEventListener("click", () => {
+  mixer?.stopAllAction();
+  animationAction = null;
+  $("animation-play").checked = false;
+  rigEditor?.prepareAnimation();
 });
 let dragDepth = 0;
 document.addEventListener("dragenter", (event) => {
@@ -640,6 +663,26 @@ rigEditor = createRigEditor({
     mixer?.stopAllAction();
     animationAction = null;
     $("animation-play").checked = false;
+  },
+});
+animationEditor = createAnimationEditor({
+  getModel: () => model,
+  loading,
+  message: toast,
+  beforeApply: () => {
+    rigEditor.assertExport("glb");
+    rigEditor.prepareAnimation();
+  },
+  addClip: (clip) => {
+    mixer?.stopAllAction();
+    mixer?.uncacheRoot(model.root);
+    const existing = model.animations.findIndex((c) => c.name === clip.name);
+    if (existing >= 0) model.animations[existing] = clip;
+    else model.animations.push(clip);
+    prepareAnimations(true);
+    setAnimation(existing >= 0 ? existing : model.animations.length - 1);
+    inspectModel();
+    updateExportOptions();
   },
 });
 await openDemo();

@@ -64,6 +64,7 @@ export async function fetchModel(
     onProgress = () => {},
     fetcher = globalThis.fetch,
     maxBytes = MAX_BYTES,
+    animation = false,
   } = {},
 ) {
   const requested = modelURL(value);
@@ -146,7 +147,12 @@ export async function fetchModel(
     return result;
   }
   const source = await read(requested.href);
-  const extension = detectFormat(source.bytes.buffer, source.url, format);
+  const extension =
+    animation && (format === "fbx" || new URL(source.url).pathname.toLowerCase().endsWith(".fbx"))
+      ? "fbx"
+      : detectFormat(source.bytes.buffer, source.url, format);
+  if (animation && !["glb", "gltf", "fbx"].includes(extension))
+    throw new Error("Для анимации выберите GLB, glTF или FBX.");
   let name;
   try {
     name = decodeURIComponent(new URL(source.url).pathname.split("/").pop()) || "model";
@@ -166,7 +172,7 @@ export async function fetchModel(
       ? await decodeMeshy(source.bytes.buffer)
       : source.bytes.buffer;
     const json = gltfDocument(buffer);
-    for (const entry of [...(json.buffers || []), ...(json.images || [])]) {
+    for (const entry of [...(json.buffers || []), ...(animation ? [] : json.images || [])]) {
       if (entry.uri) await resource(entry.uri, source.url);
     }
   } else if (extension === "obj") {

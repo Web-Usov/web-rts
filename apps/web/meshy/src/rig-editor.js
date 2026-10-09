@@ -414,6 +414,9 @@ export function createRigEditor({
   return {
     clear,
     update,
+    prepareAnimation() {
+      resetPose();
+    },
     setActive(value) {
       active = value;
       if (value && draft) resetPose();

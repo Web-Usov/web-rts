@@ -103,6 +103,7 @@
             <button id="view-tab" class="tab active" aria-selected="true" role="tab">
               Просмотр</button
             ><button id="rig-tab" class="tab" aria-selected="false" role="tab">Скелет</button
+            ><button id="motion-tab" class="tab" aria-selected="false" role="tab">Анимации</button
             ><button id="export-tab" class="tab" aria-selected="false" role="tab">
               Экспорт <span>↗</span>
             </button>
@@ -187,20 +188,6 @@
                     />＋</label
                   >
                 </div>
-              </section>
-              <section id="animation-section" class="control-section" hidden>
-                <h2>Анимация</h2>
-                <label for="animation-select" class="small-label">Клип</label
-                ><select id="animation-select"></select
-                ><label class="toggle-row"
-                  >Воспроизведение<input
-                    id="animation-play"
-                    type="checkbox"
-                    role="switch"
-                    checked /><span class="toggle"></span></label
-                ><label class="range-label" for="animation-speed"
-                  >Скорость<output id="animation-speed-value">1.0×</output></label
-                ><input id="animation-speed" type="range" min="0.1" max="2" step="0.1" value="1" />
               </section>
               <section class="control-section info-section">
                 <h2>О модели <span id="source-size">—</span></h2>
@@ -297,8 +284,8 @@
                   <input id="rig-softness" type="range" min="0.4" max="2" step="0.1" value="1" />
                   <button id="rig-bind" class="button accent rig-wide">Привязать модель</button>
                   <p class="rig-hint">
-                    После правок пересчитайте привязку. Броня и одежда могут потребовать доработки
-                    весов в 3D-редакторе.
+                    После правок пересчитайте привязку и заново примените нужные анимации. Броня и
+                    одежда могут потребовать доработки весов в 3D-редакторе.
                   </p>
                 </section>
                 <section class="control-section">
@@ -338,6 +325,104 @@
                 </button>
               </div>
               <p id="rig-status" class="rig-status" role="status" aria-live="polite"></p>
+            </div>
+            <div id="motion-panel" hidden>
+              <section class="control-section">
+                <h2>Библиотека <span class="rig-badge">CC0</span></h2>
+                <p class="rig-hint">45 движений Quaternius: ожидание, ходьба, бег, прыжки и бой.</p>
+                <button id="motion-library" class="button accent rig-wide">
+                  Открыть библиотеку
+                </button>
+                <p class="rig-hint">
+                  <a
+                    href="https://quaternius.itch.io/universal-animation-library"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >Quaternius · Standard · CC0 ↗</a
+                  >
+                </p>
+              </section>
+              <section class="control-section">
+                <h2>Своя анимация</h2>
+                <button id="motion-open" class="button ghost rig-wide">
+                  Загрузить GLB / glTF / FBX
+                </button>
+                <input id="motion-file" type="file" accept=".glb,.gltf,.bin,.fbx" multiple hidden />
+                <details class="motion-url">
+                  <summary>Загрузить по ссылке ↗</summary>
+                  <label class="small-label" for="motion-url">Ссылка на анимацию</label
+                  ><input id="motion-url" type="url" placeholder="https://…/walk.glb" />
+                  <label class="small-label" for="motion-format">Формат анимации</label
+                  ><select id="motion-format">
+                    <option value="auto">Определить автоматически</option>
+                    <option value="glb">GLB</option>
+                    <option value="gltf">glTF</option>
+                    <option value="fbx">FBX</option>
+                  </select>
+                  <button id="motion-download" class="button ghost rig-wide">
+                    Скачать анимацию</button
+                  ><button id="motion-cancel" class="button ghost rig-wide" hidden>
+                    Отменить загрузку
+                  </button>
+                  <p class="rig-hint">Нужна прямая ссылка; сервер должен разрешать CORS.</p>
+                </details>
+                <p id="motion-source-status" class="rig-hint" role="status"></p>
+              </section>
+              <section id="motion-transfer" class="control-section" hidden>
+                <h2>Применить к персонажу</h2>
+                <label class="small-label" for="motion-clip">Анимация источника</label
+                ><select id="motion-clip"></select>
+                <label class="small-label" for="motion-yaw">Поворот источника</label
+                ><select id="motion-yaw">
+                  <option value="0">0° · вперёд по +Z</option>
+                  <option value="180">180° · вперёд по −Z</option>
+                  <option value="90">90°</option>
+                  <option value="-90">−90°</option>
+                </select>
+                <label class="toggle-row"
+                  >Движение на месте<input
+                    id="motion-in-place"
+                    type="checkbox"
+                    role="switch"
+                    checked /><span class="toggle"></span
+                ></label>
+                <details id="motion-mapping">
+                  <summary id="motion-map-summary">Сопоставление костей</summary>
+                  <p class="rig-hint">
+                    Для каждого сустава выберите кость персонажа и соответствующую кость источника.
+                  </p>
+                  <button id="motion-auto-map" class="button ghost rig-wide">
+                    Сопоставить автоматически
+                  </button>
+                  <div id="motion-map-rows"></div>
+                </details>
+                <button id="motion-apply" class="button accent rig-wide">Применить анимацию</button>
+                <p class="rig-hint">
+                  После переноса клип появится ниже и сохранится при экспорте GLB/glTF.
+                </p>
+              </section>
+              <p id="motion-status" class="rig-status" role="status" aria-live="polite"></p>
+              <section id="animation-section" class="control-section" hidden>
+                <h2>Клипы персонажа</h2>
+                <label for="animation-select" class="small-label">Клип</label
+                ><select id="animation-select"></select
+                ><label class="toggle-row"
+                  >Воспроизведение<input
+                    id="animation-play"
+                    type="checkbox"
+                    role="switch"
+                    checked /><span class="toggle"></span></label
+                ><label class="range-label" for="animation-speed"
+                  >Скорость<output id="animation-speed-value">1.0×</output></label
+                ><input id="animation-speed" type="range" min="0.1" max="2" step="0.1" value="1" />
+                <label class="toggle-row"
+                  >Зацикливание<input
+                    id="animation-loop"
+                    type="checkbox"
+                    role="switch"
+                    checked /><span class="toggle"></span></label
+                ><button id="animation-rest" class="button ghost rig-wide">Исходная поза</button>
+              </section>
             </div>
             <div id="export-panel" hidden>
               <section class="control-section">

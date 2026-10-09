@@ -47,6 +47,8 @@ export default defineConfig(
           "Event",
           "DOMException",
           "AbortController",
+          "AbortSignal",
+          "Option",
           "Buffer",
           "console",
         ].map((name) => [name, "readonly"]),
