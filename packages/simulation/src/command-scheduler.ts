@@ -1,9 +1,8 @@
-import type { SimulationCommand } from "./commands.js";
-import type { PlayerId } from "./types.js";
+import type { EntityId, PlayerId } from "./types.js";
 
 /** Future cost contract only: these are not implemented gameplay/wire commands. */
 type PathCostIntent =
-  | Pick<SimulationCommand, "type" | "entityIds">
+  | { readonly type: "MOVE"; readonly entityIds: readonly EntityId[] }
   | { readonly type: "GATHER" | "BUILD" | "GARRISON" | "UNGARRISON" };
 
 export function commandPathCost(command: PathCostIntent): number {

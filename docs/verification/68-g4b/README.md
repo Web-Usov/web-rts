@@ -81,9 +81,9 @@ node scripts/benchmark-navigation.mjs docs/verification/68-g4b/benchmark.json
 
 На connected 256×256 одна группа 16 выполняет 1 048 512 component visits и превышает 100 ms tick interval уже по p50. Query-count budget ограничивает число поисков, но не их CPU work. На Foundation 40×40 результаты позволяют оставить commandBudget=16; перенос этих defaults на большие карты требует profiling. Active/AI lanes также могут выполнять дорогие searches; sum query cap не доказывает общий CPU upper bound.
 
-## Предложение отдельной issue
+## Отдельная CPU issue
 
-Название: **Navigation — снизить стоимость blocked-target resolution на больших картах без изменения nearest-reachable контракта**.
+Создана [#87 — Navigation: снизить CPU стоимость blocked-target resolution на больших картах](https://github.com/Web-Usov/web-rts/issues/87), связанная с #68 и PR #84. Приоритет — до масштабирования карт и больших групп AI. Issue содержит baseline, scope исследования, критерии измерений полного tick и обязательные semantic regressions. CPU-оптимизация остаётся вне этого PR.
 
 Рекомендуемый первый шаг: отдельно проверить кеш connected-component labels по topologyRevision и переиспользование данных reachable component для нескольких units группового MOVE. Для blocked target выбирать ту же world-space projection и row-major tie-break внутри компоненты; effective destination на accepted task фиксируется как прежде. Измерить также rebuild cost при частых topology changes: кеш не гарантирует bounded worst-case tick. Добавить partitioned/group atomicity/determinism и topology invalidation tests; сравнить все 48 workloads и полный tick при нагрузке всех lanes. Не вводить ранние exits и не менять MOVE cost в этом PR.
 
@@ -92,6 +92,14 @@ node scripts/benchmark-navigation.mjs docs/verification/68-g4b/benchmark.json
 ## Automated verification
 
 `pnpm lint`, `pnpm typecheck`, `pnpm test` (260 tests), `pnpm test:server` (40 integration tests), `pnpm build` — green. `pnpm test:e2e` — 6/6 green: debug, Local, diagonal, blocked target, multiplayer, reconnect. Tests покрывают rounds/FIFO 2–4 players, cursor/removal/wrap, spam, reservation/no refunds, oversized remaining head, synthetic zero-cost future intent, config и startup invariant, independent entity lanes, ascending movement order, safe deferral включая later segment, safe paths/unrelated topology, blocked group repeatability и existing G4a atomicity. Local и Remote проверены отдельными shell tests против общей fixture из 20 commands с 16 rejections в первом tick.
+
+## Проверка исправлений review
+
+Cost API использует самостоятельный MOVE discriminant с readonly entityIds; future variants не зависят от расширения SimulationCommand. `command-scheduler.test-d.ts` проверяет assignability будущей union с GATHER/BUILD/GARRISON/UNGARRISON без entityIds и запрещает MOVE без ids/неизвестный kind. `pnpm test` simulation запускает эти type-tests через `vitest run --typecheck`; они исключены из production build.
+
+Новый navigation regression создаёт 16 distinct units через существующий test World API. Scheduler резервирует len=16 и оставляет следующую command queued. Все units успешно получают ближайшую безопасную projected world-space destination (не cell center), прибывают туда; планы, entity identities и финальное состояние повторяемы. Production bootstrap/API не расширялись. Исходный runtime тест с repeated ids остаётся отдельной проверкой fairness по raw command cost.
+
+Эти исправления меняют внутренний type contract, tests и документацию; визуальные результаты исходного PR ниже остаются актуальными.
 
 ## Визуальная проверка
 
