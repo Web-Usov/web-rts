@@ -102,6 +102,7 @@
           <nav class="tabs" aria-label="Панели">
             <button id="view-tab" class="tab active" aria-selected="true" role="tab">
               Просмотр</button
+            ><button id="rig-tab" class="tab" aria-selected="false" role="tab">Скелет</button
             ><button id="export-tab" class="tab" aria-selected="false" role="tab">
               Экспорт <span>↗</span>
             </button>
@@ -230,6 +231,113 @@
               <button id="reset-button" class="button reset-button">
                 ↺ &nbsp; Сбросить просмотр
               </button>
+            </div>
+            <div id="rig-panel" hidden>
+              <section class="control-section">
+                <h2>Автоскелет <span class="rig-badge">HUMANOID</span></h2>
+                <p class="rig-hint">
+                  Персонаж в T/A-позе, вертикально по оси Y. Начальная подгонка по геометрии —
+                  проверьте суставы вручную.
+                </p>
+                <label class="small-label" for="rig-forward">Направление лица</label>
+                <select id="rig-forward">
+                  <option value="1">Вперёд по +Z</option>
+                  <option value="-1">Вперёд по −Z</option>
+                </select>
+                <button id="rig-create" class="button accent rig-wide">Создать скелет</button>
+              </section>
+              <div id="rig-tools" hidden>
+                <section class="control-section">
+                  <h2>Подгонка суставов</h2>
+                  <p class="rig-hint">
+                    Выберите сустав на модели или в списке. Перемещайте стрелками в 3D или задайте
+                    координаты.
+                  </p>
+                  <label class="small-label" for="rig-joint">Сустав</label
+                  ><select id="rig-joint"></select>
+                  <div class="joint-coordinates">
+                    <label>X<input id="rig-x" type="number" aria-label="Координата X" /></label
+                    ><label>Y<input id="rig-y" type="number" aria-label="Координата Y" /></label
+                    ><label>Z<input id="rig-z" type="number" aria-label="Координата Z" /></label>
+                  </div>
+                  <label class="toggle-row"
+                    >Симметричная подгонка<input
+                      id="rig-symmetry"
+                      type="checkbox"
+                      role="switch"
+                      checked /><span class="toggle"></span
+                  ></label>
+                  <label class="toggle-row"
+                    >Показывать скелет<input
+                      id="rig-show"
+                      type="checkbox"
+                      role="switch"
+                      checked /><span class="toggle"></span
+                  ></label>
+                  <div class="rig-history">
+                    <button id="rig-undo" class="button ghost" aria-label="Отменить правку скелета">
+                      ↶ Отменить</button
+                    ><button
+                      id="rig-redo"
+                      class="button ghost"
+                      aria-label="Повторить правку скелета"
+                    >
+                      ↷ Повторить
+                    </button>
+                  </div>
+                  <button id="rig-reset" class="button ghost rig-wide">
+                    Повторить автоподгонку
+                  </button>
+                </section>
+                <section class="control-section">
+                  <h2>Привязка к модели</h2>
+                  <label class="range-label" for="rig-softness"
+                    >Мягкость переходов<output id="rig-softness-value">1.0</output></label
+                  >
+                  <input id="rig-softness" type="range" min="0.4" max="2" step="0.1" value="1" />
+                  <button id="rig-bind" class="button accent rig-wide">Привязать модель</button>
+                  <p class="rig-hint">
+                    После правок пересчитайте привязку. Броня и одежда могут потребовать доработки
+                    весов в 3D-редакторе.
+                  </p>
+                </section>
+                <section class="control-section">
+                  <h2>Проверка деформаций</h2>
+                  <label class="range-label" for="rig-elbows"
+                    >Сгиб локтей<output id="rig-elbows-value">0°</output></label
+                  ><input
+                    id="rig-elbows"
+                    type="range"
+                    min="0"
+                    max="120"
+                    step="5"
+                    value="0"
+                    disabled
+                  />
+                  <label class="range-label" for="rig-knees"
+                    >Сгиб коленей<output id="rig-knees-value">0°</output></label
+                  ><input
+                    id="rig-knees"
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="5"
+                    value="0"
+                    disabled
+                  />
+                  <button id="rig-rest" class="button ghost rig-wide" disabled>
+                    Вернуть исходную позу
+                  </button>
+                  <p class="rig-hint">
+                    При сгибании подгонка в 3D отключена. Верните исходную позу для редактирования.
+                    Скелет и тестовые клипы сохраняются в GLB/glTF.
+                  </p>
+                </section>
+                <button id="rig-delete" class="button ghost rig-wide">
+                  Удалить созданный скелет
+                </button>
+              </div>
+              <p id="rig-status" class="rig-status" role="status" aria-live="polite"></p>
             </div>
             <div id="export-panel" hidden>
               <section class="control-section">

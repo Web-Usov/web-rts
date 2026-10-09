@@ -33,6 +33,7 @@ export default defineConfig(
           "File",
           "Blob",
           "URL",
+          "requestAnimationFrame",
           "ImageData",
           "Response",
           "ReadableStream",

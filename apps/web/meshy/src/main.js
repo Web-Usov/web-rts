@@ -4,6 +4,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { loadFiles, disposeModel } from "./loaders.js";
 import { formats, exportModel, safeName, download, textureCanvas } from "./exports.js";
+import { createRigEditor } from "./rig-editor.js";
 import { fetchModel } from "./remote.js";
 import { demoBase64 } from "./demo.js";
 
@@ -64,6 +65,7 @@ let currentFormat = "glb",
 let currentView = "iso",
   displaySize = new THREE.Vector3(1, 1, 1),
   animationAction = null;
+let rigEditor = null;
 const formatNumber = new Intl.NumberFormat("ru-RU");
 const sizeLabel = (bytes) =>
   bytes >= 1024 * 1024
@@ -84,6 +86,7 @@ function toast(message, error = false) {
 }
 function loading(value, message = "Открываем модель…") {
   busy = value;
+  rigEditor?.setBusy(value);
   $("loading").hidden = !value;
   $("loading-text").textContent = message;
   $("url-button").disabled = value;
@@ -244,12 +247,66 @@ function inspectModel() {
   }
 }
 
+function prepareMaterials() {
+  originalMaterials = new Map();
+  sidedMaterials = new Map();
+  model.root.traverse((node) => {
+    if (!node.isMesh) return;
+    originalMaterials.set(node.uuid, node.material);
+    const cloneMaterial = (material) => {
+      const clone = material.clone();
+      clone.side = THREE.DoubleSide;
+      return clone;
+    };
+    sidedMaterials.set(
+      node.uuid,
+      Array.isArray(node.material)
+        ? node.material.map(cloneMaterial)
+        : cloneMaterial(node.material),
+    );
+    node.frustumCulled = false;
+  });
+}
+function prepareAnimations(play) {
+  $("animation-play").checked = play;
+  mixer = model.animations.length ? new THREE.AnimationMixer(model.root) : null;
+  if (mixer) mixer.timeScale = Number($("animation-speed").value);
+  animationAction = null;
+  $("animation-section").hidden = !mixer;
+  $("animation-select").replaceChildren();
+  model.animations.forEach((clip, i) => {
+    const option = document.createElement("option");
+    option.value = i;
+    option.textContent = clip.name || `Анимация ${i + 1}`;
+    $("animation-select").append(option);
+  });
+  if (mixer) setAnimation(0);
+}
+function replaceRigRoot(root, animations) {
+  mixer?.stopAllAction();
+  mixer?.uncacheRoot(model.root);
+  restoreOriginalMaterials();
+  displayGroup.remove(model.root);
+  for (const material of sidedMaterials.values())
+    (Array.isArray(material) ? material : [material]).forEach((m) => m.dispose());
+  model.root = root;
+  model.animations = animations;
+  prepareMaterials();
+  displayGroup.add(root);
+  displayGroup.updateMatrixWorld(true);
+  prepareAnimations(false);
+  setMode(currentMode);
+  inspectModel();
+  updateExportOptions();
+}
+
 async function openFiles(files, { onError } = {}) {
-  if (busy) return;
+  if (busy || rigEditor?.isBusy) return;
   loading(true);
   let next;
   try {
     next = await (typeof files === "function" ? files() : loadFiles(files));
+    rigEditor?.clear();
     if (model) {
       mixer?.stopAllAction();
       mixer?.uncacheRoot(model.root);
@@ -260,24 +317,7 @@ async function openFiles(files, { onError } = {}) {
         (Array.isArray(material) ? material : [material]).forEach((m) => m.dispose());
     }
     model = next;
-    originalMaterials = new Map();
-    sidedMaterials = new Map();
-    model.root.traverse((node) => {
-      if (!node.isMesh) return;
-      originalMaterials.set(node.uuid, node.material);
-      const cloneMaterial = (material) => {
-        const clone = material.clone();
-        clone.side = THREE.DoubleSide;
-        return clone;
-      };
-      sidedMaterials.set(
-        node.uuid,
-        Array.isArray(node.material)
-          ? node.material.map(cloneMaterial)
-          : cloneMaterial(node.material),
-      );
-      node.frustumCulled = false;
-    });
+    prepareMaterials();
     const sourceSize = model.bounds.getSize(new THREE.Vector3()),
       center = model.bounds.getCenter(new THREE.Vector3());
     const scale = 1.65 / Math.max(sourceSize.x, sourceSize.y, sourceSize.z, 0.001);
@@ -286,18 +326,7 @@ async function openFiles(files, { onError } = {}) {
     displaySize = sourceSize.clone().multiplyScalar(scale);
     displayGroup.add(model.root);
     displayGroup.updateMatrixWorld(true);
-    mixer = model.animations.length ? new THREE.AnimationMixer(model.root) : null;
-    if (mixer) mixer.timeScale = Number($("animation-speed").value);
-    animationAction = null;
-    $("animation-section").hidden = !mixer;
-    $("animation-select").replaceChildren();
-    model.animations.forEach((clip, i) => {
-      const option = document.createElement("option");
-      option.value = i;
-      option.textContent = clip.name || `Анимация ${i + 1}`;
-      $("animation-select").append(option);
-    });
-    if (mixer) setAnimation(0);
+    prepareAnimations(true);
     $("file-title").textContent = model.file.name;
     $("file-extension").textContent = model.extension.toUpperCase();
     $("export-name").value = safeName(model.file.name);
@@ -323,13 +352,13 @@ function openDemo() {
   return openFiles([new File([data], "warrior.meshy", { type: "application/octet-stream" })]);
 }
 function setPanel(panel) {
-  const exporting = panel === "export";
-  $("view-panel").hidden = exporting;
-  $("export-panel").hidden = !exporting;
-  $("view-tab").classList.toggle("active", !exporting);
-  $("export-tab").classList.toggle("active", exporting);
-  $("view-tab").setAttribute("aria-selected", String(!exporting));
-  $("export-tab").setAttribute("aria-selected", String(exporting));
+  for (const name of ["view", "rig", "export"]) {
+    const selected = name === panel;
+    $(`${name}-panel`).hidden = !selected;
+    $(`${name}-tab`).classList.toggle("active", selected);
+    $(`${name}-tab`).setAttribute("aria-selected", String(selected));
+  }
+  rigEditor?.setActive(panel === "rig");
   document.querySelector(".panel-scroll").scrollTop = 0;
 }
 function updateExportOptions() {
@@ -364,10 +393,11 @@ for (const format of formats) {
 }
 updateExportOptions();
 $("export-button").addEventListener("click", async () => {
-  if (!model || busy) return;
+  if (!model || busy || rigEditor?.isBusy) return;
   loading(true, `Подготавливаем ${currentFormat.toUpperCase()}…`);
   $("export-status").textContent = "";
   try {
+    rigEditor?.assertExport(currentFormat);
     const name = safeName($("export-name").value);
     const result = await exportModel({
       root: model.root,
@@ -472,6 +502,7 @@ $("empty-open").addEventListener("click", () => $("file-input").click());
 $("file-input").addEventListener("change", (event) => openFiles(event.target.files));
 $("demo-button").addEventListener("click", openDemo);
 $("view-tab").addEventListener("click", () => setPanel("view"));
+$("rig-tab").addEventListener("click", () => setPanel("rig"));
 $("export-tab").addEventListener("click", () => setPanel("export"));
 $("mobile-inspector").addEventListener("click", () => $("inspector").classList.add("open"));
 $("close-inspector").addEventListener("click", () => $("inspector").classList.remove("open"));
@@ -586,11 +617,29 @@ renderer.setAnimationLoop((time) => {
   const delta = Math.min((time - lastFrame) / 1000, 0.05);
   lastFrame = time;
   if (!busy) mixer?.update(Math.max(0, delta));
+  rigEditor?.update();
   controls.update();
   renderer.render(scene, camera);
 });
 renderer.domElement.addEventListener("webglcontextlost", (event) => {
   event.preventDefault();
   toast("Браузер потерял графический контекст. Перезагрузите страницу.", true);
+});
+rigEditor = createRigEditor({
+  scene,
+  displayGroup,
+  camera,
+  canvas: renderer.domElement,
+  orbit: controls,
+  getModel: () => model,
+  getMaterials: () => originalMaterials,
+  replaceRoot: replaceRigRoot,
+  onBusy: (value) => loading(value, "Привязываем модель…"),
+  message: toast,
+  stopAnimation: () => {
+    mixer?.stopAllAction();
+    animationAction = null;
+    $("animation-play").checked = false;
+  },
 });
 await openDemo();
