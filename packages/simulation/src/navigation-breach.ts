@@ -23,7 +23,7 @@ export type BreachPathResult =
   | { readonly status: "no_route" };
 
 interface SearchState {
-  readonly key: string;
+  active: boolean;
   readonly cellId: number;
   /** Canonical ascending numeric IDs, independent of footprint encounter order. */
   readonly breached: readonly EntityId[];
@@ -45,6 +45,7 @@ interface SearchState {
  * breached entities, then edge length. Equal state costs keep the first parent
  * discovered by the explicit priority and fixed neighbor order.
  *
+ * Per-cell labels prune only subset-dominated states with no longer prefix.
  * No search cap or hidden normal A*. Worst-case state space is O(cells * 2^B)
  * for B breachable entities; this synchronous query does not schedule gameplay.
  */
@@ -77,7 +78,7 @@ export function findBreachPath(
   };
   const startId = grid.cellId(start);
   const initial: SearchState = {
-    key: stateKey(startId, []),
+    active: true,
     cellId: startId,
     breached: [],
     g: 0,
@@ -85,14 +86,15 @@ export function findBreachPath(
     previous: null,
     firstBlockerEntityId: null,
   };
-  const bestStates = new Map<string, SearchState>([[initial.key, initial]]);
+  const labelsByCell: SearchState[][] = new Array(grid.widthCells * grid.heightCells);
+  labelsByCell[startId] = [initial];
   const classification = new Map<EntityId, boolean>();
   const open = new StateHeap();
   open.push(initial);
 
   while (open.size > 0) {
     const current = open.pop()!;
-    if (bestStates.get(current.key) !== current) continue;
+    if (!current.active) continue;
     if (goalIds.has(current.cellId)) {
       const pathCells: CellCoord[] = [];
       for (let state: SearchState | null = current; state !== null; state = state.previous) {
@@ -124,17 +126,24 @@ export function findBreachPath(
         if (!allowed) continue;
         blocker = occupant;
       }
-      const breached =
-        blocker === null || current.breached.includes(blocker)
-          ? current.breached
-          : [...current.breached, blocker].sort((a, b) => a - b);
+      const breached = blocker === null ? current.breached : addBreach(current.breached, blocker);
       const nextId = grid.cellId(next);
-      const key = stateKey(nextId, breached);
       const g = current.g + 1;
-      const known = bestStates.get(key);
-      if (known !== undefined && known.g <= g) continue;
+      const labels = labelsByCell[nextId] ?? (labelsByCell[nextId] = []);
+      // For any suffix S: A ⊆ B implies A ∪ S ⊆ B ∪ S. With gA <= gB,
+      // A cannot lose on either objective. Cardinality alone is insufficient.
+      // Keep the first equal label; removed heap entries are skipped via active.
+      const dominated = labels.some((label) => label.g <= g && isSubset(label.breached, breached));
+      if (dominated) continue;
+      for (let index = labels.length - 1; index >= 0; index -= 1) {
+        const label = labels[index]!;
+        if (g <= label.g && isSubset(breached, label.breached)) {
+          label.active = false;
+          labels.splice(index, 1);
+        }
+      }
       const state: SearchState = {
-        key,
+        active: true,
         cellId: nextId,
         breached,
         g,
@@ -142,15 +151,35 @@ export function findBreachPath(
         previous: current,
         firstBlockerEntityId: current.firstBlockerEntityId ?? blocker,
       };
-      bestStates.set(key, state);
+      labels.push(state);
       open.push(state);
     }
   }
   return { status: "no_route" };
 }
 
-function stateKey(cellId: number, breached: readonly EntityId[]): string {
-  return `${cellId}:${breached.join(",")}`;
+/** Insert once in numeric order without sorting or serializing the whole set. */
+function addBreach(breached: readonly EntityId[], id: EntityId): readonly EntityId[] {
+  let index = 0;
+  while (index < breached.length && breached[index]! < id) index += 1;
+  if (breached[index] === id) return breached;
+  const next = [...breached];
+  next.splice(index, 0, id);
+  return next;
+}
+
+/** Sorted unique sets; the caller must also compare prefix lengths. */
+function isSubset(a: readonly EntityId[], b: readonly EntityId[]): boolean {
+  if (a === b || a.length === 0) return true;
+  if (a.length > b.length) return false;
+  let index = 0;
+  for (const id of b) {
+    if (id === a[index]) {
+      index += 1;
+      if (index === a.length) return true;
+    } else if (index < a.length && id > a[index]!) return false;
+  }
+  return false;
 }
 
 function cellFromId(id: number, width: number): CellCoord {

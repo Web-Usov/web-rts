@@ -78,7 +78,150 @@ function assertRoute(grid: SpatialGrid, result: BreachPathResult): void {
   expect(route.firstBlockerEntityId).toBe(first);
 }
 
+/** Independent oracle: hypothetically remove a subset, then plain FIFO BFS. */
+function subsetOracle(
+  grid: SpatialGrid,
+  start: CellCoord,
+  goals: readonly CellCoord[],
+  allowedIds: readonly number[],
+): { breachCount: number; pathLength: number } | null {
+  if (!grid.isCellInBounds(start) || !grid.isWalkable(start)) return null;
+  const goalIds = new Set(
+    goals.filter((entry) => grid.isWalkable(entry)).map((entry) => grid.cellId(entry)),
+  );
+  let best: { breachCount: number; pathLength: number } | null = null;
+  for (let mask = 0; mask < 2 ** allowedIds.length; mask += 1) {
+    const removed = new Set(allowedIds.filter((_, bit) => (mask & (1 << bit)) !== 0));
+    const queue = [{ entry: start, distance: 0 }];
+    const visited = new Set([grid.cellId(start)]);
+    for (let index = 0; index < queue.length; index += 1) {
+      const { entry, distance } = queue[index]!;
+      if (goalIds.has(grid.cellId(entry))) {
+        if (
+          best === null ||
+          removed.size < best.breachCount ||
+          (removed.size === best.breachCount && distance < best.pathLength)
+        ) {
+          best = { breachCount: removed.size, pathLength: distance };
+        }
+        break;
+      }
+      for (const next of [
+        cell(entry.x, entry.y - 1),
+        cell(entry.x - 1, entry.y),
+        cell(entry.x, entry.y + 1),
+        cell(entry.x + 1, entry.y),
+      ]) {
+        if (!grid.isStaticWalkable(next)) continue;
+        const occupant = grid.occupantAt(next);
+        if (
+          occupant !== null &&
+          grid.footprintOf(occupant)?.blocksMovement &&
+          !removed.has(occupant)
+        )
+          continue;
+        const id = grid.cellId(next);
+        if (visited.has(id)) continue;
+        visited.add(id);
+        queue.push({ entry: next, distance: distance + 1 });
+      }
+    }
+  }
+  return best;
+}
+
 describe("pure deterministic breach planner", () => {
+  it("matches subset/BFS on 256 multi-cell, four-blocker and hostility queries", () => {
+    const ids = [4000000000, 2, 900, 32];
+    const starts = cell(0, 1);
+    for (let terrainMask = 0; terrainMask < 8; terrainMask += 1) {
+      const rows = [
+        ["A", "A", ".", "."],
+        [".", ".", "B", "."],
+        ["C", "C", "B", "."],
+        [".", ".", "D", "D"],
+      ];
+      [cell(2, 0), cell(1, 1), cell(0, 3)].forEach((entry, bit) => {
+        if ((terrainMask & (1 << bit)) !== 0) rows[entry.y]![entry.x] = "#";
+      });
+      const grid = map(
+        rows.map((row) => row.join("")),
+        { A: ids[0]!, B: ids[1]!, C: ids[2]!, D: ids[3]! },
+      );
+      for (let allowedMask = 0; allowedMask < 16; allowedMask += 1) {
+        const allowedIds = ids.filter((_, bit) => (allowedMask & (1 << bit)) !== 0);
+        for (const goals of [[cell(3, 1)], [cell(3, 1), cell(1, 3), cell(3, 1), cell(-1, 0)]]) {
+          const expected = subsetOracle(grid, starts, goals, allowedIds);
+          const result = findBreachPath(grid, starts, goals, (id) => allowedIds.includes(id));
+          if (expected === null) expect(result).toEqual({ status: "no_route" });
+          else {
+            expect(found(result)).toMatchObject(expected);
+            assertRoute(grid, result);
+            expect(goals).toContainEqual(found(result).pathCells.at(-1));
+          }
+          expect(
+            findBreachPath(grid, starts, [...goals].reverse(), (id) => allowedIds.includes(id)),
+          ).toEqual(result);
+        }
+      }
+    }
+  });
+
+  it("does not prune a shorter superset label in favor of a longer subset prefix", () => {
+    // At (1,0), {} arrives in 5 edges but {A} arrives in 3. The suffix must
+    // breach A again, so both final counts are 1 and only {A} gives length 9.
+    const grid = map(["......", ".A###A", "..###.", "..####"]);
+    const start = cell(1, 3);
+    const goals = [cell(5, 2)];
+    const result = found(findBreachPath(grid, start, goals, allow));
+    expect(result).toMatchObject({ breachCount: 1, pathLength: 9, firstBlockerEntityId: 65 });
+    expect(result.pathCells).toContainEqual(cell(1, 1));
+    expect(result).toMatchObject(subsetOracle(grid, start, goals, [65])!);
+    assertRoute(grid, result);
+  });
+
+  it("handles shorter subset prefixes, dominated detours and stale replaced labels", () => {
+    const grid = map(["...B..C.", "..A..#C.", ".....#C.", "...D.#C."]);
+    const start = cell(0, 1);
+    const goals = [cell(7, 2)];
+    const ids = [65, 66, 67, 68];
+    const expected = subsetOracle(grid, start, goals, ids)!;
+    const result = found(findBreachPath(grid, start, goals, allow));
+    expect(result).toMatchObject(expected);
+    expect(result.firstBlockerEntityId).toBe(67);
+    assertRoute(grid, result);
+    expect(findBreachPath(grid, start, goals, allow)).toEqual(result);
+  });
+
+  it.each([31, 32, 33, 63, 64, 65, 96])("has no representation limit at %i blockers", (count) => {
+    const grid = map([".".repeat(count * 2 + 1)]);
+    const ids = Array.from({ length: count }, (_, index) => 4000000000 - index * 997);
+    ids.forEach((id, index) => {
+      expect(
+        grid.addFootprint(id, {
+          anchorCell: cell(index * 2 + 1, 0),
+          width: 1,
+          height: 1,
+          blocksMovement: true,
+          blocksBuilding: true,
+        }),
+      ).toEqual({ ok: true });
+    });
+    const start = cell(0, 0);
+    const goals = [cell(count * 2, 0)];
+    const result = found(findBreachPath(grid, start, goals, allow));
+    expect(result).toMatchObject({
+      breachCount: count,
+      pathLength: count * 2,
+      firstBlockerEntityId: ids[0],
+    });
+    assertRoute(grid, result);
+    expect(findBreachPath(grid, start, goals, allow)).toEqual(result);
+    expect(findBreachPath(grid, start, goals, (id) => id !== ids.at(-1))).toEqual({
+      status: "no_route",
+    });
+  });
+
   it("matches an independent subset-removal/BFS oracle on 256 small map queries", () => {
     // Enumerate which entities are hypothetically removed, then ordinary BFS.
     // This oracle has no A* heuristic or per-cell breached-set search state.
