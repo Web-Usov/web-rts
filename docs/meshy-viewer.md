@@ -77,9 +77,9 @@ Node-тесты проверяют перенос всех 45 встроенны
 
 В Codex In-app Browser проверены встроенная ходьба и удар, отдельный локальный FBX Mixamo, перенос на уже импортированный риг, скорость/однократное действие и перемещение таза, glTF с внешним BIN по URL, FBX по URL, незаполненная карта и её восстановление, HTTP 404 и отмена, GLB/glTF ZIP с пятью клипами, повторное открытие GLB и воспроизведение ходьбы. Ошибок console/runtime в этих сценариях нет; FBXLoader предупреждает о сокращении более четырёх весов источника (геометрия источника не переносится). Khronos glTF Validator: 0 ошибок в обоих экспортированных файлах, 2 прежних предупреждения о tangent space и родительской группе SkinnedMesh.
 
-![Ходьба на модели](verification/meshy-animations/walk.png)
-![FBX после переноса](verification/meshy-animations/fbx.png)
-![Удар из библиотеки](verification/meshy-animations/sword.png)
-![Повторное открытие GLB с клипами](verification/meshy-animations/reimport.png)
+![Ходьба на модели](verification/meshy-animations/walk.jpg)
+![FBX после переноса](verification/meshy-animations/fbx.jpg)
+![Удар из библиотеки](verification/meshy-animations/sword.jpg)
+![Повторное открытие GLB с клипами](verification/meshy-animations/reimport.jpg)
 
 Мобильная проверка новой панели ограничена средой: viewport override внутреннего браузера возвращает прежние 1280×720 вместо запрошенных 390×844. Фактическое мобильное прохождение новой панели не заявляется; четырёхвкладочный header проверен на рабочем размере без переполнения.
