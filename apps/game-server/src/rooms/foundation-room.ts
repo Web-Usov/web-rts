@@ -1,3 +1,4 @@
+import { createGameplayRuntime } from "@web-rts/match-adapter";
 import { Room, ServerError, type Client } from "colyseus";
 import {
   COMMAND_MESSAGE,
@@ -18,7 +19,6 @@ import {
 import { projectGameStateView, toGameEvent, toSimulationCommand } from "@web-rts/match-adapter";
 import {
   DEFAULT_TICK_HZ,
-  createMatchRuntime,
   type MatchRuntime,
   type MatchSetup,
   type MatchSnapshot,
@@ -72,7 +72,7 @@ export class FoundationRoom extends Room {
    * Same rule as `reconnectGraceSeconds`: tests may replace it on the server room,
    * client payloads never reach it.
    */
-  matchRuntimeFactory: (setup: MatchSetup) => MatchRuntime = createMatchRuntime;
+  matchRuntimeFactory: (setup: MatchSetup) => MatchRuntime = createGameplayRuntime;
   readonly slots = new PlayerSlotRegistry();
   matchRuntime: MatchRuntime | null = null;
   /** Latest measured simulation step. Updated every tick; verbose logging is separate. */

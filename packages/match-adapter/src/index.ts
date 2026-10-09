@@ -1,4 +1,5 @@
 import {
+  MAX_MOVE_ENTITY_IDS,
   GAME_DATA_VERSION,
   PROTOCOL_VERSION,
   type CommandRejectedEvent,
@@ -8,7 +9,12 @@ import {
   type MatchPhase,
   type PlayerSlotView,
 } from "@web-rts/protocol";
+import { createMatchRuntime, resolveSimulationConfig } from "@web-rts/simulation";
 import type {
+  CreateWorldOptions,
+  MatchSetup,
+  MatchRuntime,
+  RuntimeConfig,
   MatchEntitySnapshot,
   MatchSnapshot,
   RuntimeEvent,
@@ -82,4 +88,17 @@ function toEntityView(entity: MatchEntitySnapshot): EntityView {
     objectiveType: entity.objectiveType,
     objectiveState: entity.objectiveState,
   };
+}
+
+/** Startup cross-package invariant belongs to the approved bridge (ADR-009). */
+export function createGameplayRuntime(
+  setup: MatchSetup,
+  runtimeConfig: Partial<RuntimeConfig> = {},
+  simulationOptions: Pick<CreateWorldOptions, "pathQueriesPerTick" | "maxPathQueriesPerTick"> = {},
+): MatchRuntime {
+  const config = resolveSimulationConfig(simulationOptions);
+  if (MAX_MOVE_ENTITY_IDS > config.pathQueriesPerTick.commandBudget) {
+    throw new RangeError("MAX_MOVE_ENTITY_IDS must be <= commandBudget");
+  }
+  return createMatchRuntime(setup, runtimeConfig, simulationOptions);
 }

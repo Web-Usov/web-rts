@@ -11,6 +11,7 @@ import {
 import { createMatchRuntime, type MatchRuntime, type MatchSetup } from "@web-rts/simulation";
 import {
   FOUNDATION_PARITY_FIXTURE,
+  SCHEDULING_PARITY_FIXTURE,
   PARITY_FINISH_AFTER_STEPS,
   createFinishingMatchRuntime,
   normalizeGameStateView,
@@ -346,28 +347,30 @@ describe("local match runtime", () => {
     ]);
   });
 
-  it("matches the shared parity reference for the same fixture", () => {
-    const fixture = FOUNDATION_PARITY_FIXTURE;
-    const match = harness();
-    match.handle({ ...connectMessage, seed: fixture.seed, mapId: fixture.mapId });
-    match.handle({ type: "start", sessionId: 1 });
-    for (let tick = 0; tick < fixture.ticks; tick += 1) {
-      for (const step of fixture.steps.filter((candidate) => candidate.atTick === tick)) {
-        match.handle({ type: "command", sessionId: 1, command: step.payload });
+  it.each([FOUNDATION_PARITY_FIXTURE, SCHEDULING_PARITY_FIXTURE])(
+    "matches the shared parity reference for fixture %#",
+    (fixture) => {
+      const match = harness();
+      match.handle({ ...connectMessage, seed: fixture.seed, mapId: fixture.mapId });
+      match.handle({ type: "start", sessionId: 1 });
+      for (let tick = 0; tick < fixture.ticks; tick += 1) {
+        for (const step of fixture.steps.filter((candidate) => candidate.atTick === tick)) {
+          match.handle({ type: "command", sessionId: 1, command: step.payload });
+        }
+        match.tick();
       }
-      match.tick();
-    }
 
-    const reference = runParityReference(fixture);
-    const rejections = match.events.flatMap((event) =>
-      event.type === "COMMAND_REJECTED"
-        ? [{ commandId: event.commandId, reason: event.reason }]
-        : [],
-    );
-    expect(rejections).toEqual(fixture.expectedRejections);
-    expect(rejections).toEqual(reference.rejections);
-    expect(normalizeGameStateView(match.states.at(-1)!)).toEqual(reference.finalView);
-  });
+      const reference = runParityReference(fixture);
+      const rejections = match.events.flatMap((event) =>
+        event.type === "COMMAND_REJECTED"
+          ? [{ commandId: event.commandId, reason: event.reason }]
+          : [],
+      );
+      expect(rejections).toEqual(fixture.expectedRejections);
+      expect(rejections).toEqual(reference.rejections);
+      expect(normalizeGameStateView(match.states.at(-1)!)).toEqual(reference.finalView);
+    },
+  );
 
   it("reflects START → RUNNING → FINISHED and rejects commands after FINISHED", () => {
     const match = harness((setup) => createFinishingMatchRuntime(setup));

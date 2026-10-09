@@ -1,4 +1,7 @@
 export {
+  DEFAULT_PATH_QUERY_BUDGETS,
+  DEFAULT_MAX_PATH_QUERIES_PER_TICK,
+  type PathQueryBudgets,
   DEFAULT_MOVE_SPEED,
   DEFAULT_TICK_HZ,
   resolveSimulationConfig,
@@ -14,6 +17,7 @@ export type {
 export type { SimulationEvent } from "./events.js";
 export {
   DEFAULT_MAX_PENDING_COMMANDS_PER_PLAYER,
+  DEFAULT_MAX_COMMANDS_PER_TICK,
   createMatchRuntime,
   resolveRuntimeConfig,
   type RuntimeConfig,

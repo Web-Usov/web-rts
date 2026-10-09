@@ -1,5 +1,6 @@
 import type { ComponentStore } from "../component-store.js";
 import { prepareNavigation, type NavigationTask } from "../navigation.js";
+import type { EntityPathQueryLane } from "../path-query-lane.js";
 import type { SpatialGrid } from "../spatial-grid.js";
 import type { Movement, Position } from "../types.js";
 
@@ -34,9 +35,13 @@ export function runMovementSystem(
   positions: ComponentStore<Position>,
   movements: ComponentStore<Movement>,
   tickDurationSeconds: number,
-  navigation?: { tasks: ComponentStore<NavigationTask>; grid: SpatialGrid },
+  navigation?: {
+    tasks: ComponentStore<NavigationTask>;
+    grid: SpatialGrid;
+    lane: EntityPathQueryLane;
+  },
 ): void {
-  for (const [entityId, movement] of movements.entries()) {
+  for (const [entityId, movement] of [...movements.entries()].sort(([a], [b]) => a - b)) {
     let position = positions.get(entityId);
     if (position === undefined) {
       movements.remove(entityId);
@@ -47,7 +52,10 @@ export function runMovementSystem(
     let remaining = movement.speed * tickDurationSeconds;
     while (true) {
       if (task !== undefined && navigation !== undefined) {
-        const prepared = prepareNavigation(navigation.grid, task, position);
+        const prepared = prepareNavigation(navigation.grid, task, position, () =>
+          navigation.lane.tryReserve(entityId),
+        );
+        if (prepared === "deferred") break;
         if (prepared === null) {
           navigation.tasks.remove(entityId);
           movements.remove(entityId);

@@ -1,5 +1,6 @@
 import { FOUNDATION_MAP, type MapDefinition } from "@web-rts/game-data";
 import { describe, expect, it } from "vitest";
+import { commandPathCost, scheduleCommands } from "./command-scheduler.js";
 import type { QueuedCommand } from "./commands.js";
 import { planMove, planMoveToTarget, segmentIsTraversable } from "./navigation.js";
 import { advanceToward } from "./systems/movement.js";
@@ -90,6 +91,51 @@ describe("MOVE navigation", () => {
     terrain.stepN(30);
     expect(terrain.positions.get(terrainUnit)!.x).toBeCloseTo(effective.destinationX, 12);
     expect(terrain.positions.get(terrainUnit)!.y).toBeCloseTo(effective.destinationY, 12);
+  });
+
+  it("reserves and deterministically plans a blocked-target MOVE for 16 distinct units", () => {
+    const run = () => {
+      const world = createWorld({ seed: 1, map: testMap(12, 12) });
+      const blocker = world.createEntity({ kind: "BUILDING", definitionId: "test_wall" });
+      expect(world.placeSolidFootprint(blocker, solid(8, 5, 2, 2))).toEqual({ ok: true });
+      const units = Array.from({ length: 16 }, (_, i) =>
+        unitAt(world, 0.5 + (i % 4), 0.5 + Math.floor(i / 4)),
+      );
+      expect(new Set(units).size).toBe(16);
+      const target = { x: 8.2, y: 5.4 };
+      const group = move(units, target, "distinct-group");
+      const later = move([units[0]!], { x: 1.5, y: 1.5 }, "later");
+      const queues = new Map([[0, [group.command, later.command]]]);
+      const selected = scheduleCommands(queues, undefined, 16, 16, commandPathCost);
+      expect(selected.reservedCost).toBe(units.length);
+      expect(selected.selected.map(({ command }) => command.commandId)).toEqual(["distinct-group"]);
+      expect(queues.get(0)).toEqual([later.command]);
+      world.drainEvents();
+      for (const { playerId, command } of selected.selected)
+        world.enqueueCommand({ actor: { playerId }, command });
+      world.step();
+      expect(rejectionReasons(world)).toEqual([]);
+      const plans = units.map((entityId) => {
+        const task = world.readNavigation(entityId)!;
+        expect(task).toBeDefined();
+        // Nearest world-space projection is the left side, not a cell center.
+        expect(task.destinationX).toBeCloseTo(7.9999, 12);
+        expect(task.destinationY).toBe(target.y);
+        const destination = { x: task.destinationX, y: task.destinationY };
+        expect(segmentIsTraversable(world.grid!, destination, destination)).toBe(true);
+        return { entityId, task };
+      });
+      world.stepN(60);
+      for (const { entityId, task } of plans) {
+        expect(world.positions.get(entityId)).toEqual({
+          x: task.destinationX,
+          y: task.destinationY,
+        });
+        expect(world.movements.has(entityId)).toBe(false);
+      }
+      return { plans, entities: readWorldEntities(world) };
+    };
+    expect(run()).toEqual(run());
   });
 
   it("chooses the nearest reachable side, skipping closer disconnected cells", () => {
@@ -510,5 +556,97 @@ describe("future segment topology validation", () => {
     }
     expect(replanned).toBe(true);
     expect(previous).toEqual({ x: 6.5, y: 3.5 });
+  });
+});
+
+describe("bounded active-task replans", () => {
+  it("serves ascending entity ids even after movement insertion is reversed, safely defers the peer", () => {
+    const world = createWorld({
+      seed: 1,
+      map: testMap(7, 5),
+      defaultMoveSpeed: 1,
+      pathQueriesPerTick: { activeTaskBudget: 1 },
+    });
+    const first = unitAt(world, 0.5, 1.5);
+    const second = unitAt(world, 0.5, 3.5);
+    world.enqueueCommand(move([second], { x: 6.5, y: 3.5 }, "second"));
+    world.enqueueCommand(move([first], { x: 6.5, y: 1.5 }, "first"));
+    world.step();
+    for (const y of [1, 3]) {
+      const wall = world.createEntity({ kind: "BUILDING", definitionId: "test_wall" });
+      expect(world.placeSolidFootprint(wall, solid(3, y))).toEqual({ ok: true });
+    }
+    const before = world.positions.get(second)!;
+    const oldTask = world.readNavigation(second)!;
+    world.step();
+    expect(world.readPathQueryMetrics()).toEqual({ activeTaskQueries: 1, aiQueries: 0 });
+    expect(world.readNavigation(first)!.plannedRevision).toBe(world.topologyRevision);
+    expect(world.readNavigation(second)).toEqual(oldTask);
+    expect(world.positions.get(second)).toEqual(before);
+    expect(world.movements.has(second)).toBe(true);
+    world.step();
+    expect(world.readNavigation(second)!.plannedRevision).toBe(world.topologyRevision);
+    expect(world.readPathQueryMetrics().activeTaskQueries).toBe(1);
+    let previous = world.positions.get(second)!;
+    for (let tick = 0; tick < 100; tick++) {
+      world.step();
+      const current = world.positions.get(second)!;
+      expect(segmentIsTraversable(world.grid!, previous, current)).toBe(true);
+      previous = current;
+    }
+    expect(previous).toEqual({ x: 6.5, y: 3.5 });
+  });
+  it("unrelated changes and safe multi-waypoint transitions do not spend query budget", () => {
+    const world = createWorld({
+      seed: 1,
+      map: testMap(9, 5),
+      defaultMoveSpeed: 30,
+      pathQueriesPerTick: { activeTaskBudget: 1 },
+    });
+    const unit = unitAt(world, 0.5, 2.5);
+    const wall = world.createEntity({ kind: "BUILDING", definitionId: "test_wall" });
+    world.placeSolidFootprint(wall, solid(4, 2));
+    world.enqueueCommand(move([unit], { x: 8.5, y: 2.5 }));
+    world.step();
+    const distant = world.createEntity({ kind: "BUILDING", definitionId: "test_wall" });
+    world.placeSolidFootprint(distant, solid(0, 4));
+    world.step();
+    expect(world.readPathQueryMetrics().activeTaskQueries).toBe(0);
+  });
+  it("defers at a later unsafe segment after spending distance on the safe segment", () => {
+    const world = createWorld({
+      seed: 1,
+      map: testMap(9, 7),
+      defaultMoveSpeed: 1,
+      pathQueriesPerTick: { activeTaskBudget: 1 },
+    });
+    const first = unitAt(world, 0.5, 5.5);
+    const second = unitAt(world, 0.5, 0.5);
+    const wall = world.createEntity({ kind: "BUILDING", definitionId: "test_wall" });
+    world.placeSolidFootprint(wall, solid(1, 0, 1, 3));
+    world.enqueueCommand(move([first], { x: 8.5, y: 5.5 }, "first"));
+    world.enqueueCommand(move([second], { x: 8.5, y: 3.5 }, "second"));
+    world.step();
+    for (const [x, y] of [
+      [4, 5],
+      [5, 3],
+    ]) {
+      const block = world.createEntity({ kind: "BUILDING", definitionId: "test_wall" });
+      world.placeSolidFootprint(block, solid(x!, y!));
+    }
+    // Complete the safe initial segment in this tick, then discover invalid later segment.
+    world.movements.set(second, { ...world.movements.get(second)!, speed: 80 });
+    const previous = world.positions.get(second)!;
+    world.step();
+    const deferred = world.readNavigation(second)!;
+    expect(deferred.waypointIndex).toBeGreaterThan(0);
+    expect(deferred.plannedRevision).toBeLessThan(world.topologyRevision);
+    expect(segmentIsTraversable(world.grid!, previous, world.positions.get(second)!)).toBe(true);
+    expect(world.readPathQueryMetrics().activeTaskQueries).toBe(1);
+    world.step();
+    expect(world.readPathQueryMetrics().activeTaskQueries).toBe(1);
+    expect(world.readNavigation(second)!.plannedRevision).toBe(world.topologyRevision);
+    world.stepN(3);
+    expect(world.positions.get(second)).toEqual({ x: 8.5, y: 3.5 });
   });
 });

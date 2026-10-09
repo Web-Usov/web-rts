@@ -52,7 +52,11 @@ describe("MatchRuntime", () => {
       controllerPlayerId: 1,
     });
     expect(objectiveOf(snapshot)).toMatchObject({ x: 0, y: 0, controllerPlayerId: null });
-    expect(runtime.readMetrics()).toEqual({ tick: 0, entityCount: 3, pendingCommandCount: 0 });
+    expect(runtime.readMetrics()).toMatchObject({
+      tick: 0,
+      entityCount: 3,
+      pendingCommandCount: 0,
+    });
     expect(runtime.drainEvents()).toEqual([]);
   });
 
@@ -77,7 +81,11 @@ describe("MatchRuntime", () => {
 
     runtime.step();
 
-    expect(runtime.readMetrics()).toEqual({ tick: 1, entityCount: 3, pendingCommandCount: 0 });
+    expect(runtime.readMetrics()).toMatchObject({
+      tick: 1,
+      entityCount: 3,
+      pendingCommandCount: 0,
+    });
     expect(unitOf(runtime.readSnapshot(), 0).x).not.toBe(unit.x);
     expect(runtime.drainEvents()).toEqual([]);
   });
@@ -105,16 +113,16 @@ describe("MatchRuntime", () => {
       },
       {
         type: "COMMAND_REJECTED",
-        recipientPlayerId: 0,
-        commandId: "oob",
-        reason: "out_of_bounds",
+        recipientPlayerId: 1,
+        commandId: "objective",
+        reason: "not_your_unit",
         tick: 0,
       },
       {
         type: "COMMAND_REJECTED",
-        recipientPlayerId: 1,
-        commandId: "objective",
-        reason: "not_your_unit",
+        recipientPlayerId: 0,
+        commandId: "oob",
+        reason: "out_of_bounds",
         tick: 0,
       },
     ]);
@@ -159,8 +167,8 @@ describe("MatchRuntime", () => {
 
     expect(runtime.drainEvents().map((event) => event.commandId)).toEqual([
       "p0-a",
-      "p0-b",
       "p1-a",
+      "p0-b",
       "p1-b",
     ]);
   });
@@ -248,7 +256,7 @@ describe("MatchRuntime", () => {
   });
 
   it("requires a finite positive pending cap", () => {
-    expect(resolveRuntimeConfig()).toEqual({
+    expect(resolveRuntimeConfig()).toMatchObject({
       maxPendingCommandsPerPlayer: DEFAULT_MAX_PENDING_COMMANDS_PER_PLAYER,
     });
     for (const value of [0, -1, 1.5, Number.POSITIVE_INFINITY, Number.NaN]) {

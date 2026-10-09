@@ -1,10 +1,7 @@
 import { FOUNDATION_MAP } from "@web-rts/game-data";
-import type {
-  CommandActor,
-  CommandRejectionReason,
-  QueuedCommand,
-  SimulationCommand,
-} from "./commands.js";
+import type { CommandActor, CommandRejectionReason, SimulationCommand } from "./commands.js";
+import { commandPathCost, scheduleCommands } from "./command-scheduler.js";
+import { positiveInteger, type CreateWorldOptions } from "./config.js";
 import { placeStartingStructures, spawnPlayerUnits } from "./foundation-match.js";
 import { readWorldEntities, type MatchEntitySnapshot } from "./snapshot.js";
 import type { PlayerId } from "./types.js";
@@ -29,10 +26,12 @@ export type MatchStatus = "RUNNING" | "FINISHED";
  * Shared by Local and Remote; the Remote room rate limit is an extra guard only.
  */
 export const DEFAULT_MAX_PENDING_COMMANDS_PER_PLAYER = 32;
+export const DEFAULT_MAX_COMMANDS_PER_TICK = 16;
 
 /** Host-owned runtime limits. Not part of the trusted gameplay setup. */
 export type RuntimeConfig = {
   readonly maxPendingCommandsPerPlayer: number;
+  readonly maxCommandsPerTick: number;
 };
 
 /**
@@ -64,6 +63,12 @@ export type RuntimeMetrics = {
   readonly tick: number;
   readonly entityCount: number;
   readonly pendingCommandCount: number;
+  readonly processedCommands: number;
+  readonly reservedCommandPathCost: number;
+  readonly commandBudgetUsed: number;
+  readonly commandBudgetRemaining: number;
+  readonly activeTaskQueries: number;
+  readonly aiQueries: number;
 };
 
 /**
@@ -92,33 +97,40 @@ export interface MatchRuntime {
 export function resolveRuntimeConfig(overrides: Partial<RuntimeConfig> = {}): RuntimeConfig {
   const maxPendingCommandsPerPlayer =
     overrides.maxPendingCommandsPerPlayer ?? DEFAULT_MAX_PENDING_COMMANDS_PER_PLAYER;
-  if (!Number.isSafeInteger(maxPendingCommandsPerPlayer) || maxPendingCommandsPerPlayer < 1) {
-    throw new RangeError("maxPendingCommandsPerPlayer must be a positive integer");
-  }
-  return { maxPendingCommandsPerPlayer };
+  positiveInteger(maxPendingCommandsPerPlayer, "maxPendingCommandsPerPlayer");
+  const maxCommandsPerTick = positiveInteger(
+    overrides.maxCommandsPerTick ?? DEFAULT_MAX_COMMANDS_PER_TICK,
+    "maxCommandsPerTick",
+  );
+  return { maxPendingCommandsPerPlayer, maxCommandsPerTick };
 }
 
 export function createMatchRuntime(
   setup: MatchSetup,
   config: Partial<RuntimeConfig> = {},
+  simulationOptions: Pick<CreateWorldOptions, "pathQueriesPerTick" | "maxPathQueriesPerTick"> = {},
 ): MatchRuntime {
-  return new FoundationMatchRuntime(setup, resolveRuntimeConfig(config));
+  return new FoundationMatchRuntime(setup, resolveRuntimeConfig(config), simulationOptions);
 }
 
 class FoundationMatchRuntime implements MatchRuntime {
   private readonly world: World;
   /** Per-player FIFO ingress. Key presence means the player still participates. */
   private readonly queues = new Map<PlayerId, SimulationCommand[]>();
+  private nextCommandPlayerId: PlayerId | undefined;
+  private processedCommands = 0;
+  private reservedCommandPathCost = 0;
   private readonly outbox: RuntimeEvent[] = [];
 
   constructor(
     setup: MatchSetup,
     private readonly config: RuntimeConfig,
+    simulationOptions: Pick<CreateWorldOptions, "pathQueriesPerTick" | "maxPathQueriesPerTick">,
   ) {
     // #002 has one fixed MapDefinition. Selecting it by mapId waits for mapId on the
     // wire (G11); shells still pass arbitrary ids, so they must not change the layout.
     const map = FOUNDATION_MAP;
-    this.world = createWorld({ seed: setup.seed, map });
+    this.world = createWorld({ ...simulationOptions, seed: setup.seed, map });
     const playerIds = setup.participants.map((participant) => participant.playerId);
     for (const playerId of playerIds) {
       this.queues.set(playerId, []);
@@ -151,14 +163,18 @@ class FoundationMatchRuntime implements MatchRuntime {
     if (this.status !== "RUNNING") {
       return;
     }
-    // G1 scheduling: ascending playerId, FIFO within a player, everything pending.
-    const playerIds = [...this.queues.keys()].sort((left, right) => left - right);
-    for (const playerId of playerIds) {
-      const queue = this.queues.get(playerId)!;
-      for (const command of queue.splice(0, queue.length)) {
-        const queued: QueuedCommand = { actor: { playerId }, command };
-        this.world.enqueueCommand(queued);
-      }
+    const schedule = scheduleCommands(
+      this.queues,
+      this.nextCommandPlayerId,
+      this.config.maxCommandsPerTick,
+      this.world.config.pathQueriesPerTick.commandBudget,
+      commandPathCost,
+    );
+    this.nextCommandPlayerId = schedule.nextPlayerId;
+    this.processedCommands = schedule.selected.length;
+    this.reservedCommandPathCost = schedule.reservedCost;
+    for (const { playerId, command } of schedule.selected) {
+      this.world.enqueueCommand({ actor: { playerId }, command });
     }
     this.world.step();
     for (const event of this.world.drainEvents()) {
@@ -196,6 +212,12 @@ class FoundationMatchRuntime implements MatchRuntime {
       tick: this.world.tick,
       entityCount: this.world.entityIds().length,
       pendingCommandCount,
+      processedCommands: this.processedCommands,
+      reservedCommandPathCost: this.reservedCommandPathCost,
+      commandBudgetUsed: this.reservedCommandPathCost,
+      commandBudgetRemaining:
+        this.world.config.pathQueriesPerTick.commandBudget - this.reservedCommandPathCost,
+      ...this.world.readPathQueryMetrics(),
     };
   }
 
