@@ -50,6 +50,12 @@ export async function loadAnimationFiles(fileList, { resources = new Map() } = {
     if (extension === "fbx") {
       root = new FBXLoader(manager).parse(buffer, "");
       animations = root.animations;
+      // Mixamo FBX files often all call their single take "mixamo.com".
+      // File names keep separately imported actions distinct in the target catalogue.
+      const base = file.name.replace(/\.fbx$/i, "");
+      animations.forEach((clip, i) => {
+        clip.name = animations.length === 1 ? base : `${base} · ${clip.name || i + 1}`;
+      });
     } else {
       const gltf = await new GLTFLoader(manager)
         .setMeshoptDecoder(MeshoptDecoder)
