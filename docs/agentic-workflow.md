@@ -21,7 +21,8 @@
 7. подготовить готовый prompt для отдельного coding agent;
 8. после реализации проверить фактический PR, exact head, diff, branch freshness и GitHub Actions;
 9. провести review и сформулировать замечания для coding agent;
-10. повторять review после fixes до готовности к manual merge.
+10. повторять review после fixes до готовности к manual merge;
+11. завершать финальное review обязательным `Project Status Check: Required / Not required` с кратким обоснованием; при `Required` запросить обновление в том же PR до merge и повторить review.
 
 По умолчанию Task Chat **не**:
 
@@ -48,7 +49,32 @@ Coding Agent:
 5. запускает релевантные tests/build/verification;
 6. открывает PR;
 7. исправляет замечания review;
-8. не merge'ит PR и не включает auto-merge.
+8. перед передачей PR выполняет `Project Status Check: Required / Not required`, фиксирует обоснование в PR и обновляет `docs/project-status.md` при `Required`;
+9. не merge'ит PR и не включает auto-merge.
+
+### Naming / handoff contract
+
+При подготовке implementation prompt Task Chat обязан явно передать Coding Agent:
+
+```yaml
+Task: G4c / #87
+Branch: feature/g4c-87
+Worktree: web-rts_g4c-87
+Base: origin/main
+```
+
+Точные имена определяются Task Chat по правилам `AGENTS.md`: branches — `feature|fix|doc|chore/<stage>-<issue>[-description]`, `<type>/<issue>[-description]` или `<type>/<description>`; worktrees — `web-rts_<stage>-<issue>`, `web-rts_<issue>` либо `web-rts_<type>_<description>` без issue. Stage берётся из issue/spec. С issue тип и описание **не** включаются в имя worktree. Все части lowercase, описания в kebab-case.
+
+Перед созданием новых branch/worktree Coding Agent проверяет, нет ли уже существующих для этой же задачи. Начиная с даты принятия правил, новые имена соблюдают контракт; старые ветки и worktree не переименовываются. GitHub Actions `branch-name` входит в required `ci-gate` на PR и блокирует merge при несоблюдении naming convention, но не создание ветки.
+
+### Project Status Check (обязательный финальный review gate)
+
+Перед сдачей PR Coding Agent, а в конце каждого финального review Task Chat / архитектор независимо фиксируют **одно** решение с кратким обоснованием:
+
+- `Required` — PR меняет крупный stage/checkpoint, milestone/roadmap, зависимости этапов, устойчивые project-wide invariants или агентный workflow contract. Обновить `docs/project-status.md` **в этом же PR**, затем повторно проверить diff и GitHub Actions.
+- `Not required` — PR не меняет checkpoint (например, локальный bugfix, тесты или внутренний рефакторинг). Обосновать отсутствие обновления.
+
+Не вносить в checkpoint текущие SHA, временные CI statuses или transient PR states. `Required` означает блокировку передачи PR на manual merge до обновления, а не обязанность менять файл в каждом PR.
 
 ### User / Maintainer
 

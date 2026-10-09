@@ -66,6 +66,25 @@ Issue не может молча переопределять Game Vision / Art 
 
 `1 task/issue = 1 branch = 1 worktree = 1 PR`.
 
+### Имена новых task branches и worktree
+
+Единый формат для **новых** задач (существующие ветки/worktree не переименовывать):
+
+| Сценарий | Branch | Worktree |
+| --- | --- | --- |
+| Stage + issue | `feature/g4c-87` | `web-rts_g4c-87` |
+| Только issue | `feature/87` / `fix/87` | `web-rts_87` |
+| Без issue | `fix/typo` | `web-rts_fix_typo` |
+| Документация без issue | `doc/update-project-status` | `web-rts_doc_update-project-status` |
+| Tooling/CI без issue | `chore/ci-cache` | `web-rts_chore_ci-cache` |
+
+- Допустимые branch types: `feature` (новая функциональность), `fix` (исправления), `doc` (документация), `chore` (tooling/CI/обслуживание).
+- Канонический branch pattern: `<type>/<stage>-<issue>[-description]`, `<type>/<issue>[-description]` или `<type>/<description>`. Для `stage` используется подтверждённый issue/spec идентификатор (например, `g4c`, `f9`), не выдуманный агентом.
+- При наличии issue имя worktree **всегда** `web-rts_<stage>-<issue>` или `web-rts_<issue>`: тип и описание не добавляются. При отсутствии issue — `web-rts_<type>_<description>`. Для задач с issue optional branch description обычно опускается.
+- Имена в lowercase; составные описания — `kebab-case`; issue — положительное число без ведущих нулей. Не использовать пробелы и другие разделители.
+- Orchestrator/Task Chat задаёт **конкретные** Branch, Worktree и Base (`origin/main`) в handoff. Coding Agent проверяет их соответствие правилам, а до создания ищет существующие branch/worktree **той же задачи** и продолжает работу в них.
+- GitHub Actions проверяет имена PR branches в отдельном `branch-name` job; результат входит в required `ci-gate`. Это блокирует merge некорректного PR, но не создание/push Git branch. Existing PR, открытый до принятия правила, может иметь явно зафиксированное исключение в workflow.
+
 Перед началом работы:
 
 1. выполнить `git fetch origin`;
@@ -303,5 +322,7 @@ Coding agent не merge'ит собственный PR и не включает 
 - обязательная browser/playtest verification выполнена для player-visible изменений и screenshots приложены в PR;
 - branch проверена поверх актуального `main`, если `main` изменился во время работы;
 - docs обновлены, если public contract изменился;
+- Coding Agent перед сдачей PR выполнил `Project Status Check: Required / Not required` с обоснованием; при `Required` обновил `docs/project-status.md` в этом же PR;
+- Task Chat / architect reviewer в конце финального review независимо повторил `Project Status Check`; при `Required` запросил обновление до merge и повторно проверил PR;
 - PR не содержит случайного scope expansion;
 - PR остаётся unmerged до решения пользователя/maintainer.

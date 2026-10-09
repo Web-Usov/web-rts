@@ -14,6 +14,38 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  branch-name:
+    name: branch-name
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Regression tests for branch names
+        run: node --test scripts/validate-branch-name.test.mjs
+
+      - name: Validate PR head branch
+        if: github.event_name == 'pull_request'
+        env:
+          PR_HEAD_REF: ${{ github.head_ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+
+          # PR #86 predates this convention. Preserve its existing branch.
+          if [[ "$PR_NUMBER" == "86" && "$PR_HEAD_REF" == "codex/meshy-viewer" ]]; then
+            echo "Grandfathered pre-convention PR #86: $PR_HEAD_REF"
+            exit 0
+          fi
+
+          node scripts/validate-branch-name.mjs "$PR_HEAD_REF"
+
   changes:
     name: changes
     runs-on: ubuntu-latest
@@ -322,6 +354,7 @@ jobs:
     timeout-minutes: 5
     if: always()
     needs:
+      - branch-name
       - changes
       - asset-validation
       - lint
@@ -335,6 +368,7 @@ jobs:
     steps:
       - name: Verify required CI results
         env:
+          BRANCH_NAME_RESULT: ${{ needs.branch-name.result }}
           DOCS_ONLY: ${{ needs.changes.outputs.docs_only }}
           CHANGES_RESULT: ${{ needs.changes.result }}
           ASSET_VALIDATION_RESULT: ${{ needs.asset-validation.result }}
@@ -348,6 +382,11 @@ jobs:
           DOCKER_LAN_SMOKE_RESULT: ${{ needs.docker-lan-smoke.result }}
         run: |
           set -euo pipefail
+
+          if [[ "$BRANCH_NAME_RESULT" != "success" ]]; then
+            echo "branch-name job failed: $BRANCH_NAME_RESULT"
+            exit 1
+          fi
 
           if [[ "$CHANGES_RESULT" != "success" ]]; then
             echo "changes job failed: $CHANGES_RESULT"
