@@ -156,6 +156,21 @@ function frame(role: JointName, map: BoneMap, rest: Map<string, RestBone>): Quat
   return new Quaternion().setFromRotationMatrix(new Matrix4().makeBasis(x, y, z));
 }
 
+function poseCorrection(
+  role: JointName,
+  source: Map<string, RestBone>,
+  target: Map<string, RestBone>,
+  options: RetargetOptions,
+): Quaternion {
+  const rotation = target.get(options.targetMap[role]!)!.rotation.clone();
+  // A/T limb alignment is useful, but torso/clavicle directions describe body shape.
+  // Aligning those directions twists a neutral target to the source's proportions.
+  if (!/^(Left|Right)(Arm|ForeArm|UpLeg|Leg|Foot|ToeBase)$/.test(role)) return rotation;
+  return frame(role, options.sourceMap, source)
+    .multiply(frame(role, options.targetMap, target).invert())
+    .multiply(rotation);
+}
+
 const essential: JointName[] = [
   "Hips",
   "Head",
@@ -221,9 +236,7 @@ export function retargetHumanoid(
     yaw = new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), options.yaw ?? 0);
   const corrections = pairs.map((p) => ({
     ...p,
-    correction: frame(p.role, options.sourceMap, source.rest)
-      .multiply(frame(p.role, options.targetMap, target.rest).invert())
-      .multiply(p.t.rotation),
+    correction: poseCorrection(p.role, source.rest, target.rest, options),
   }));
   const byTarget = new Map(corrections.map((p) => [p.t.bone, p]));
   const times: number[] = [],

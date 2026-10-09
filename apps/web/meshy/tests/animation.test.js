@@ -130,6 +130,57 @@ test("root motion scales to target height, in-place retains vertical movement, a
   mixer.stopAllAction();
 });
 
+test("neutral library pose preserves torso and clavicles instead of copying the source body shape", () => {
+  const rig = target(),
+    neutral = library.animations.find((c) => c.name === "A_TPose"),
+    clip = retargetHumanoid(library.scene, rig.root, neutral, options(library.scene, rig.root));
+  const mixer = new THREE.AnimationMixer(rig.root);
+  mixer.clipAction(clip).play();
+  mixer.setTime(0.1);
+  rig.root.updateMatrixWorld(true);
+  for (const role of [
+    "Hips",
+    "Spine",
+    "Spine1",
+    "Spine2",
+    "Neck",
+    "Head",
+    "LeftShoulder",
+    "RightShoulder",
+  ]) {
+    assert.ok(rig.bones[role].quaternion.angleTo(new THREE.Quaternion()) < 1e-4, role);
+  }
+  mixer.stopAllAction();
+  mixer.uncacheRoot(rig.root);
+});
+
+test("real chest rotation still transfers when source and target spine depths differ", () => {
+  const source = target(),
+    dest = target();
+  source.bones.Spine.position.z += 0.12;
+  source.bones.LeftShoulder.position.z += 0.08;
+  source.bones.RightShoulder.position.z += 0.08;
+  source.root.updateMatrixWorld(true);
+  source.skeleton.calculateInverses();
+  const rotation = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), 0.3);
+  const clip = new THREE.AnimationClip("chest bend", 1, [
+    new THREE.QuaternionKeyframeTrack(
+      `${source.bones.Spine2.name}.quaternion`,
+      [0, 1],
+      [0, 0, 0, 1, ...rotation.toArray()],
+    ),
+  ]);
+  const converted = retargetHumanoid(source.root, dest.root, clip, options(source.root, dest.root));
+  const mixer = new THREE.AnimationMixer(dest.root);
+  mixer.clipAction(converted).setLoop(THREE.LoopOnce, 1).play();
+  mixer.setTime(0.5);
+  dest.root.updateMatrixWorld(true);
+  const expected = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), 0.15);
+  assert.ok(dest.bones.Spine2.getWorldQuaternion(new THREE.Quaternion()).angleTo(expected) < 1e-4);
+  assert.ok(dest.bones.LeftShoulder.quaternion.angleTo(new THREE.Quaternion()) < 1e-4);
+  mixer.stopAllAction();
+});
+
 test("manual bone maps work and invalid mappings or key data fail without modifying the target", () => {
   const rig = target(),
     sourceMap = autoBoneMap(library.scene),

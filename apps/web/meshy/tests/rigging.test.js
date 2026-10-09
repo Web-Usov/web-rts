@@ -72,6 +72,42 @@ test("joint adjustment mirrors around the fitted center and snapshots are indepe
   assert.throws(() => moveJoint(draft, "Hips", new THREE.Vector3(NaN, 0, 0), true), /конечными/);
 });
 
+test("collar weights vary continuously across closest-bone and top-four boundaries", () => {
+  const root = humanoid(),
+    draft = fitHumanoid(root);
+  const coordinates = [];
+  for (let row = 0; row < 5; row++)
+    for (let x = 0; x <= 2000; x++)
+      coordinates.push(
+        draft.centerX + x * draft.height * 0.0001,
+        draft.layout.Neck.y + (row - 2) * draft.height * 0.015,
+        draft.layout.Neck.z + draft.height * 0.025,
+      );
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.Float32BufferAttribute(coordinates, 3));
+  root.add(new THREE.Mesh(geometry, new THREE.MeshBasicMaterial()));
+  for (const softness of [0.4, 1, 2]) {
+    const rig = bindHumanoid(root, draft, new Map(), softness),
+      probe = rig.meshes.at(-1).geometry,
+      indices = probe.getAttribute("skinIndex"),
+      weights = probe.getAttribute("skinWeight");
+    const dense = (vertex) => {
+      const vector = new Array(22).fill(0);
+      for (let k = 0; k < 4; k++)
+        vector[indices.getComponent(vertex, k)] += weights.getComponent(vertex, k);
+      return vector;
+    };
+    for (let row = 0; row < 5; row++)
+      for (let x = 1; x <= 2000; x++) {
+        const a = dense(row * 2001 + x - 1),
+          b = dense(row * 2001 + x);
+        const change = a.reduce((sum, w, i) => sum + Math.abs(w - b[i]), 0);
+        assert.ok(change < 0.05, `softness=${softness}, row=${row}, x=${x}: ${change}`);
+      }
+    disposeRig(rig);
+  }
+});
+
 test("binding preserves rest vertices, root transform and original geometry/material", () => {
   const source = humanoid();
   source.position.set(2, 3, 4);
@@ -115,6 +151,7 @@ test("all four skin weights are normalized, finite, nonnegative and refer to val
           assert.ok(Number.isFinite(w) && w >= 0);
           total += w;
           assert.ok(indices.getComponent(i, j) < 22);
+          if (w === 0) assert.equal(indices.getComponent(i, j), 0);
         }
         assert.ok(Math.abs(total - 1) < 1e-6);
       }

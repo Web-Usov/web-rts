@@ -268,7 +268,7 @@ function bakeGeometry(mesh: Mesh, matrix: Matrix4): BufferGeometry {
   return geometry;
 }
 
-/** Local segment distances with hierarchy-neighbour blending; not a heat/ML solver. */
+/** Continuous segment-distance weights; not a heat/ML solver. */
 function skinWeights(geometry: BufferGeometry, draft: RigDraft, softness: number): void {
   const segments = JOINTS.map(([name]) => {
     const children = JOINTS.filter(([, , parent]) => parent === name);
@@ -286,9 +286,6 @@ function skinWeights(geometry: BufferGeometry, draft: RigDraft, softness: number
     const direction = end.clone().sub(start);
     return { start, direction, length2: Math.max(direction.lengthSq(), draft.height ** 2 * 1e-10) };
   });
-  const neighbours = JOINTS.map(([name, , parent], i) =>
-    JOINTS.flatMap(([id, , p], j) => (i === j || id === parent || p === name ? [j] : [])),
-  );
   const position = geometry.getAttribute("position"),
     indices = new Uint16Array(position.count * 4),
     weights = new Float32Array(position.count * 4);
@@ -296,7 +293,6 @@ function skinWeights(geometry: BufferGeometry, draft: RigDraft, softness: number
   const radius2 = (draft.height * 0.035) ** 2,
     exponent = 2 / Math.max(0.4, Math.min(2, softness));
   for (let vertex = 0; vertex < position.count; vertex++) {
-    let nearest = 0;
     segments.forEach(({ start, direction, length2 }, i) => {
       const dx = position.getX(vertex) - start.x,
         dy = position.getY(vertex) - start.y,
@@ -307,16 +303,28 @@ function skinWeights(geometry: BufferGeometry, draft: RigDraft, softness: number
       );
       distances[i] =
         (dx - t * direction.x) ** 2 + (dy - t * direction.y) ** 2 + (dz - t * direction.z) ** 2;
-      if (distances[i]! < distances[nearest]!) nearest = i;
     });
-    const candidates = [...neighbours[nearest]!]
+    // Changing the closest segment must not swap an entire influence neighbourhood.
+    // Fade the fourth influence to zero at the fifth's distance so top-four swaps
+    // are continuous too (important at the collar, armpits and between the legs).
+    const candidates = JOINTS.map((_, i) => i)
       .sort((a, b) => distances[a]! - distances[b]!)
-      .slice(0, 4);
-    const scores = candidates.map((i) => (1 + distances[i]! / radius2) ** -exponent),
+      .slice(0, 5);
+    const cutoff = (1 + distances[candidates[4]!]! / radius2) ** -exponent;
+    candidates.pop();
+    const scores = candidates.map((i) =>
+        Math.max(0, (1 + distances[i]! / radius2) ** -exponent - cutoff),
+      ),
       total = scores.reduce((a, b) => a + b, 0);
+    if (total < 1e-20) {
+      // Coincident/equidistant segments: deterministic normalized fallback.
+      scores.fill(1);
+    }
+    const normalization = total < 1e-20 ? scores.length : total;
     candidates.forEach((index, slot) => {
-      indices[vertex * 4 + slot] = index;
-      weights[vertex * 4 + slot] = scores[slot]! / total;
+      const weight = Math.fround(scores[slot]! / normalization);
+      indices[vertex * 4 + slot] = weight > 0 ? index : 0;
+      weights[vertex * 4 + slot] = weight;
     });
   }
   geometry.setAttribute("skinIndex", new Uint16BufferAttribute(indices, 4));
