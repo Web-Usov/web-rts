@@ -22,6 +22,12 @@ Coding Agent, получивший handoff, следует `AGENTS.md` и пра
 
 Этот файл намеренно **не хранит текущий SHA `main`, состояние PR или CI checks**: такие данные быстро устаревают и должны читаться напрямую из GitHub.
 
+## Agentic workflow checkpoint
+
+- Для новых implementation-задач действует naming contract из `AGENTS.md`: branch prefix `feature/`, `fix/`, `doc/` или `chore/`; отдельный worktree `web-rts_...`. Для задач с issue worktree не включает тип/описание; orchestrator передаёт точные имена и `origin/main` в handoff.
+- PR branch naming контролируется GitHub Actions `branch-name` через required `ci-gate`; создание/push ветки само по себе не блокируется. Ранее созданные ветки не переименовываются.
+- Каждый Coding Agent перед handoff и Task Chat / architect reviewer в конце финального review делают `Project Status Check: Required / Not required`. При `Required` checkpoint обновляется в том же PR **до** manual merge; мелкие PR не требуют формальных правок файла.
+
 ## Foundation checkpoint
 
 Завершены:
