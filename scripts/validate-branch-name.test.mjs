@@ -43,5 +43,7 @@ for (const name of valid) {
 }
 
 for (const name of invalid) {
-  test(`reject ${JSON.stringify(name)}`, () => assert.equal(isValidBranchName(name), false));
+  test(`reject ${JSON.stringify(name)}`, () =>
+    assert.equal(isValidBranchName(name), false),
+  );
 }
