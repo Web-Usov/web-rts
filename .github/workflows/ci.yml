@@ -141,15 +141,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Show expected Prettier format (temporary)
-        run: |
-          echo '===== FORMAT SCRIPT START ====='
-          pnpm exec prettier scripts/validate-branch-name.mjs
-          echo '===== FORMAT SCRIPT END ====='
-          echo '===== FORMAT TEST START ====='
-          pnpm exec prettier scripts/validate-branch-name.test.mjs
-          echo '===== FORMAT TEST END ====='
-
       - name: Lint
         run: pnpm lint
 
