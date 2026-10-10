@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="color-scheme" content="dark" />
     <title>Mesh Studio — просмотр и экспорт 3D</title>
-    <script type="module" crossorigin src="./assets/index-SLyf8EVk.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-Cqt6tioS.css">
+    <script type="module" crossorigin src="./assets/index-C8OU-yYR.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-D8yxwnXA.css">
   </head>
   <body>
     <div class="app">
@@ -29,9 +29,10 @@
         <div class="header-actions">
           <button id="url-button" class="button ghost">По ссылке ↗</button
           ><button id="demo-button" class="button ghost">Открыть пример</button
-          ><button id="open-button" class="button accent">
+          ><button id="open-button" class="button">
             <span aria-hidden="true">＋</span> Открыть модель
           </button>
+          <button id="export-shortcut" class="button accent">Экспорт ↓</button>
         </div>
         <input
           id="file-input"
@@ -41,77 +42,136 @@
           hidden
         />
       </header>
+      <nav class="tabs workflow" aria-label="Рабочие разделы" role="tablist">
+        <button
+          id="view-tab"
+          aria-controls="view-panel"
+          class="tab active"
+          aria-selected="true"
+          role="tab"
+        >
+          Модель</button
+        ><button
+          id="rig-tab"
+          aria-controls="rig-panel"
+          class="tab"
+          aria-selected="false"
+          role="tab"
+        >
+          Скелет</button
+        ><button
+          id="motion-tab"
+          aria-controls="motion-panel"
+          class="tab"
+          aria-selected="false"
+          role="tab"
+        >
+          Анимации</button
+        ><button
+          id="export-tab"
+          aria-controls="export-panel"
+          class="tab"
+          aria-selected="false"
+          role="tab"
+        >
+          Экспорт <span>↗</span>
+        </button>
+      </nav>
       <main class="workspace">
-        <section id="viewport" class="viewport" aria-label="3D-просмотр модели">
-          <div class="viewport-heading">
-            <span class="eyebrow">РАБОЧАЯ ОБЛАСТЬ</span>
-            <div class="file-heading">
-              <span id="file-title">Нет модели</span
-              ><span id="file-extension" class="file-extension">3D</span>
+        <div class="stage">
+          <section id="viewport" class="viewport" aria-label="3D-просмотр модели">
+            <div class="viewport-heading">
+              <span class="eyebrow">РАБОЧАЯ ОБЛАСТЬ</span>
+              <div class="file-heading">
+                <span id="file-title">Нет модели</span
+                ><span id="file-extension" class="file-extension">3D</span>
+              </div>
             </div>
-          </div>
-          <div class="view-tools" aria-label="Управление камерой">
-            <button
-              id="fit-button"
-              class="icon-button"
-              title="Вписать модель"
-              aria-label="Вписать модель"
-            >
-              ⌖</button
-            ><button
-              id="snapshot-button"
-              class="icon-button"
-              title="Сохранить изображение PNG"
-              aria-label="Сохранить изображение PNG"
-            >
-              ▣
+            <div class="view-tools" aria-label="Управление камерой">
+              <button
+                id="fit-button"
+                class="icon-button"
+                title="Вписать модель"
+                aria-label="Вписать модель"
+              >
+                ⌖</button
+              ><button
+                id="snapshot-button"
+                class="icon-button"
+                title="Сохранить изображение PNG"
+                aria-label="Сохранить изображение PNG"
+              >
+                ▣
+              </button>
+            </div>
+            <div id="empty-state" class="empty-state" hidden>
+              <span class="empty-symbol">◇</span>
+              <h1>Модель в центре внимания.</h1>
+              <p>Перетащите 3D-файл сюда или откройте его с устройства.</p>
+              <button id="empty-open" class="button accent">Выбрать файл</button
+              ><span class="accepted">MESHY · GLB · glTF · OBJ · STL · PLY</span>
+            </div>
+            <div id="drop-overlay" class="drop-overlay" hidden>
+              <span>Отпустите, чтобы открыть</span
+              ><small>Для glTF и OBJ добавьте связанные файлы вместе с моделью</small>
+            </div>
+            <div id="loading" class="loading" hidden>
+              <span class="spinner"></span><span id="loading-text">Открываем модель…</span>
+            </div>
+            <div class="camera-strip" aria-label="Ракурсы">
+              <span>РАКУРС</span><button data-view="front">Спереди</button
+              ><button data-view="side">Сбоку</button><button data-view="top">Сверху</button
+              ><button data-view="iso" class="active">3/4</button>
+            </div>
+            <div class="viewport-footer">
+              <span
+                >Вращение — мышью <b>·</b> Масштаб — колесом <b>·</b> Сдвиг — правой кнопкой</span
+              ><span class="up-label">Y ↑</span>
+            </div>
+            <button id="mobile-inspector" class="mobile-inspector button">
+              Параметры <span>↗</span>
             </button>
+          </section>
+          <div id="transport-root"></div>
+          <div class="legacy-playback" hidden>
+            <section id="animation-section" class="control-section" hidden>
+              <h2>Клипы персонажа</h2>
+              <label for="animation-select" class="small-label">Клип</label
+              ><select id="animation-select"></select
+              ><label class="toggle-row"
+                >Воспроизведение<input
+                  id="animation-play"
+                  type="checkbox"
+                  role="switch"
+                  checked /><span class="toggle"></span></label
+              ><label class="range-label" for="animation-speed"
+                >Скорость<output id="animation-speed-value">1.0×</output></label
+              ><input id="animation-speed" type="range" min="0.1" max="2" step="0.01" value="1" />
+              <label class="toggle-row"
+                >Зацикливание<input
+                  id="animation-loop"
+                  type="checkbox"
+                  role="switch"
+                  checked /><span class="toggle"></span></label
+              ><button id="animation-rest" class="button ghost rig-wide">Исходная поза</button>
+            </section>
           </div>
-          <div id="empty-state" class="empty-state" hidden>
-            <span class="empty-symbol">◇</span>
-            <h1>Модель в центре внимания.</h1>
-            <p>Перетащите 3D-файл сюда или откройте его с устройства.</p>
-            <button id="empty-open" class="button accent">Выбрать файл</button
-            ><span class="accepted">MESHY · GLB · glTF · OBJ · STL · PLY</span>
-          </div>
-          <div id="drop-overlay" class="drop-overlay" hidden>
-            <span>Отпустите, чтобы открыть</span
-            ><small>Для glTF и OBJ добавьте связанные файлы вместе с моделью</small>
-          </div>
-          <div id="loading" class="loading" hidden>
-            <span class="spinner"></span><span id="loading-text">Открываем модель…</span>
-          </div>
-          <div class="camera-strip" aria-label="Ракурсы">
-            <span>РАКУРС</span><button data-view="front">Спереди</button
-            ><button data-view="side">Сбоку</button><button data-view="top">Сверху</button
-            ><button data-view="iso" class="active">3/4</button>
-          </div>
-          <div class="viewport-footer">
-            <span>Вращение — мышью <b>·</b> Масштаб — колесом <b>·</b> Сдвиг — правой кнопкой</span
-            ><span class="up-label">Y ↑</span>
-          </div>
-          <button id="mobile-inspector" class="mobile-inspector button">
-            Параметры <span>↗</span>
-          </button>
-        </section>
+        </div>
         <aside id="inspector" class="inspector" aria-label="Параметры модели">
           <div class="inspector-header">
-            <span>Инспектор</span
+            <span id="inspector-title">Модель</span
             ><button id="close-inspector" class="icon-button" aria-label="Закрыть параметры">
               ×
             </button>
           </div>
-          <nav class="tabs" aria-label="Панели">
-            <button id="view-tab" class="tab active" aria-selected="true" role="tab">
-              Просмотр</button
-            ><button id="rig-tab" class="tab" aria-selected="false" role="tab">Скелет</button
-            ><button id="motion-tab" class="tab" aria-selected="false" role="tab">Анимации</button
-            ><button id="export-tab" class="tab" aria-selected="false" role="tab">
-              Экспорт <span>↗</span>
-            </button>
-          </nav>
           <div class="panel-scroll">
-            <div id="view-panel">
+            <div id="view-panel" role="tabpanel" aria-labelledby="view-tab">
+              <section class="control-section mobile-only">
+                <h2>Открыть модель</h2>
+                <button id="mobile-url-button" class="button rig-wide">
+                  Загрузить по ссылке ↗
+                </button>
+              </section>
               <section class="control-section">
                 <h2>Отображение</h2>
                 <div class="mode-switch" role="group" aria-label="Режим отображения">
@@ -142,11 +202,11 @@
                 <h2>Свет и фон</h2>
                 <label class="range-label" for="exposure"
                   >Экспозиция<output id="exposure-value">1.0</output></label
-                ><input id="exposure" type="range" min="0.2" max="3" step="0.1" value="1" /><label
+                ><input id="exposure" type="range" min="0.2" max="3" step="0.01" value="1" /><label
                   class="range-label"
                   for="environment"
                   >Окружение<output id="environment-value">1.0</output></label
-                ><input id="environment" type="range" min="0" max="3" step="0.1" value="1" /><label
+                ><input id="environment" type="range" min="0" max="3" step="0.01" value="1" /><label
                   class="range-label"
                   for="light"
                   >Основной свет<output id="light-value">2.0</output></label
@@ -221,7 +281,7 @@
                 ↺ &nbsp; Сбросить просмотр
               </button>
             </div>
-            <div id="rig-panel" hidden>
+            <div id="rig-panel" role="tabpanel" aria-labelledby="rig-tab" hidden>
               <section class="control-section">
                 <h2>Автоскелет <span class="rig-badge">HUMANOID</span></h2>
                 <p class="rig-hint">
@@ -283,7 +343,7 @@
                   <label class="range-label" for="rig-softness"
                     >Мягкость переходов<output id="rig-softness-value">1.0</output></label
                   >
-                  <input id="rig-softness" type="range" min="0.4" max="2" step="0.1" value="1" />
+                  <input id="rig-softness" type="range" min="0.4" max="2" step="0.01" value="1" />
                   <button id="rig-bind" class="button accent rig-wide">Привязать модель</button>
                   <p class="rig-hint">
                     После правок пересчитайте привязку и заново примените нужные анимации. Броня и
@@ -328,50 +388,74 @@
               </div>
               <p id="rig-status" class="rig-status" role="status" aria-live="polite"></p>
             </div>
-            <div id="motion-panel" hidden>
-              <section class="control-section">
-                <h2>Библиотека <span class="rig-badge">CC0</span></h2>
-                <p class="rig-hint">45 движений Quaternius: ожидание, ходьба, бег, прыжки и бой.</p>
-                <button id="motion-library" class="button accent rig-wide">
-                  Открыть библиотеку
-                </button>
-                <p class="rig-hint">
-                  <a
-                    href="https://quaternius.itch.io/universal-animation-library"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    >Quaternius · Standard · CC0 ↗</a
-                  >
-                </p>
-              </section>
-              <section class="control-section">
-                <h2>Своя анимация</h2>
-                <button id="motion-open" class="button ghost rig-wide">
-                  Загрузить GLB / glTF / FBX
-                </button>
-                <input id="motion-file" type="file" accept=".glb,.gltf,.bin,.fbx" multiple hidden />
-                <details class="motion-url">
-                  <summary>Загрузить по ссылке ↗</summary>
-                  <label class="small-label" for="motion-url">Ссылка на анимацию</label
-                  ><input id="motion-url" type="url" placeholder="https://…/walk.glb" />
-                  <label class="small-label" for="motion-format">Формат анимации</label
-                  ><select id="motion-format">
-                    <option value="auto">Определить автоматически</option>
-                    <option value="glb">GLB</option>
-                    <option value="gltf">glTF</option>
-                    <option value="fbx">FBX</option>
-                  </select>
-                  <button id="motion-download" class="button ghost rig-wide">
-                    Скачать анимацию</button
-                  ><button id="motion-cancel" class="button ghost rig-wide" hidden>
-                    Отменить загрузку
+            <div id="motion-panel" role="tabpanel" aria-labelledby="motion-tab" hidden>
+              <details id="motion-sources" open>
+                <summary>Источники анимаций</summary>
+                <section class="control-section">
+                  <h2>Библиотека <span class="rig-badge">CC0</span></h2>
+                  <p class="rig-hint">
+                    45 движений Quaternius: ожидание, ходьба, бег, прыжки и бой.
+                  </p>
+                  <button id="motion-library" class="button accent rig-wide">
+                    Открыть библиотеку
                   </button>
-                  <p class="rig-hint">Нужна прямая ссылка; сервер должен разрешать CORS.</p>
-                </details>
-                <p id="motion-source-status" class="rig-hint" role="status"></p>
-              </section>
+                  <p class="rig-hint">
+                    <a
+                      href="https://quaternius.itch.io/universal-animation-library"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      >Quaternius · Standard · CC0 ↗</a
+                    >
+                  </p>
+                </section>
+                <section class="control-section">
+                  <h2>Своя анимация</h2>
+                  <button id="motion-open" class="button ghost rig-wide">
+                    Загрузить GLB / glTF / FBX
+                  </button>
+                  <input
+                    id="motion-file"
+                    type="file"
+                    accept=".glb,.gltf,.bin,.fbx"
+                    multiple
+                    hidden
+                  />
+                  <details class="motion-url">
+                    <summary>Загрузить по ссылке ↗</summary>
+                    <label class="small-label" for="motion-url">Ссылка на анимацию</label
+                    ><input id="motion-url" type="url" placeholder="https://…/walk.glb" />
+                    <label class="small-label" for="motion-format">Формат анимации</label
+                    ><select id="motion-format">
+                      <option value="auto">Определить автоматически</option>
+                      <option value="glb">GLB</option>
+                      <option value="gltf">glTF</option>
+                      <option value="fbx">FBX</option>
+                    </select>
+                    <button id="motion-download" class="button ghost rig-wide">
+                      Скачать анимацию</button
+                    ><button id="motion-cancel" class="button ghost rig-wide" hidden>
+                      Отменить загрузку
+                    </button>
+                    <p class="rig-hint">Нужна прямая ссылка; сервер должен разрешать CORS.</p>
+                  </details>
+                  <p id="motion-source-status" class="rig-hint" role="status"></p>
+                </section>
+              </details>
               <section id="motion-transfer" class="control-section" hidden>
                 <h2>Применить к персонажу</h2>
+                <label class="small-label" for="motion-search">Найти движение</label
+                ><input id="motion-search" type="search" placeholder="Название анимации…" /><label
+                  class="small-label"
+                  for="motion-category"
+                  >Категория</label
+                ><select id="motion-category">
+                  <option value="all">Все движения</option>
+                  <option value="idle">Ожидание</option>
+                  <option value="move">Перемещение</option>
+                  <option value="combat">Бой</option>
+                  <option value="other">Другие</option>
+                </select>
+                <p id="motion-results" class="rig-hint" role="status"></p>
                 <label class="small-label" for="motion-clip">Анимация источника</label
                 ><select id="motion-clip"></select>
                 <label class="small-label" for="motion-yaw">Поворот источника</label
@@ -400,33 +484,12 @@
                 </details>
                 <button id="motion-apply" class="button accent rig-wide">Применить анимацию</button>
                 <p class="rig-hint">
-                  После переноса клип появится ниже и сохранится при экспорте GLB/glTF.
+                  После переноса клип появится на шкале времени и сохранится при экспорте GLB/glTF.
                 </p>
               </section>
               <p id="motion-status" class="rig-status" role="status" aria-live="polite"></p>
-              <section id="animation-section" class="control-section" hidden>
-                <h2>Клипы персонажа</h2>
-                <label for="animation-select" class="small-label">Клип</label
-                ><select id="animation-select"></select
-                ><label class="toggle-row"
-                  >Воспроизведение<input
-                    id="animation-play"
-                    type="checkbox"
-                    role="switch"
-                    checked /><span class="toggle"></span></label
-                ><label class="range-label" for="animation-speed"
-                  >Скорость<output id="animation-speed-value">1.0×</output></label
-                ><input id="animation-speed" type="range" min="0.1" max="2" step="0.1" value="1" />
-                <label class="toggle-row"
-                  >Зацикливание<input
-                    id="animation-loop"
-                    type="checkbox"
-                    role="switch"
-                    checked /><span class="toggle"></span></label
-                ><button id="animation-rest" class="button ghost rig-wide">Исходная поза</button>
-              </section>
             </div>
-            <div id="export-panel" hidden>
+            <div id="export-panel" role="tabpanel" aria-labelledby="export-tab" hidden>
               <section class="control-section">
                 <h2>Формат файла</h2>
                 <div
