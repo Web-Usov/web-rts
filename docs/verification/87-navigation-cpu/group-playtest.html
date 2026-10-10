@@ -3,13 +3,29 @@
   <meta charset="utf-8" />
   <title>#87 — isolated group MOVE playtest</title>
   <style>
-    body { background: #17222a; color: #e0e8ec; font: 16px system-ui; margin: 24px; }
-    canvas { background: #22333b; border: 1px solid #72858e; }
-    button { padding: 12px; margin: 8px; }
-    pre { white-space: pre-wrap; }
+    body {
+      background: #17222a;
+      color: #e0e8ec;
+      font: 16px system-ui;
+      margin: 24px;
+    }
+    canvas {
+      background: #22333b;
+      border: 1px solid #72858e;
+    }
+    button {
+      padding: 12px;
+      margin: 8px;
+    }
+    pre {
+      white-space: pre-wrap;
+    }
   </style>
   <h1>#87: изолированный browser fixture</h1>
-  <p>Настоящий World + command scheduler. 16 distinct units; две компоненты. Это test harness, а не production Local/Remote shell.</p>
+  <p>
+    Настоящий World + command scheduler. 16 distinct units; две компоненты. Это test harness, а не
+    production Local/Remote shell.
+  </p>
   <button id="blocked">Группа MOVE: blocked target</button>
   <button id="reachable">Группа MOVE: reachable target слева</button>
   <button id="reset">Сброс</button>
@@ -17,39 +33,96 @@
   <pre id="state"></pre>
   <script type="module">
     import { createWorld } from "../../../packages/simulation/src/world.ts";
-    import { scheduleCommands, commandPathCost } from "../../../packages/simulation/src/command-scheduler.ts";
-    const canvas = document.querySelector("canvas"), ctx = canvas.getContext("2d"), status = document.querySelector("#state");
+    import {
+      scheduleCommands,
+      commandPathCost,
+    } from "../../../packages/simulation/src/command-scheduler.ts";
+    const canvas = document.querySelector("canvas"),
+      ctx = canvas.getContext("2d"),
+      status = document.querySelector("#state");
     let world, ids, cursor, marker, queues, lastEvent;
     function reset() {
-      world = createWorld({ seed: 87, defaultMoveSpeed: 4, map: { id: "browser-fixture-87", originX: 0, originY: 0, widthCells: 18, heightCells: 10, staticTerrain: [{ x: 8, y: 0, width: 1, height: 10, walkable: false, buildable: false }], playerSpawns: [], startingPlacements: [], resourcePlacements: [] } });
+      world = createWorld({
+        seed: 87,
+        defaultMoveSpeed: 4,
+        map: {
+          id: "browser-fixture-87",
+          originX: 0,
+          originY: 0,
+          widthCells: 18,
+          heightCells: 10,
+          staticTerrain: [{ x: 8, y: 0, width: 1, height: 10, walkable: false, buildable: false }],
+          playerSpawns: [],
+          startingPlacements: [],
+          resourcePlacements: [],
+        },
+      });
       ids = Array.from({ length: 16 }, (_, i) => {
         const id = world.createEntity({ kind: "UNIT", definitionId: "foundation_unit" });
         world.positions.set(id, { x: i % 2 ? 15.5 : 2.5, y: 1.5 + Math.floor(i / 2) });
-        world.controllers.set(id, { controllerPlayerId: 0 }); return id;
+        world.controllers.set(id, { controllerPlayerId: 0 });
+        return id;
       });
-      world.drainEvents(); queues = new Map([[0, []]]); cursor = undefined; marker = null; lastEvent = "—"; draw();
+      world.drainEvents();
+      queues = new Map([[0, []]]);
+      cursor = undefined;
+      marker = null;
+      lastEvent = "—";
+      draw();
     }
-    function move(target) { marker = target; queues.get(0).push({ type: "MOVE", commandId: "fixture-" + world.tick, entityIds: ids, target }); }
+    function move(target) {
+      marker = target;
+      queues
+        .get(0)
+        .push({ type: "MOVE", commandId: "fixture-" + world.tick, entityIds: ids, target });
+    }
     document.querySelector("#blocked").onclick = () => move({ x: 8.5, y: 4.5 });
     document.querySelector("#reachable").onclick = () => move({ x: 4.5, y: 4.5 });
     document.querySelector("#reset").onclick = reset;
     function draw() {
-      ctx.clearRect(0, 0, 720, 400); ctx.strokeStyle = "#48616b";
-      for (let x = 0; x <= 18; x++) { ctx.beginPath(); ctx.moveTo(x * 40, 0); ctx.lineTo(x * 40, 400); ctx.stroke(); }
-      for (let y = 0; y <= 10; y++) { ctx.beginPath(); ctx.moveTo(0, y * 40); ctx.lineTo(720, y * 40); ctx.stroke(); }
-      ctx.fillStyle = "#b19a86"; ctx.fillRect(320, 0, 40, 400);
-      if (marker) { ctx.strokeStyle = "#ffd36c"; ctx.beginPath(); ctx.arc(marker.x * 40, marker.y * 40, 10, 0, Math.PI * 2); ctx.stroke(); }
-      const positions = ids.map(id => world.positions.get(id));
-      positions.forEach((p, i) => { ctx.fillStyle = i % 2 ? "#efad7b" : "#76b7ed"; ctx.beginPath(); ctx.arc(p.x * 40, p.y * 40, 5, 0, Math.PI * 2); ctx.fill(); });
-      const active = ids.filter(id => world.movements.has(id)).length;
-      status.textContent = `Tick: ${world.tick}; Units: ${ids.length}; Active tasks: ${active}; Last event: ${lastEvent}\n` + positions.map((p,i) => `${ids[i]}: (${p.x.toFixed(4)}, ${p.y.toFixed(4)})`).join(" · ");
+      ctx.clearRect(0, 0, 720, 400);
+      ctx.strokeStyle = "#48616b";
+      for (let x = 0; x <= 18; x++) {
+        ctx.beginPath();
+        ctx.moveTo(x * 40, 0);
+        ctx.lineTo(x * 40, 400);
+        ctx.stroke();
+      }
+      for (let y = 0; y <= 10; y++) {
+        ctx.beginPath();
+        ctx.moveTo(0, y * 40);
+        ctx.lineTo(720, y * 40);
+        ctx.stroke();
+      }
+      ctx.fillStyle = "#b19a86";
+      ctx.fillRect(320, 0, 40, 400);
+      if (marker) {
+        ctx.strokeStyle = "#ffd36c";
+        ctx.beginPath();
+        ctx.arc(marker.x * 40, marker.y * 40, 10, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      const positions = ids.map((id) => world.positions.get(id));
+      positions.forEach((p, i) => {
+        ctx.fillStyle = i % 2 ? "#efad7b" : "#76b7ed";
+        ctx.beginPath();
+        ctx.arc(p.x * 40, p.y * 40, 5, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      const active = ids.filter((id) => world.movements.has(id)).length;
+      status.textContent =
+        `Tick: ${world.tick}; Units: ${ids.length}; Active tasks: ${active}; Last event: ${lastEvent}\n` +
+        positions.map((p, i) => `${ids[i]}: (${p.x.toFixed(4)}, ${p.y.toFixed(4)})`).join(" · ");
     }
     reset();
     // Host timer only; simulation receives explicit fixed ticks.
     setInterval(() => {
-      const selection = scheduleCommands(queues, cursor, 16, 16, commandPathCost); cursor = selection.nextPlayerId;
-      for (const { playerId, command } of selection.selected) world.enqueueCommand({ actor: { playerId }, command });
-      world.step(); for (const e of world.drainEvents()) if (e.type === "COMMAND_REJECTED") lastEvent = e.reason;
+      const selection = scheduleCommands(queues, cursor, 16, 16, commandPathCost);
+      cursor = selection.nextPlayerId;
+      for (const { playerId, command } of selection.selected)
+        world.enqueueCommand({ actor: { playerId }, command });
+      world.step();
+      for (const e of world.drainEvents()) if (e.type === "COMMAND_REJECTED") lastEvent = e.reason;
       draw();
     }, 100);
   </script>
