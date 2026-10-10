@@ -1,0 +1,265 @@
+{
+  "schema_version": 1,
+  "art_direction_brief": "docs/art-direction.md",
+  "issue": "https://github.com/Web-Usov/web-rts/issues/80",
+  "assets": [
+    {
+      "id": "core-002-worker-front-reference",
+      "role": "worker T-pose visual turnaround — front",
+      "path": "docs/art/assets/core-002/characters/worker-front.png",
+      "status": "approved-reference-only",
+      "technical": {
+        "dimensions": "1086x1448",
+        "format": "PNG",
+        "view": "front",
+        "pose": "T-pose",
+        "sha256": "8528a7786377d231a05ddc2b54c7b009c5fd6dcb3d3c2c924828a9bebac290bc",
+        "bytes": 1773610,
+        "pixel_mode": "RGBA",
+        "alpha_channel_present": true,
+        "fully_opaque": true
+      },
+      "visual_locks": [
+        "character-identity",
+        "role-silhouette",
+        "costume",
+        "relative-proportions",
+        "cozy-settlement",
+        "material-language"
+      ],
+      "source": {
+        "kind": "generated",
+        "url_or_tool": "OpenAI / ChatGPT image generation",
+        "creator": "OpenAI image generation, user-curated",
+        "created_at": "2026-10-09",
+        "license": "not recorded; rights review pending",
+        "attribution": "generation provenance recorded in README",
+        "prompt_or_source_record": "user-uploaded ChatGPT image, source filename: Изображение ChatGPT 9 окт. 2026 г., 21_15_15.png"
+      },
+      "verification": {
+        "raster_decode_passed": true,
+        "image_to_model_verified": false,
+        "in_engine_reviewed": false,
+        "production_approved": false,
+        "reviewed_as_visual_reference": true,
+        "approved_by": "user in ChatGPT project conversation"
+      },
+      "notes": "Reference only; no runtime import; compare views before mesh generation."
+    },
+    {
+      "id": "core-002-worker-side-reference",
+      "role": "worker T-pose visual turnaround — side",
+      "path": "docs/art/assets/core-002/characters/worker-side.png",
+      "status": "approved-reference-only",
+      "technical": {
+        "dimensions": "1086x1448",
+        "format": "PNG",
+        "view": "side",
+        "pose": "T-pose",
+        "sha256": "bdaf66f6fb842a1bb8cf3159b769cabf1ef967d71b579d092d450adee3b59f71",
+        "bytes": 1662623,
+        "pixel_mode": "RGBA",
+        "alpha_channel_present": true,
+        "fully_opaque": true
+      },
+      "visual_locks": [
+        "character-identity",
+        "role-silhouette",
+        "costume",
+        "relative-proportions",
+        "cozy-settlement",
+        "material-language"
+      ],
+      "source": {
+        "kind": "generated",
+        "url_or_tool": "OpenAI / ChatGPT image generation",
+        "creator": "OpenAI image generation, user-curated",
+        "created_at": "2026-10-09",
+        "license": "not recorded; rights review pending",
+        "attribution": "generation provenance recorded in README",
+        "prompt_or_source_record": "user-uploaded ChatGPT image, source filename: Изображение ChatGPT 9 окт. 2026 г., 21_15_26.png"
+      },
+      "verification": {
+        "raster_decode_passed": true,
+        "image_to_model_verified": false,
+        "in_engine_reviewed": false,
+        "production_approved": false,
+        "reviewed_as_visual_reference": true,
+        "approved_by": "user in ChatGPT project conversation"
+      },
+      "notes": "Reference only; no runtime import; compare views before mesh generation."
+    },
+    {
+      "id": "core-002-worker-back-reference",
+      "role": "worker T-pose visual turnaround — back",
+      "path": "docs/art/assets/core-002/characters/worker-back.png",
+      "status": "approved-reference-only",
+      "technical": {
+        "dimensions": "1086x1448",
+        "format": "PNG",
+        "view": "back",
+        "pose": "T-pose",
+        "sha256": "074ad9833af4e074539ef466eb7dd2cbdc032e87c5bae85236bebb6e627c2dc7",
+        "bytes": 1735469,
+        "pixel_mode": "RGBA",
+        "alpha_channel_present": true,
+        "fully_opaque": true
+      },
+      "visual_locks": [
+        "character-identity",
+        "role-silhouette",
+        "costume",
+        "relative-proportions",
+        "cozy-settlement",
+        "material-language"
+      ],
+      "source": {
+        "kind": "generated",
+        "url_or_tool": "OpenAI / ChatGPT image generation",
+        "creator": "OpenAI image generation, user-curated",
+        "created_at": "2026-10-09",
+        "license": "not recorded; rights review pending",
+        "attribution": "generation provenance recorded in README",
+        "prompt_or_source_record": "user-uploaded ChatGPT image, source filename: Изображение ChatGPT 9 окт. 2026 г., 21_15_31.png"
+      },
+      "verification": {
+        "raster_decode_passed": true,
+        "image_to_model_verified": false,
+        "in_engine_reviewed": false,
+        "production_approved": false,
+        "reviewed_as_visual_reference": true,
+        "approved_by": "user in ChatGPT project conversation"
+      },
+      "notes": "Reference only; no runtime import; compare views before mesh generation."
+    },
+    {
+      "id": "core-002-soldier-front-reference",
+      "role": "soldier T-pose visual turnaround — front",
+      "path": "docs/art/assets/core-002/characters/soldier-front.png",
+      "status": "approved-reference-only",
+      "technical": {
+        "dimensions": "1086x1448",
+        "format": "PNG",
+        "view": "front",
+        "pose": "T-pose",
+        "sha256": "4ec5a2bac289dfb3a37af28b3dfb55fde9c5354c7af6df62df6624e281755bde",
+        "bytes": 1850903,
+        "pixel_mode": "RGBA",
+        "alpha_channel_present": true,
+        "fully_opaque": true
+      },
+      "visual_locks": [
+        "character-identity",
+        "role-silhouette",
+        "costume",
+        "relative-proportions",
+        "cozy-settlement",
+        "material-language"
+      ],
+      "source": {
+        "kind": "generated",
+        "url_or_tool": "OpenAI / ChatGPT image generation",
+        "creator": "OpenAI image generation, user-curated",
+        "created_at": "2026-10-09",
+        "license": "not recorded; rights review pending",
+        "attribution": "generation provenance recorded in README",
+        "prompt_or_source_record": "user-uploaded ChatGPT image, source filename: Изображение ChatGPT 9 окт. 2026 г., 21_15_37.png"
+      },
+      "verification": {
+        "raster_decode_passed": true,
+        "image_to_model_verified": false,
+        "in_engine_reviewed": false,
+        "production_approved": false,
+        "reviewed_as_visual_reference": true,
+        "approved_by": "user in ChatGPT project conversation"
+      },
+      "notes": "Reference only; no runtime import; compare views before mesh generation."
+    },
+    {
+      "id": "core-002-soldier-side-reference",
+      "role": "soldier T-pose visual turnaround — side",
+      "path": "docs/art/assets/core-002/characters/soldier-side.png",
+      "status": "approved-reference-only",
+      "technical": {
+        "dimensions": "1086x1448",
+        "format": "PNG",
+        "view": "side",
+        "pose": "T-pose",
+        "sha256": "ff520dc5783ae2fe7666f5b6221d9b3a2a8c5cad29091ecd57c5af84db4d85dd",
+        "bytes": 1796445,
+        "pixel_mode": "RGBA",
+        "alpha_channel_present": true,
+        "fully_opaque": true
+      },
+      "visual_locks": [
+        "character-identity",
+        "role-silhouette",
+        "costume",
+        "relative-proportions",
+        "cozy-settlement",
+        "material-language"
+      ],
+      "source": {
+        "kind": "generated",
+        "url_or_tool": "OpenAI / ChatGPT image generation",
+        "creator": "OpenAI image generation, user-curated",
+        "created_at": "2026-10-09",
+        "license": "not recorded; rights review pending",
+        "attribution": "generation provenance recorded in README",
+        "prompt_or_source_record": "user-uploaded ChatGPT image, source filename: Гладиатор в синем плюмаже(1).png"
+      },
+      "verification": {
+        "raster_decode_passed": true,
+        "image_to_model_verified": false,
+        "in_engine_reviewed": false,
+        "production_approved": false,
+        "reviewed_as_visual_reference": true,
+        "approved_by": "user in ChatGPT project conversation"
+      },
+      "notes": "Reference only; no runtime import; compare views before mesh generation."
+    },
+    {
+      "id": "core-002-soldier-back-reference",
+      "role": "soldier T-pose visual turnaround — back",
+      "path": "docs/art/assets/core-002/characters/soldier-back.png",
+      "status": "approved-reference-only",
+      "technical": {
+        "dimensions": "1086x1448",
+        "format": "PNG",
+        "view": "back",
+        "pose": "T-pose",
+        "sha256": "5f017ae8992c70fd5203b7655682462738f4311df1e6d9370a12d78d16c9b1c0",
+        "bytes": 1856207,
+        "pixel_mode": "RGBA",
+        "alpha_channel_present": true,
+        "fully_opaque": true
+      },
+      "visual_locks": [
+        "character-identity",
+        "role-silhouette",
+        "costume",
+        "relative-proportions",
+        "cozy-settlement",
+        "material-language"
+      ],
+      "source": {
+        "kind": "generated",
+        "url_or_tool": "OpenAI / ChatGPT image generation",
+        "creator": "OpenAI image generation, user-curated",
+        "created_at": "2026-10-09",
+        "license": "not recorded; rights review pending",
+        "attribution": "generation provenance recorded in README",
+        "prompt_or_source_record": "user-uploaded ChatGPT image, source filename: Изображение ChatGPT 9 окт. 2026 г., 21_15_41.png"
+      },
+      "verification": {
+        "raster_decode_passed": true,
+        "image_to_model_verified": false,
+        "in_engine_reviewed": false,
+        "production_approved": false,
+        "reviewed_as_visual_reference": true,
+        "approved_by": "user in ChatGPT project conversation"
+      },
+      "notes": "Reference only; no runtime import; compare views before mesh generation."
+    }
+  ]
+}
