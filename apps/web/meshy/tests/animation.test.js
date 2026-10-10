@@ -5,7 +5,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { GLTFExporter } from "three/addons/exporters/GLTFExporter.js";
 import { autoBoneMap, retargetHumanoid } from "../src/retarget.ts";
-import { bindHumanoid, fitHumanoid } from "../src/rigging.ts";
+import { bindHumanoid, fitHumanoid, JOINTS } from "../src/rigging.ts";
 import { loadAnimationFiles } from "../src/animation-loader.js";
 
 const bytes = readFileSync(new URL("../assets/quaternius-standard.glb", import.meta.url));
@@ -339,4 +339,47 @@ test("separate glTF loads its BIN without fetching unused source textures", asyn
   } finally {
     globalThis.ProgressEvent = oldEvent;
   }
+});
+
+test("numbered Mixamo prefixes map all core joints without matching finger/end nodes", () => {
+  for (const prefix of ["mixamorig1", "mixamorig12:", "mixamorig2_"]) {
+    const root = new THREE.Group();
+    for (const [role] of JOINTS) {
+      const bone = new THREE.Bone();
+      bone.name = prefix + role;
+      root.add(bone);
+    }
+    const finger = new THREE.Bone();
+    finger.name = prefix + "LeftHandIndex1";
+    root.add(finger);
+    const map = autoBoneMap(root);
+    assert.equal(Object.keys(map).length, 22);
+    assert.equal(map.LeftHand, prefix + "LeftHand");
+  }
+});
+
+test("optional toe end markers do not change retargeted joint frames or skin weights", () => {
+  const a = target(),
+    b = target(),
+    end = new THREE.Bone();
+  end.name = "Toe_End";
+  end.position.set(0, 0, 0.1);
+  b.bones.LeftToeBase.add(end);
+  const weights = b.meshes.map((m) => [...m.geometry.attributes.skinWeight.array]);
+  const clip = library.animations.find((c) => c.name === "Walk_Loop");
+  const retarget = (rig) =>
+    retargetHumanoid(library.scene, rig.root, clip, {
+      sourceMap: autoBoneMap(library.scene),
+      targetMap: autoBoneMap(rig.root),
+    });
+  const first = retarget(a),
+    second = retarget(b);
+  assert.deepEqual(
+    second.tracks.map((t) => [t.name, [...t.values]]),
+    first.tracks.map((t) => [t.name, [...t.values]]),
+  );
+  assert.deepEqual(
+    b.meshes.map((m) => [...m.geometry.attributes.skinWeight.array]),
+    weights,
+  );
 });

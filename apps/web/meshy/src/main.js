@@ -7,7 +7,7 @@ import { formats, exportModel, safeName, download, textureCanvas } from "./expor
 import { createRigEditor } from "./rig-editor.js";
 import { createAnimationEditor } from "./animation-editor.js";
 import { fetchModel } from "./remote.js";
-import { demoBase64 } from "./demo.js";
+const demoURL = new URL("../assets/mannequin.glb", import.meta.url).href;
 
 const $ = (id) => document.getElementById(id);
 const viewport = $("viewport");
@@ -360,8 +360,13 @@ async function openFiles(files, { onError } = {}) {
   }
 }
 function openDemo() {
-  const data = Uint8Array.from(atob(demoBase64), (c) => c.charCodeAt(0));
-  return openFiles([new File([data], "warrior.meshy", { type: "application/octet-stream" })]);
+  return openFiles(async () => {
+    const response = await globalThis.fetch(demoURL);
+    if (!response.ok) throw new Error(`Не удалось загрузить манекен: HTTP ${response.status}.`);
+    return loadFiles([
+      new File([await response.blob()], "mannequin.glb", { type: "model/gltf-binary" }),
+    ]);
+  });
 }
 function setPanel(panel) {
   for (const name of ["view", "rig", "motion", "export"]) {

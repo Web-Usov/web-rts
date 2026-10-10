@@ -52,7 +52,7 @@ const aliases: Record<JointName, string[]> = {
 const normalize = (name: string) =>
   name
     .toLowerCase()
-    .replace(/^(mixamorig[:_]?|meshstudio_|armature[|:]|def[-_])/g, "")
+    .replace(/^(mixamorig\d*[:_]?|meshstudio_|armature[|:]|def[-_])/g, "")
     .replace(/[^a-z0-9]/g, "");
 
 export function rigBones(root: Object3D, requireSkin = false): Bone[] {
@@ -140,8 +140,8 @@ function snapshot(root: Object3D, requireSkin: boolean) {
 function frame(role: JointName, map: BoneMap, rest: Map<string, RestBone>): Quaternion {
   const entry = rest.get(map[role]!)!;
   const childRole = JOINTS.find(([, , parent]) => parent === role);
-  let end = childRole && rest.get(map[childRole[0]] ?? "")?.position;
-  if (!end) end = entry.bone.children.map((n) => rest.get(n.name)?.position).find(Boolean);
+  const end = childRole && rest.get(map[childRole[0]] ?? "")?.position;
+  // End markers are optional metadata, not a different toe/hand coordinate system.
   let direction = end?.clone().sub(entry.position);
   if (!direction || direction.lengthSq() < 1e-12) {
     const parent = entry.bone.parent && rest.get(entry.bone.parent.name);

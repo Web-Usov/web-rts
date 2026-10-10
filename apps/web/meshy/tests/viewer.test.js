@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import * as THREE from "three";
 import { decodeMeshy } from "../src/meshy.js";
-import { demoBase64 } from "../src/demo.js";
+import { demoBase64 } from "./fixtures/warrior.js";
 import { exportClone, flattenStatic, safeName } from "../src/exports.js";
 import { MeshoptDecoder } from "three/addons/libs/meshopt_decoder.module.js";
 
