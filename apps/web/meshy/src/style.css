@@ -1138,3 +1138,452 @@ select {
   line-height: 1.6;
   margin: 16px 0;
 }
+
+/* Editor shell: the stage, task inspector and transport have separate space. */
+.header {
+  height: 64px;
+  padding: 0 24px;
+  gap: 24px;
+}
+.workspace {
+  grid-template-columns: minmax(0, 1fr) 350px;
+  position: relative;
+}
+.stage {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+.stage .viewport {
+  flex: 1;
+  height: auto;
+}
+.workflow {
+  margin: 0;
+  padding: 0 24px;
+  gap: 28px;
+  background: #171a1f;
+  flex-shrink: 0;
+  height: 48px;
+  align-items: stretch;
+}
+.workflow .tab {
+  padding: 0 4px;
+  font-size: 13px;
+  align-items: center;
+}
+.inspector-header {
+  padding: 20px 24px 10px;
+  font-size: 12px;
+  color: #cbd0d7;
+  letter-spacing: 0.7px;
+}
+.panel-scroll {
+  padding: 0 24px 24px;
+}
+.control-section {
+  padding: 20px 0;
+}
+h2 {
+  font-size: 13px;
+}
+.rig-hint,
+.small-label,
+.range-label,
+.toggle-row,
+.mode-switch button {
+  font-size: 12px;
+}
+.rig-hint {
+  line-height: 1.6;
+}
+.button {
+  min-height: 40px;
+  font-size: 13px;
+}
+.camera-strip {
+  bottom: 20px;
+  background: #171a1fe8;
+}
+.viewport-footer {
+  display: none;
+}
+.viewport-heading {
+  top: 20px;
+  left: 24px;
+}
+.eyebrow {
+  font-size: 10px;
+  letter-spacing: 1.2px;
+}
+.file-heading {
+  font-size: 14px;
+}
+.view-tools {
+  top: 20px;
+  right: 20px;
+}
+#motion-search {
+  width: 100%;
+  color: inherit;
+  background: #24292f;
+  border: 1px solid #414852;
+  border-radius: 5px;
+  padding: 11px 12px;
+  margin: 8px 0 16px;
+}
+.transport {
+  padding: 14px 24px 16px;
+  background: #191d22;
+  border-top: 1px solid #363c44;
+}
+.transport-top,
+.transport-track,
+.transport-options,
+.transport-buttons,
+.timecode {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.transport-top {
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.transport-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.transport-title select {
+  width: min(250px, 25vw);
+}
+.transport select {
+  background: #24292f;
+  color: #e5e7ea;
+  border: 1px solid #3a414b;
+  border-radius: 5px;
+  padding: 7px 10px;
+  font-size: 12px;
+  margin: 0;
+}
+.transport-empty {
+  font-size: 12px;
+  color: #9da7b3;
+}
+.transport-options {
+  gap: 8px;
+  font-size: 12px;
+  color: #aeb7c3;
+}
+.transport-options label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.transport button {
+  background: transparent;
+  border: 1px solid #3a414b;
+  border-radius: 5px;
+  padding: 8px 10px;
+  min-height: 36px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.transport button:hover {
+  background: #303741;
+}
+.transport button[aria-pressed="true"] {
+  color: var(--accent);
+  border-color: #729784;
+  background: #26382f;
+}
+.transport-buttons {
+  gap: 6px;
+}
+.transport-buttons button {
+  width: 36px;
+  font-size: 16px;
+}
+.transport-buttons .play-button {
+  width: 44px;
+  color: #15251e;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.transport-buttons .play-button:hover {
+  background: #d2efde;
+}
+.transport .timeline {
+  flex: 1;
+  min-width: 30px;
+  margin: 0;
+  accent-color: var(--accent);
+  height: 30px;
+  cursor: pointer;
+}
+.timecode {
+  gap: 6px;
+  white-space: nowrap;
+  color: #9da7b3;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.timecode input {
+  width: 72px;
+  padding: 7px 5px;
+  border: 1px solid #3a414b;
+  border-radius: 4px;
+  background: #24292f;
+  color: inherit;
+  text-align: right;
+}
+@media (max-width: 1050px) {
+  .workspace {
+    grid-template-columns: minmax(0, 1fr) 310px;
+  }
+  .transport-title .eyebrow,
+  .transport-options label {
+    font-size: 0;
+  }
+  .transport-options button:last-child {
+    display: none;
+  }
+  .transport {
+    padding: 12px 16px;
+  }
+}
+@media (max-width: 620px) {
+  .header {
+    height: 60px;
+    padding: 0 12px;
+    gap: 8px;
+  }
+  .local-label,
+  #demo-button,
+  #url-button {
+    display: none;
+  }
+  .header-actions {
+    gap: 4px;
+  }
+  .header-actions .button {
+    min-height: 40px;
+    padding: 8px 10px;
+    font-size: 11px;
+  }
+  .workflow {
+    padding: 0 12px;
+    gap: 20px;
+    height: 44px;
+    justify-content: space-between;
+  }
+  .workflow .tab {
+    font-size: 12px;
+  }
+  .workspace {
+    display: flex;
+  }
+  .stage {
+    width: 100%;
+    flex: 1;
+  }
+  .viewport-heading {
+    top: 16px;
+    left: 16px;
+  }
+  .viewport-heading .eyebrow {
+    display: none;
+  }
+  .view-tools {
+    top: 16px;
+    right: 12px;
+  }
+  .camera-strip {
+    bottom: 16px;
+    padding: 5px;
+  }
+  .camera-strip > span {
+    display: none;
+  }
+  .camera-strip button {
+    min-height: 36px;
+    font-size: 12px;
+    padding: 7px 12px;
+  }
+  .mobile-inspector {
+    right: 12px;
+    bottom: 70px;
+    font-size: 12px;
+    min-height: 40px;
+  }
+  .transport {
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+  }
+  .transport-top {
+    margin-bottom: 8px;
+    gap: 8px;
+  }
+  .transport-title .eyebrow {
+    display: none;
+  }
+  .transport-title select {
+    width: 100%;
+    max-width: 185px;
+  }
+  .transport-options label {
+    display: flex;
+  }
+  .transport-options {
+    gap: 4px;
+  }
+  .transport-options button {
+    padding: 6px;
+    min-height: 36px;
+  }
+  .transport select {
+    font-size: 11px;
+    padding: 8px 6px;
+  }
+  .transport-track {
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .transport-buttons button {
+    min-height: 40px;
+  }
+  .timecode {
+    margin-left: auto;
+    font-size: 11px;
+  }
+  .timecode input {
+    width: 64px;
+    min-height: 36px;
+  }
+  .transport .timeline {
+    order: 3;
+    flex-basis: 100%;
+    height: 24px;
+  }
+  .transport-empty {
+    max-width: 185px;
+    font-size: 11px;
+  }
+  .inspector {
+    top: auto;
+    bottom: 150px;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: min(45dvh, 400px);
+    border-radius: 14px 14px 0 0;
+    border-top: 1px solid #505b64;
+    box-shadow: 0 -12px 35px #0005;
+  }
+  .inspector.open {
+    animation: sheet-in 0.18s ease-out;
+  }
+  .inspector-header {
+    padding: 12px 20px;
+  }
+  #close-inspector {
+    width: 40px;
+    height: 40px;
+    font-size: 24px;
+  }
+  .workspace:has(.inspector.open) .stage .viewport {
+    margin-bottom: min(45dvh, 400px);
+  }
+  .workspace:has(.inspector.open) .mobile-inspector {
+    display: none;
+  }
+}
+@keyframes sheet-in {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+.transport .timeline {
+  background: transparent;
+}
+.transport .timeline::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 3px;
+  background: #4b5661;
+}
+.transport .timeline::-webkit-slider-thumb {
+  height: 14px;
+  width: 14px;
+  margin-top: -5px;
+}
+.transport .timeline::-moz-range-track {
+  height: 4px;
+  border-radius: 3px;
+  background: #4b5661;
+}
+.transport .timeline::-moz-range-thumb {
+  height: 14px;
+  width: 14px;
+}
+#motion-sources > summary {
+  padding: 14px 0;
+  cursor: pointer;
+  font-size: 13px;
+  color: #b8c2ce;
+}
+@media (max-width: 620px) {
+  .inspector {
+    bottom: var(--transport-height, 150px);
+    height: min(32dvh, 320px);
+  }
+  .workspace:has(.inspector.open) .stage .viewport {
+    margin-bottom: min(32dvh, 320px);
+  }
+  .transport-title {
+    flex: 1;
+  }
+  .transport-title select {
+    max-width: 150px;
+  }
+  .transport-options {
+    flex-shrink: 0;
+  }
+  .transport-options button:last-child {
+    display: inline-flex;
+    font-size: 0;
+    width: 36px;
+  }
+  .transport-options button:last-child::before {
+    content: "↺";
+    font-size: 18px;
+  }
+}
+.mobile-only {
+  display: none;
+}
+@media (max-width: 620px) {
+  .mobile-only {
+    display: block;
+  }
+  .workspace:has(.inspector.open) .camera-strip {
+    right: 12px;
+    left: auto;
+    bottom: 8px;
+    transform: none;
+    flex-direction: column;
+    padding: 3px;
+    gap: 2px;
+  }
+  .workspace:has(.inspector.open) .camera-strip button {
+    min-height: 28px;
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+}

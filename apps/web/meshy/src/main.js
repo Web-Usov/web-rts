@@ -1,4 +1,6 @@
 import "./style.css";
+import { mountTransport } from "./transport.tsx";
+import { seekAction, frameTime } from "./playback.ts";
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
@@ -74,6 +76,68 @@ const sizeLabel = (bytes) =>
     ? `${(bytes / 1024 / 1024).toFixed(1)} МБ`
     : `${Math.round(bytes / 1024)} КБ`;
 
+let renderTransport = null;
+let lastTransportFrame = 0;
+function syncTransport() {
+  renderTransport?.({
+    clips:
+      model?.animations.map((clip, index) => ({
+        name: clip.name || `Анимация ${index + 1}`,
+        duration: clip.duration,
+      })) ?? [],
+    selected: Number($("animation-select").value || 0),
+    time: animationAction?.time ?? 0,
+    playing: !!animationAction && !animationAction.paused,
+    loop: $("animation-loop").checked,
+    speed: Number($("animation-speed").value),
+    busy,
+  });
+}
+function seek(time) {
+  if (!mixer || busy) return;
+  if (!animationAction) setAnimation(Number($("animation-select").value));
+  if (!animationAction) return;
+  seekAction(mixer, animationAction, time);
+  $("animation-play").checked = false;
+  syncTransport();
+}
+function togglePlayback() {
+  if (!mixer || busy) return;
+  if (!animationAction) setAnimation(Number($("animation-select").value));
+  if (!animationAction) return;
+  const play = animationAction.paused;
+  if (play && animationAction.time >= animationAction.getClip().duration)
+    animationAction.reset().play();
+  animationAction.paused = !play;
+  $("animation-play").checked = play;
+  syncTransport();
+}
+renderTransport = mountTransport($("transport-root"), {
+  select: (index) => setAnimation(index),
+  play: togglePlayback,
+  seek,
+  step: (direction) =>
+    seek(
+      frameTime(
+        animationAction?.time ?? 0,
+        direction,
+        model?.animations[Number($("animation-select").value)]?.duration ?? 0,
+      ),
+    ),
+  speed: (value) => {
+    $("animation-speed").value = String(value);
+    if (mixer) mixer.timeScale = value;
+    syncTransport();
+  },
+  loop: (value) => {
+    $("animation-loop").checked = value;
+    animationAction?.setLoop(value ? THREE.LoopRepeat : THREE.LoopOnce, value ? Infinity : 1);
+    syncTransport();
+  },
+  rest: () => $("animation-rest").click(),
+});
+syncTransport();
+
 function toast(message, error = false) {
   clearTimeout(toastTimer);
   $("toast").textContent = message;
@@ -96,6 +160,8 @@ function loading(value, message = "Открываем модель…") {
   $("open-button").disabled = value;
   $("demo-button").disabled = value;
   $("export-button").disabled = value || !model;
+  $("export-shortcut").disabled = value || !model;
+  syncTransport();
 }
 function setView(view = "iso") {
   currentView = view;
@@ -182,6 +248,7 @@ function setAnimation(index) {
   animationAction.clampWhenFinished = true;
   animationAction.play();
   animationAction.paused = !$("animation-play").checked;
+  syncTransport();
 }
 function inspectModel() {
   const geometries = new Set(),
@@ -291,6 +358,7 @@ function prepareAnimations(play) {
     $("animation-select").append(option);
   });
   if (mixer) setAnimation(0);
+  syncTransport();
 }
 function replaceRigRoot(root, animations) {
   mixer?.stopAllAction();
@@ -374,9 +442,20 @@ function setPanel(panel) {
     $(`${name}-panel`).hidden = !selected;
     $(`${name}-tab`).classList.toggle("active", selected);
     $(`${name}-tab`).setAttribute("aria-selected", String(selected));
+    $(`${name}-tab`).tabIndex = selected ? 0 : -1;
   }
+  $("inspector-title").textContent = {
+    view: "Модель",
+    rig: "Скелет",
+    motion: "Анимации",
+    export: "Экспорт",
+  }[panel];
   rigEditor?.setActive(panel === "rig");
   document.querySelector(".panel-scroll").scrollTop = 0;
+}
+function showPanel(panel) {
+  setPanel(panel);
+  if (window.matchMedia("(max-width: 620px)").matches) $("inspector").classList.add("open");
 }
 function updateExportOptions() {
   const format = formats.find((f) => f.id === currentFormat);
@@ -443,6 +522,7 @@ $("url-button").addEventListener("click", () => {
   $("url-status").classList.remove("error");
   $("url-dialog").showModal();
 });
+$("mobile-url-button").addEventListener("click", () => $("url-button").click());
 function cancelRemote() {
   if (remoteController)
     remoteController.abort(new DOMException("Загрузка отменена.", "AbortError"));
@@ -518,10 +598,29 @@ $("open-button").addEventListener("click", () => $("file-input").click());
 $("empty-open").addEventListener("click", () => $("file-input").click());
 $("file-input").addEventListener("change", (event) => openFiles(event.target.files));
 $("demo-button").addEventListener("click", openDemo);
-$("view-tab").addEventListener("click", () => setPanel("view"));
-$("rig-tab").addEventListener("click", () => setPanel("rig"));
-$("motion-tab").addEventListener("click", () => setPanel("motion"));
-$("export-tab").addEventListener("click", () => setPanel("export"));
+document.querySelector(".workflow").addEventListener("keydown", (event) => {
+  const tabs = [...document.querySelectorAll(".workflow [role=tab]")];
+  const index = tabs.indexOf(document.activeElement);
+  if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+  event.preventDefault();
+  event.stopPropagation();
+  const next =
+    event.key === "Home"
+      ? 0
+      : event.key === "End"
+        ? tabs.length - 1
+        : (index + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length;
+  tabs[next].focus();
+  tabs[next].click();
+});
+$("view-tab").addEventListener("click", () => showPanel("view"));
+$("rig-tab").addEventListener("click", () => showPanel("rig"));
+$("motion-tab").addEventListener("click", () => showPanel("motion"));
+$("export-tab").addEventListener("click", () => showPanel("export"));
+$("export-shortcut").addEventListener("click", () => {
+  setPanel("export");
+  if (window.matchMedia("(max-width: 620px)").matches) $("inspector").classList.add("open");
+});
 $("mobile-inspector").addEventListener("click", () => $("inspector").classList.add("open"));
 $("close-inspector").addEventListener("click", () => $("inspector").classList.remove("open"));
 $("fit-button").addEventListener("click", () => setView(currentView));
@@ -599,6 +698,7 @@ $("animation-rest").addEventListener("click", () => {
   animationAction = null;
   $("animation-play").checked = false;
   rigEditor?.prepareAnimation();
+  syncTransport();
 });
 let dragDepth = 0;
 document.addEventListener("dragenter", (event) => {
@@ -624,6 +724,21 @@ document.addEventListener("drop", (event) => {
 });
 document.addEventListener("keydown", (event) => {
   if (event.target.matches("input,select,textarea")) return;
+  if (event.target.closest("dialog") || event.ctrlKey || event.metaKey || event.altKey) return;
+  if (event.code === "Space" && !event.target.matches("button")) {
+    event.preventDefault();
+    togglePlayback();
+  }
+  if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+    event.preventDefault();
+    seek(
+      frameTime(
+        animationAction?.time ?? 0,
+        event.key === "ArrowLeft" ? -1 : 1,
+        animationAction?.getClip().duration ?? 0,
+      ),
+    );
+  }
   if (event.key.toLowerCase() === "f") setView(currentView);
   if (event.key === "Escape") $("inspector").classList.remove("open");
 });
@@ -638,6 +753,11 @@ new ResizeObserver(() => {
   resize();
   setView(currentView);
 }).observe(viewport);
+new ResizeObserver(() => {
+  document
+    .querySelector(".workspace")
+    .style.setProperty("--transport-height", `${$("transport-root").clientHeight}px`);
+}).observe($("transport-root"));
 resize();
 setView();
 let lastFrame = performance.now();
@@ -645,6 +765,11 @@ renderer.setAnimationLoop((time) => {
   const delta = Math.min((time - lastFrame) / 1000, 0.05);
   lastFrame = time;
   if (!busy) mixer?.update(Math.max(0, delta));
+  if (time - lastTransportFrame >= 100) {
+    lastTransportFrame = time;
+    if (animationAction?.paused) $("animation-play").checked = false;
+    syncTransport();
+  }
   rigEditor?.update();
   controls.update();
   renderer.render(scene, camera);
@@ -690,4 +815,5 @@ animationEditor = createAnimationEditor({
     updateExportOptions();
   },
 });
+setPanel("view");
 await openDemo();

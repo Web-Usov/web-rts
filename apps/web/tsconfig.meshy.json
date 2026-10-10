@@ -6,7 +6,8 @@
     "moduleResolution": "bundler",
     "noEmit": true,
     "allowImportingTsExtensions": true,
-    "types": ["node"]
+    "types": ["node"],
+    "jsx": "react-jsx"
   },
-  "include": ["meshy/**/*.ts"]
+  "include": ["meshy/**/*.ts", "meshy/**/*.tsx"]
 }

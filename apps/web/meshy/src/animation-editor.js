@@ -27,6 +27,7 @@ const labels = {
 
 export function createAnimationEditor({ getModel, loading, message, beforeApply, addClip }) {
   const $ = (id) => document.getElementById(id);
+  let librarySource = false;
   let source = null,
     targetMap = {},
     sourceMap = {},
@@ -34,6 +35,36 @@ export function createAnimationEditor({ getModel, loading, message, beforeApply,
     busy = false,
     controller = null;
   const status = (text) => ($("motion-status").textContent = text);
+  function filterClips() {
+    if (!source) return;
+    const query = $("motion-search").value.trim().toLocaleLowerCase("ru");
+    const category = $("motion-category").value;
+    const group = (name) =>
+      /Sword|Punch|Pistol|Hit|Spell/.test(name)
+        ? "combat"
+        : /Walk|Jog|Sprint|Jump|Swim|Roll|Crouch_Fwd/.test(name)
+          ? "move"
+          : /Idle|Talking/.test(name)
+            ? "idle"
+            : "other";
+    const selected = $("motion-clip").value;
+    $("motion-clip").replaceChildren();
+    source.animations.forEach((clip, index) => {
+      if (librarySource && clip.name === "A_TPose") return;
+      const name = labels[clip.name] ?? clip.name;
+      if (category !== "all" && group(clip.name) !== category) return;
+      if (query && !`${name} ${clip.name}`.toLocaleLowerCase("ru").includes(query)) return;
+      $("motion-clip").append(new Option(`${name} · ${clip.duration.toFixed(1)} с`, index));
+    });
+    if ([...$("motion-clip").options].some((option) => option.value === selected))
+      $("motion-clip").value = selected;
+    $("motion-results").textContent = $("motion-clip").options.length
+      ? `Найдено: ${$("motion-clip").options.length}`
+      : "Ничего не найдено. Измените запрос или категорию.";
+    controlsState();
+  }
+  $("motion-search").addEventListener("input", filterClips);
+  $("motion-category").addEventListener("change", filterClips);
   function controlsState() {
     for (const id of [
       "motion-library",
@@ -45,9 +76,12 @@ export function createAnimationEditor({ getModel, loading, message, beforeApply,
       "motion-auto-map",
       "motion-url",
       "motion-format",
+      "motion-search",
+      "motion-category",
     ])
       $(id).disabled = busy;
-    $("motion-apply").disabled = busy || !source || !targetBones.length;
+    $("motion-apply").disabled =
+      busy || !source || !targetBones.length || !$("motion-clip").options.length;
     $("motion-transfer").hidden = !source;
     $("motion-map-rows")
       .querySelectorAll("select")
@@ -111,6 +145,7 @@ export function createAnimationEditor({ getModel, loading, message, beforeApply,
     }
     if (source) disposeModel(source.root);
     source = next;
+    librarySource = label === "Quaternius Standard";
     sourceMap = autoBoneMap(source.root);
     $("motion-clip").replaceChildren();
     source.animations.forEach((clip, i) => {
@@ -129,6 +164,10 @@ export function createAnimationEditor({ getModel, loading, message, beforeApply,
       $("motion-clip").value = String(source.animations.findIndex((c) => c.name === "Idle_Loop"));
     $("motion-source-status").textContent =
       `${label ?? next.file.name} · ${$("motion-clip").options.length} клипов`;
+    $("motion-search").value = "";
+    $("motion-category").value = "all";
+    filterClips();
+    $("motion-sources").open = false;
     modelChanged();
   }
   async function runLoad(getFiles, label, signal) {
