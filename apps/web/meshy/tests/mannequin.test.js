@@ -99,7 +99,7 @@ test("curved spine does not assign different chest weights to its front and back
   try {
     const g = rig.meshes[0].geometry,
       dense = (v) => {
-        const result = new Array(22).fill(0);
+        const result = new Array(rig.skeleton.bones.length).fill(0);
         for (let k = 0; k < 4; k++)
           result[g.attributes.skinIndex.getComponent(v, k)] += g.attributes.skinWeight.getComponent(
             v,
@@ -108,6 +108,69 @@ test("curved spine does not assign different chest weights to its front and back
         return result;
       };
     assert.deepEqual(dense(0), dense(1));
+  } finally {
+    disposeRig(rig);
+  }
+});
+
+test("sword follow-through retains elbow cross-section through large axial forearm rotations", async () => {
+  const model = await load("mannequin.glb"),
+    library = await load("quaternius-standard.glb"),
+    draft = fitHumanoid(model.scene),
+    radius = draft.height * 0.007,
+    coordinates = [];
+  for (const side of ["Left", "Right"]) {
+    const axis = draft.layout[`${side}Hand`]
+        .clone()
+        .sub(draft.layout[`${side}ForeArm`])
+        .normalize(),
+      radial = axis
+        .clone()
+        .cross(new THREE.Vector3(0, 1, 0))
+        .normalize();
+    for (const fraction of [0, 0.25, 0.5, 0.75]) {
+      const center = draft.layout[`${side}ForeArm`]
+        .clone()
+        .lerp(draft.layout[`${side}Hand`], fraction);
+      for (const sign of [-1, 1])
+        coordinates.push(
+          ...center
+            .clone()
+            .addScaledVector(radial, sign * radius)
+            .toArray(),
+        );
+    }
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.Float32BufferAttribute(coordinates, 3));
+  model.scene.add(new THREE.Mesh(geometry, new THREE.MeshBasicMaterial()));
+  const rig = bindHumanoid(model.scene, draft);
+  try {
+    assert.equal(Object.keys(autoBoneMap(rig.root)).length, 22);
+    const clip = retargetHumanoid(
+        library.scene,
+        rig.root,
+        library.animations.find((c) => c.name === "Sword_Attack"),
+        { sourceMap: autoBoneMap(library.scene), targetMap: autoBoneMap(rig.root) },
+      ),
+      mixer = new THREE.AnimationMixer(rig.root);
+    mixer.clipAction(clip).play();
+    for (const time of [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]) {
+      mixer.setTime(time);
+      rig.root.updateMatrixWorld(true);
+      rig.skeleton.update();
+      const probe = rig.meshes.at(-1);
+      for (let pair = 0; pair < 8; pair++) {
+        const a = probe.getVertexPosition(pair * 2, new THREE.Vector3()),
+          b = probe.getVertexPosition(pair * 2 + 1, new THREE.Vector3());
+        assert.ok(
+          a.distanceTo(b) / (2 * radius) > 0.72,
+          `time=${time}, pair=${pair}, width=${a.distanceTo(b) / (2 * radius)}`,
+        );
+      }
+    }
+    mixer.stopAllAction();
+    mixer.uncacheRoot(rig.root);
   } finally {
     disposeRig(rig);
   }

@@ -56,6 +56,51 @@ export interface BoundRig {
   meshes: SkinnedMesh[];
   animations: AnimationClip[];
 }
+/** Auxiliary skin bones share the elbow pivot; they do not add editable joints. */
+export const FOREARM_HELPERS = [
+  "LeftForeArmSwing",
+  "LeftForeArmTwist",
+  "RightForeArmSwing",
+  "RightForeArmTwist",
+] as const;
+
+/** Separate hinge swing from axial roll, retaining the original wrist motion. */
+export function updateForearmTwists(bones: Bone[], previous = new Map<string, Quaternion>()): void {
+  const byName = new Map(bones.map((bone) => [bone.name, bone]));
+  for (const side of ["Left", "Right"]) {
+    const forearm = byName.get(`MeshStudio_${side}ForeArm`),
+      hand = byName.get(`MeshStudio_${side}Hand`),
+      hinge = byName.get(`MeshStudio_${side}ForeArmSwing`),
+      middle = byName.get(`MeshStudio_${side}ForeArmTwist`);
+    if (
+      !forearm ||
+      !hand ||
+      !hinge ||
+      !middle ||
+      hand.parent !== forearm ||
+      hinge.parent !== forearm.parent ||
+      middle.parent !== forearm.parent
+    )
+      continue;
+    const axis = hand.position.clone().normalize(),
+      q = forearm.quaternion,
+      projection = new Vector3(q.x, q.y, q.z).dot(axis),
+      twist = new Quaternion(axis.x * projection, axis.y * projection, axis.z * projection, q.w);
+    if (twist.lengthSq() < 1e-12) twist.identity();
+    else twist.normalize();
+    const last = previous.get(forearm.name);
+    if ((last && twist.dot(last) < 0) || (!last && twist.w < 0))
+      twist.set(-twist.x, -twist.y, -twist.z, -twist.w);
+    previous.set(forearm.name, twist.clone());
+    const swing = q.clone().multiply(twist.clone().invert()),
+      angle = 2 * Math.atan2(new Vector3(twist.x, twist.y, twist.z).dot(axis), twist.w);
+    hinge.quaternion.copy(swing);
+    middle.quaternion.copy(swing).multiply(new Quaternion().setFromAxisAngle(axis, angle * 0.5));
+    hinge.updateMatrixWorld(true);
+    middle.updateMatrixWorld(true);
+  }
+}
+
 const MAX_VERTICES = 200_000;
 
 export function copyLayout(layout: JointLayout): JointLayout {
@@ -341,7 +386,7 @@ const smooth = (value: number, low: number, high: number): number => {
 function skinWeights(geometry: BufferGeometry, draft: RigDraft, softness: number): void {
   const position = geometry.getAttribute("position"),
     count = position.count,
-    n = JOINTS.length;
+    n = JOINTS.length + FOREARM_HELPERS.length;
   const radius = draft.height * 0.024 * Math.max(0.4, Math.min(2, softness));
   const ids = new Map<JointName, number>(JOINTS.map(([name], i) => [name, i]));
   const torso: JointName[] = ["Hips", "Spine", "Spine1", "Spine2", "Neck", "Head"];
@@ -484,11 +529,27 @@ function skinWeights(geometry: BufferGeometry, draft: RigDraft, softness: number
     }
     [current, next] = [next, current];
   }
+  // Carry no axial roll at the elbow, half at mid-forearm, full near the wrist.
+  // Adjacent skin transforms now differ by at most half the forearm twist.
+  for (let v = 0; v < vertices.length; v++) {
+    for (const [sideIndex, side] of ["Left", "Right"].entries()) {
+      const elbow = draft.layout[`${side}ForeArm` as JointName],
+        axis = draft.layout[`${side}Hand` as JointName].clone().sub(elbow),
+        t = Math.max(0, Math.min(1, tmp.copy(vertices[v]!).sub(elbow).dot(axis) / axis.lengthSq())),
+        first = smooth(t, 0, 0.5),
+        second = smooth(t, 0.5, 1),
+        index = v * n + ids.get(`${side}ForeArm` as JointName)!,
+        amount = current[index]!;
+      current[v * n + JOINTS.length + sideIndex * 2] = amount * (1 - first);
+      current[v * n + JOINTS.length + sideIndex * 2 + 1] = amount * first * (1 - second);
+      current[index] = amount * second;
+    }
+  }
   const indices = new Uint16Array(count * 4),
     weights = new Float32Array(count * 4);
   for (let v = 0; v < count; v++) {
     const offset = vertexIds[v]! * n;
-    const candidates = JOINTS.map((_, i) => i).sort(
+    const candidates = Array.from({ length: n }, (_, i) => i).sort(
       (a, b) => current[offset + b]! - current[offset + a]!,
     );
     // Fade influences to zero at the fifth's score so top-four changes stay continuous.
@@ -505,7 +566,11 @@ function skinWeights(geometry: BufferGeometry, draft: RigDraft, softness: number
   geometry.setAttribute("skinWeight", new Float32BufferAttribute(weights, 4));
 }
 
-function testClips(bones: Record<JointName, Bone>, forward: number): AnimationClip[] {
+function testClips(
+  bones: Record<JointName, Bone>,
+  forward: number,
+  allBones: Bone[],
+): AnimationClip[] {
   const axisArm = new Vector3(0, 0, 1),
     axisLeg = new Vector3(forward, 0, 0);
   const make = (title: string, ids: JointName[], axis: Vector3, angle: number, mirror: boolean) =>
@@ -525,10 +590,34 @@ function testClips(bones: Record<JointName, Bone>, forward: number): AnimationCl
           ),
       ),
     );
-  return [
+  const clips = [
     make("Тест: сгиб локтей", ["LeftForeArm", "RightForeArm"], axisArm, Math.PI * 0.6, true),
     make("Тест: сгиб коленей", ["LeftLeg", "RightLeg"], axisLeg, Math.PI * 0.5, false),
   ];
+  for (const clip of clips) {
+    const helpers = allBones.filter((bone) =>
+        FOREARM_HELPERS.some((name) => bone.name === `MeshStudio_${name}`),
+      ),
+      values = helpers.map(() => [] as number[]),
+      previous = new Map<string, Quaternion>();
+    for (let i = 0; i < 5; i++) {
+      for (const bone of allBones) bone.quaternion.identity();
+      for (const track of clip.tracks) {
+        const bone = allBones.find((bone) => track.name === `${bone.name}.quaternion`)!;
+        bone.quaternion.fromArray(track.values, i * 4);
+      }
+      updateForearmTwists(allBones, previous);
+      helpers.forEach((bone, j) => values[j]!.push(...bone.quaternion.toArray()));
+    }
+    helpers.forEach((bone, j) =>
+      clip.tracks.push(
+        new QuaternionKeyframeTrack(`${bone.name}.quaternion`, [0, 1, 2, 3, 4], values[j]!),
+      ),
+    );
+  }
+  for (const bone of allBones) bone.quaternion.identity();
+  allBones[0]?.updateWorldMatrix(true, true);
+  return clips;
 }
 
 export function bindHumanoid(
@@ -567,8 +656,16 @@ export function bindHumanoid(
       bones[parent].add(bones[name]);
     } else root.add(bones[name]);
   });
+  const helpers = FOREARM_HELPERS.map((name) => {
+    const side = name.startsWith("Left") ? "Left" : "Right",
+      bone = new Bone();
+    bone.name = `MeshStudio_${name}`;
+    bone.position.copy(bones[`${side}ForeArm`].position);
+    bones[`${side}Arm`].add(bone);
+    return bone;
+  });
   root.updateMatrixWorld(true);
-  const skeleton = new Skeleton(JOINTS.map(([name]) => bones[name])),
+  const skeleton = new Skeleton([...JOINTS.map(([name]) => bones[name]), ...helpers]),
     skinned: SkinnedMesh[] = [];
   try {
     meshes.forEach((mesh, index) => {
@@ -589,7 +686,13 @@ export function bindHumanoid(
       skinned.push(skin);
     });
     skeleton.update();
-    return { root, bones, skeleton, meshes: skinned, animations: testClips(bones, draft.forward) };
+    return {
+      root,
+      bones,
+      skeleton,
+      meshes: skinned,
+      animations: testClips(bones, draft.forward, skeleton.bones),
+    };
   } catch (error) {
     skinned.forEach((mesh) => mesh.geometry.dispose());
     skeleton.dispose();
@@ -603,6 +706,7 @@ export function poseRig(rig: BoundRig, elbows: number, knees: number, forward = 
   rig.bones.RightForeArm.quaternion.setFromAxisAngle(new Vector3(0, 0, 1), -elbows);
   for (const name of ["LeftLeg", "RightLeg"] as const)
     rig.bones[name].quaternion.setFromAxisAngle(new Vector3(forward, 0, 0), knees);
+  updateForearmTwists(rig.skeleton.bones);
   rig.root.updateWorldMatrix(true, true);
   rig.skeleton.update();
 }

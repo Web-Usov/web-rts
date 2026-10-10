@@ -92,7 +92,7 @@ test("collar weights vary continuously across closest-bone and top-four boundari
       indices = probe.getAttribute("skinIndex"),
       weights = probe.getAttribute("skinWeight");
     const dense = (vertex) => {
-      const vector = new Array(22).fill(0);
+      const vector = new Array(rig.skeleton.bones.length).fill(0);
       for (let k = 0; k < 4; k++)
         vector[indices.getComponent(vertex, k)] += weights.getComponent(vertex, k);
       return vector;
@@ -150,7 +150,7 @@ test("all four skin weights are normalized, finite, nonnegative and refer to val
           const w = weights.getComponent(i, j);
           assert.ok(Number.isFinite(w) && w >= 0);
           total += w;
-          assert.ok(indices.getComponent(i, j) < 22);
+          assert.ok(indices.getComponent(i, j) < rig.skeleton.bones.length);
           if (w === 0) assert.equal(indices.getComponent(i, j), 0);
         }
         assert.ok(Math.abs(total - 1) < 1e-6);
@@ -203,7 +203,7 @@ test("existing rigs, instances, excessive geometry and coincident joints fail ex
   assert.throws(() => bindHumanoid(source, draft), /не должны совпадать/);
 });
 
-test("glTF export/reimport keeps the edited 22-joint skin and both diagnostic animation clips", async () => {
+test("glTF export/reimport keeps the edited 22-joint skin with forearm helpers and both diagnostic animation clips", async () => {
   const oldReader = globalThis.FileReader,
     oldEvent = globalThis.ProgressEvent;
   globalThis.FileReader = class {
@@ -238,7 +238,7 @@ test("glTF export/reimport keeps the edited 22-joint skin and both diagnostic an
     display.updateMatrixWorld(true);
     const copy = exportClone(rig.root, new Map());
     const json = await new GLTFExporter().parseAsync(copy, { animations: rig.animations });
-    assert.equal(json.skins[0].joints.length, 22);
+    assert.equal(json.skins[0].joints.length, 26);
     assert.equal(json.animations.length, 2);
     const loaded = await new GLTFLoader().parseAsync(JSON.stringify(json), "");
     const skins = [];

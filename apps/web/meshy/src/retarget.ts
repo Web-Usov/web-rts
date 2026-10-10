@@ -13,7 +13,7 @@ import {
   VectorKeyframeTrack,
 } from "three";
 import { clone } from "three/addons/utils/SkeletonUtils.js";
-import { JOINTS } from "./rigging.ts";
+import { JOINTS, FOREARM_HELPERS, updateForearmTwists } from "./rigging.ts";
 import type { JointName } from "./rigging.ts";
 import type { KeyframeTrack } from "three";
 
@@ -238,6 +238,11 @@ export function retargetHumanoid(
     ...p,
     correction: poseCorrection(p.role, source.rest, target.rest, options),
   }));
+  const helpers = target.bones.filter((bone) =>
+      FOREARM_HELPERS.some((name) => bone.name === `MeshStudio_${name}`),
+    ),
+    helperValues = helpers.map(() => [] as number[]),
+    previousTwists = new Map<string, Quaternion>();
   const byTarget = new Map(corrections.map((p) => [p.t.bone, p]));
   const times: number[] = [],
     positions: number[] = [],
@@ -298,6 +303,8 @@ export function retargetHumanoid(
           positions.push(...restHipLocal.clone().add(offset).toArray());
         }
       }
+      updateForearmTwists(target.bones, previousTwists);
+      helpers.forEach((bone, j) => helperValues[j]!.push(...bone.quaternion.toArray()));
     }
   } finally {
     mixer.stopAllAction();
@@ -305,6 +312,9 @@ export function retargetHumanoid(
   }
   const tracks: KeyframeTrack[] = corrections.map(
     (p) => new QuaternionKeyframeTrack(`${p.t.bone.name}.quaternion`, times, values.get(p.t.bone)!),
+  );
+  helpers.forEach((bone, j) =>
+    tracks.push(new QuaternionKeyframeTrack(`${bone.name}.quaternion`, times, helperValues[j]!)),
   );
   tracks.push(new VectorKeyframeTrack(`${hip.t.bone.name}.position`, times, positions));
   const result = new AnimationClip(options.name ?? clip.name, clip.duration, tracks);
