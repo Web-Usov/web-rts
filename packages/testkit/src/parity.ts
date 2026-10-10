@@ -202,7 +202,7 @@ export function runParityReference(fixture: MatchParityFixture): ParityOutcome {
     runtime.step();
     for (const event of runtime.drainEvents()) {
       const wire = toGameEvent(event);
-      rejections.push({ commandId: wire.commandId, reason: wire.reason });
+      if (wire !== null) rejections.push({ commandId: wire.commandId, reason: wire.reason });
     }
   }
   const view = projectGameStateView(

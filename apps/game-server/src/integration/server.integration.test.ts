@@ -470,7 +470,10 @@ describe("game-server integration", () => {
     expect(entityA.x).toBeCloseTo(target.x, 5);
     expect(viewA.localPlayerId).toBe(playerA);
     expect(viewB.localPlayerId).not.toBe(viewA.localPlayerId);
-    expect(viewA.entities.filter((entity) => entity.kind === "UNIT")).toHaveLength(2);
+    expect(
+      viewA.entities.filter((entity) => entity.definitionId === "foundation_unit"),
+    ).toHaveLength(2);
+    expect(viewA.entities.filter((entity) => entity.definitionId === "worker")).toHaveLength(2);
 
     const objectivesA = viewA.entities.filter((entity) => entity.kind === "OBJECTIVE");
     const objectivesB = viewB.entities.filter((entity) => entity.kind === "OBJECTIVE");

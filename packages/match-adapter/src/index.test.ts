@@ -53,6 +53,8 @@ describe("toSimulationCommand", () => {
     const mapped = toSimulationCommand(command);
     command.entityIds.push(99);
     command.target.x = 100;
+    expect(mapped.type).toBe("MOVE");
+    if (mapped.type !== "MOVE") throw new Error("expected MOVE mapping");
     expect(mapped.entityIds).toEqual([10]);
     expect(mapped.target).toEqual({ x: 3, y: 4 });
   });
@@ -73,7 +75,15 @@ describe("projectGameStateView", () => {
       localPlayerId: 1,
       players: session.players,
     });
-    expect(view.entities).toEqual(snapshot.entities);
+    expect(view.entities).toEqual(
+      snapshot.entities.map((entity) => {
+        const projected = { ...entity };
+        delete projected.worker;
+        delete projected.resourceNode;
+        return projected;
+      }),
+    );
+    expect(view).not.toHaveProperty("playerEconomies");
     expect(view.entities.find((entity) => entity.kind === "OBJECTIVE")).toMatchObject({
       x: 0,
       y: 0,
@@ -173,4 +183,28 @@ it("checks the MOVE cap at startup without a simulation/protocol dependency", as
     createGameplayRuntime(setup, {}, { pathQueriesPerTick: { commandBudget: 15 } }),
   ).toThrow(/MAX_MOVE_ENTITY_IDS/);
   expect(createGameplayRuntime(setup).readMetrics().commandBudgetRemaining).toBe(16);
+});
+
+it("keeps G5 failures and rejection reasons transport-neutral until G11", () => {
+  expect(
+    toGameEvent({
+      type: "ACTION_FAILED",
+      recipientPlayerId: 2,
+      commandId: "g1",
+      entityId: 4,
+      action: "GATHER",
+      reason: "no_dropoff",
+      tick: 8,
+    }),
+  ).toBeNull();
+  for (const reason of ["no_dropoff", "not_worker", "invalid_resource"] as const)
+    expect(
+      toGameEvent({
+        type: "COMMAND_REJECTED",
+        recipientPlayerId: 2,
+        commandId: "g1",
+        reason,
+        tick: 8,
+      }),
+    ).toBeNull();
 });

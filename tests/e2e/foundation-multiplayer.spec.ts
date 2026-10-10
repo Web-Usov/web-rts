@@ -143,7 +143,7 @@ test.describe("F7 foundation multiplayer browser E2E", () => {
 async function saveVerificationShot(page: Page, fileName: string): Promise<void> {
   const { mkdir } = await import("node:fs/promises");
   const path = await import("node:path");
-  const dir = path.resolve("docs/verification/f7");
+  const dir = path.resolve(process.env.VERIFICATION_DIR ?? "docs/verification/f7");
   await mkdir(dir, { recursive: true });
   await page.screenshot({ path: path.join(dir, fileName), fullPage: true });
 }

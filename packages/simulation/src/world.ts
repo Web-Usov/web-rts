@@ -19,8 +19,14 @@ import {
   type FootprintPlacementRefusal,
   type SpatialFootprint,
 } from "./spatial-grid.js";
+import { assessGather, economyHooks, installGatherNavigation } from "./systems/economy.js";
 import { runMovementSystem } from "./systems/movement.js";
 import type {
+  Worker,
+  ResourceNode,
+  PlayerEconomy,
+  Dropoff,
+  GatherTask,
   Controller,
   EntityId,
   EntityIdentity,
@@ -49,8 +55,14 @@ export class World {
   readonly identities = new ComponentStore<EntityIdentity>();
   readonly positions = new ComponentStore<Position>();
   readonly movements = new ComponentStore<Movement>();
-  /** Grid route for an in-progress MOVE. Absent from snapshots and replication. */
+  /** Grid route for in-progress movement. Absent from snapshots and replication. */
   private readonly navigations = new ComponentStore<NavigationTask>();
+  readonly workers = new ComponentStore<Worker>();
+  readonly resourceNodes = new ComponentStore<ResourceNode>();
+  readonly dropoffs = new ComponentStore<Dropoff>();
+  /** Absence of a gather task means IDLE (carry survives cancellation). */
+  readonly gatherTasks = new ComponentStore<GatherTask>();
+  readonly playerEconomies = new Map<PlayerId, PlayerEconomy>();
   readonly owners = new ComponentStore<Owner>();
   readonly controllers = new ComponentStore<Controller>();
 
@@ -97,6 +109,10 @@ export class World {
     this.positions.remove(entityId);
     this.movements.remove(entityId);
     this.navigations.remove(entityId);
+    this.workers.remove(entityId);
+    this.resourceNodes.remove(entityId);
+    this.dropoffs.remove(entityId);
+    this.gatherTasks.remove(entityId);
     this.owners.remove(entityId);
     this.controllers.remove(entityId);
   }
@@ -244,6 +260,7 @@ export class World {
       this.grid === null
         ? undefined
         : { tasks: this.navigations, grid: this.grid, lane: activeTaskLane },
+      economyHooks(this, this.navigations, activeTaskLane, this.events),
     );
     this.activeTaskQueries = activeTaskLane.used;
     this.tickCount += 1;
@@ -270,7 +287,23 @@ export class World {
   }
 
   private applyCommand(queued: QueuedCommand): void {
-    this.applyMoveCommand(queued.actor.playerId, queued.command);
+    if (queued.command.type === "MOVE")
+      this.applyMoveCommand(queued.actor.playerId, queued.command);
+    else {
+      const result = assessGather(this, queued.actor.playerId, queued.command);
+      if ("reason" in result) {
+        this.rejectCommand(queued.actor.playerId, queued.command.commandId, result.reason);
+        return;
+      }
+      this.gatherTasks.set(queued.command.workerEntityId, result.task);
+      installGatherNavigation(
+        this,
+        this.navigations,
+        queued.command.workerEntityId,
+        result.navigation,
+      );
+      this.acceptCommand(queued.actor.playerId, queued.command.commandId);
+    }
   }
 
   private applyMoveCommand(
@@ -296,21 +329,22 @@ export class World {
       }
     }
     if (applicable.length === 0) {
-      this.rejectMove(playerId, command.commandId, "no_valid_entities");
+      this.rejectCommand(playerId, command.commandId, "no_valid_entities");
       return;
     }
 
     const speed = this.config.defaultMoveSpeed;
     if (this.grid === null) {
       for (const entityId of applicable) {
+        this.gatherTasks.remove(entityId);
         this.navigations.remove(entityId);
         this.movements.set(entityId, {
           targetX: command.target.x,
           targetY: command.target.y,
-          speed,
+          speed: this.workers.get(entityId)?.moveSpeed ?? speed,
         });
       }
-      this.acceptMove(playerId, command.commandId);
+      this.acceptCommand(playerId, command.commandId);
       return;
     }
 
@@ -323,13 +357,15 @@ export class World {
       }
       const task = planMoveToTarget(this.grid, position, command.target, undefined, resolution);
       if (task === null) {
-        this.rejectMove(playerId, command.commandId, "no_path");
+        this.rejectCommand(playerId, command.commandId, "no_path");
         return;
       }
       planned.push({ entityId, task });
     }
 
     for (const { entityId, task } of planned) {
+      this.gatherTasks.remove(entityId);
+      this.movements.remove(entityId);
       this.navigations.set(entityId, task);
       const waypoint = task.waypoints[0];
       if (waypoint === undefined) {
@@ -338,11 +374,11 @@ export class World {
       this.movements.set(entityId, {
         targetX: waypoint.x,
         targetY: waypoint.y,
-        speed,
+        speed: this.workers.get(entityId)?.moveSpeed ?? speed,
       });
     }
 
-    this.acceptMove(playerId, command.commandId);
+    this.acceptCommand(playerId, command.commandId);
   }
 
   /** Order matters: wire reasons are stable and parity-tested across Local/Remote. */
@@ -362,7 +398,11 @@ export class World {
     return null;
   }
 
-  private rejectMove(playerId: PlayerId, commandId: string, reason: CommandRejectionReason): void {
+  private rejectCommand(
+    playerId: PlayerId,
+    commandId: string,
+    reason: CommandRejectionReason,
+  ): void {
     this.events.push({
       type: "COMMAND_REJECTED",
       commandId,
@@ -372,7 +412,7 @@ export class World {
     });
   }
 
-  private acceptMove(playerId: PlayerId, commandId: string): void {
+  private acceptCommand(playerId: PlayerId, commandId: string): void {
     this.events.push({
       type: "COMMAND_APPLIED",
       commandId,

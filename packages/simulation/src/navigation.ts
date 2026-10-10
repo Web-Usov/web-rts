@@ -114,6 +114,38 @@ export function findPath(
   goals: readonly CellCoord[],
   work?: NavigationWork,
 ): CellCoord[] | null {
+  return searchGoalSets(grid, start, [goals], false, work)?.[0] ?? null;
+}
+
+/** One bounded search for multiple goal sets, including command admission's source + drop-off.
+ * Uses A* with zero heuristic (Dijkstra) to compare reachable distance. Within a set,
+ * input goal order breaks equal-distance ties. No partial search survives a tick.
+ */
+export function findPathsToGoalSets(
+  grid: WalkGrid,
+  start: CellCoord,
+  goalSets: readonly (readonly CellCoord[])[],
+): (CellCoord[] | null)[] {
+  return searchGoalSets(grid, start, goalSets, true) ?? goalSets.map(() => null);
+}
+
+function searchGoalSets(
+  grid: WalkGrid,
+  start: CellCoord,
+  goalSets: readonly (readonly CellCoord[])[],
+  ranked: boolean,
+  work?: NavigationWork,
+): (CellCoord[] | null)[] | null {
+  const goals = goalSets.flat();
+  const results: (CellCoord[] | null)[] = goalSets.map(() => null);
+  const ranks = goalSets.map((set) => {
+    const rank = new Map<number, number>();
+    set.forEach((cell, index) => {
+      const id = grid.cellId(cell);
+      if (!rank.has(id)) rank.set(id, index);
+    });
+    return rank;
+  });
   if (!grid.isCellInBounds(start) || !grid.isWalkable(start)) {
     return null;
   }
@@ -136,8 +168,8 @@ export function findPath(
   }
 
   const startId = grid.cellId(start);
-  if (goalIds.has(startId)) {
-    return [{ x: start.x, y: start.y }];
+  if (!ranked && goalIds.has(startId)) {
+    return [[{ x: start.x, y: start.y }]];
   }
 
   const cellCount = grid.widthCells * grid.heightCells;
@@ -146,7 +178,7 @@ export function findPath(
   const expanded = new Uint8Array(cellCount);
   gScore[startId] = 0;
 
-  const startHeuristic = heuristic(start.x, start.y, openGoals);
+  const startHeuristic = ranked ? 0 : heuristic(start.x, start.y, openGoals);
   const open = new BinaryHeap<OpenNode>(openComesBefore);
   open.push({ f: startHeuristic, h: startHeuristic, cellId: startId, g: 0 });
 
@@ -164,9 +196,28 @@ export function findPath(
     }
     expanded[current.cellId] = 1;
     if (work) work.astarExpandedCells += 1;
+    if (
+      ranked &&
+      results.every((path) => path !== null) &&
+      current.g > Math.max(...results.map((path) => path!.length - 1))
+    )
+      return results;
     if (goalIds.has(current.cellId)) {
       const path = reconstruct(cameFrom, current.cellId, startId, width);
-      return path.length === 0 ? null : path;
+      if (!ranked) return path.length === 0 ? null : [path];
+      ranks.forEach((set, index) => {
+        const rank = set.get(current.cellId);
+        if (rank === undefined) return;
+        const previous = results[index];
+        if (
+          previous === null ||
+          previous === undefined ||
+          path.length < previous.length ||
+          (path.length === previous.length &&
+            rank < set.get(grid.cellId(previous[previous.length - 1]!))!)
+        )
+          results[index] = path;
+      });
     }
 
     const cx = current.cellId % width;
@@ -187,12 +238,12 @@ export function findPath(
       }
       gScore[nextId] = newG;
       cameFrom[nextId] = current.cellId;
-      const h = heuristic(next.x, next.y, openGoals);
+      const h = ranked ? 0 : heuristic(next.x, next.y, openGoals);
       open.push({ f: newG + h, h, cellId: nextId, g: newG });
     }
   }
 
-  return null;
+  return ranked ? results : null;
 }
 
 /** One MOVE only: projected destinations by component; routes are never shared. */
@@ -294,6 +345,16 @@ export function planMove(
   if (pathCells === null) {
     return null;
   }
+  return navigationForPath(grid, origin, pathCells, destination);
+}
+
+/** Builds the shared smoothed route from an already queried cell path. */
+export function navigationForPath(
+  grid: SpatialGrid,
+  origin: Vec2,
+  pathCells: readonly CellCoord[],
+  destination: Vec2,
+): NavigationTask | null {
   const waypoints = smoothPath(grid, origin, waypointsForPath(grid, pathCells, destination));
   if (waypoints === null) {
     return null;
@@ -315,6 +376,7 @@ export function prepareNavigation(
   task: NavigationTask,
   position: Vec2,
   reserveReplan: () => boolean,
+  replan?: () => NavigationTask | null,
 ): NavigationTask | null | "deferred" {
   const waypoint = task.waypoints[task.waypointIndex];
   if (waypoint === undefined) {
@@ -327,7 +389,9 @@ export function prepareNavigation(
     return { ...task, validatedRevision: grid.topologyRevision };
   }
   if (!reserveReplan()) return "deferred";
-  return planMove(grid, position, { x: task.destinationX, y: task.destinationY });
+  return replan === undefined
+    ? planMove(grid, position, { x: task.destinationX, y: task.destinationY })
+    : replan();
 }
 
 /** Farthest-visible string pulling, with a stable descending candidate order. */

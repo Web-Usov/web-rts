@@ -64,7 +64,8 @@ Implementation checkpoint:
 - G4a / #57 — completed (PR #81): deterministic navigation / MOVE core;
 - G4b / #68 — completed (PR #84): fair command scheduling / path budgets;
 - G4c / #69 — completed (PR #83): deterministic breach-aware planner;
-- **next gameplay stages: G5 / #58 (Economy) и G6 / #59 (Combat)** — готовы к параллельной реализации.
+- G5 / #58 — completed: finite Wood, Worker carry и повторяющийся internal GATHER, owned Town Hall drop-off, PlayerEconomy и transport-neutral snapshots/events;
+- **next gameplay stage: G6 / #59 (Combat)**; G7 / #60 требует и G5, и G6. Public economy/GATHER projection остаётся G11, interaction/HUD — G12.
 
 Art Direction дополнительно уточнён через #75 / PR #77: основной production-style target — **Stylized Low-Poly / Soft Hand-Painted**.
 
@@ -79,7 +80,7 @@ GitHub epic #50 является актуальным tracker implementation dec
        ├─ #68 G4b Fair scheduling / path budgets ✅
        └─ #69 G4c Breach-aware planner ✅
             ↓
-       #58 G5 Economy  ||  #59 G6 Combat ← NEXT (parallel)
+       #58 G5 Economy ✅  ||  #59 G6 Combat ← NEXT
             ↓
           #60 G7 Construction
           ├─ #61 G8 Garrison
@@ -100,7 +101,7 @@ GitHub epic #50 является актуальным tracker implementation dec
              #67 G14 Full Local/Remote E2E
 ```
 
-G1–G4 завершены. После G4b разблокированы #58 G5 (Economy) и #59 G6 (Combat), которые можно вести параллельно. Для G9 дополнительно требуется уже завершённый G4c (#69). Практический максимум остаётся **2 Coding Agents одновременно**.
+G1–G5 завершены. G6 (#59) остаётся следующим prerequisite для G7 (#60). Для G9 дополнительно требуется уже завершённый G4c (#69). Практический максимум остаётся **2 Coding Agents одновременно**.
 
 Отдельные follow-up задачи не входят в критический путь G4→G5/G6: #87 — измеренная CPU-стоимость blocked-target resolution на больших картах (важно решить до масштабирования карт/AI), #82 — UX обратной связи для скорректированной MOVE destination. Оба вопроса не отменяют завершённый контракт G4.
 

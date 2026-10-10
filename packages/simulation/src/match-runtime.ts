@@ -2,9 +2,13 @@ import { FOUNDATION_MAP } from "@web-rts/game-data";
 import type { CommandActor, CommandRejectionReason, SimulationCommand } from "./commands.js";
 import { commandPathCost, scheduleCommands } from "./command-scheduler.js";
 import { positiveInteger, type CreateWorldOptions } from "./config.js";
-import { placeStartingStructures, spawnPlayerUnits } from "./foundation-match.js";
+import {
+  placeStartingStructures,
+  spawnPlayerUnits,
+  spawnStartingEconomy,
+} from "./foundation-match.js";
 import { readWorldEntities, type MatchEntitySnapshot } from "./snapshot.js";
-import type { PlayerId } from "./types.js";
+import type { EntityId, PlayerEconomy, PlayerId } from "./types.js";
 import { createWorld, type World } from "./world.js";
 
 export type MatchParticipant = {
@@ -45,18 +49,29 @@ export type CommandAdmission =
   | { readonly accepted: false; readonly reason: CommandAdmissionRejection };
 
 /** Transport-neutral event addressed to one player. Shells only deliver it. */
-export type RuntimeEvent = {
-  readonly type: "COMMAND_REJECTED";
-  readonly recipientPlayerId: PlayerId;
-  readonly commandId: string;
-  readonly reason: CommandRejectionReason;
-  readonly tick: number;
-};
+export type RuntimeEvent =
+  | {
+      readonly type: "COMMAND_REJECTED";
+      readonly recipientPlayerId: PlayerId;
+      readonly commandId: string;
+      readonly reason: CommandRejectionReason;
+      readonly tick: number;
+    }
+  | {
+      readonly type: "ACTION_FAILED";
+      readonly recipientPlayerId: PlayerId;
+      readonly commandId: string;
+      readonly entityId: EntityId;
+      readonly action: "GATHER";
+      readonly reason: import("./events.js").ActionFailureReason;
+      readonly tick: number;
+    };
 
 export type MatchSnapshot = {
   readonly tick: number;
   readonly status: MatchStatus;
   readonly entities: readonly MatchEntitySnapshot[];
+  readonly playerEconomies: readonly (PlayerEconomy & { readonly playerId: PlayerId })[];
 };
 
 export type RuntimeMetrics = {
@@ -137,6 +152,7 @@ class FoundationMatchRuntime implements MatchRuntime {
     }
     spawnPlayerUnits(this.world, map, playerIds);
     placeStartingStructures(this.world, map);
+    spawnStartingEconomy(this.world, map, playerIds);
     this.world.drainEvents();
   }
 
@@ -178,6 +194,18 @@ class FoundationMatchRuntime implements MatchRuntime {
     }
     this.world.step();
     for (const event of this.world.drainEvents()) {
+      if (event.type === "ACTION_FAILED") {
+        this.outbox.push({
+          type: event.type,
+          recipientPlayerId: event.playerId,
+          commandId: event.commandId,
+          entityId: event.entityId,
+          action: event.action,
+          reason: event.reason,
+          tick: event.tick,
+        });
+        continue;
+      }
       if (event.type !== "COMMAND_REJECTED") {
         continue;
       }
@@ -200,6 +228,9 @@ class FoundationMatchRuntime implements MatchRuntime {
       tick: this.world.tick,
       status: this.status,
       entities: readWorldEntities(this.world),
+      playerEconomies: [...this.world.playerEconomies.entries()]
+        .sort(([a], [b]) => a - b)
+        .map(([playerId, economy]) => ({ playerId, resources: { ...economy.resources } })),
     };
   }
 
