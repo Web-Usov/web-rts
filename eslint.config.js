@@ -8,6 +8,7 @@ export default defineConfig(
   {
     ignores: [
       "**/dist/**",
+      "**/dist-pages/**",
       "**/node_modules/**",
       "**/.turbo/**",
       "**/coverage/**",
@@ -20,6 +21,40 @@ export default defineConfig(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   eslintConfigPrettier,
+  {
+    files: ["apps/web/meshy/**/*.js"],
+    languageOptions: {
+      globals: Object.fromEntries(
+        [
+          "window",
+          "document",
+          "devicePixelRatio",
+          "atob",
+          "File",
+          "Blob",
+          "URL",
+          "requestAnimationFrame",
+          "ImageData",
+          "Response",
+          "ReadableStream",
+          "TextEncoder",
+          "TextDecoder",
+          "crypto",
+          "ResizeObserver",
+          "performance",
+          "setTimeout",
+          "clearTimeout",
+          "Event",
+          "DOMException",
+          "AbortController",
+          "AbortSignal",
+          "Option",
+          "Buffer",
+          "console",
+        ].map((name) => [name, "readonly"]),
+      ),
+    },
+  },
   {
     files: ["apps/**/src/**/*.{ts,tsx}"],
     ignores: ["**/*.test.ts", "apps/game-server/src/integration/**"],
