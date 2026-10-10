@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { createRoot } from "react-dom/client";
-import { PREVIEW_FPS } from "./playback.ts";
+import { PREVIEW_FPS } from "./playback";
 
 export interface TransportState {
   clips: { name: string; duration: number }[];
@@ -55,9 +55,22 @@ function TimeInput({
   );
 }
 
-function Transport({ state, commands }: { state: TransportState; commands: TransportCommands }) {
+export function Transport({
+  state,
+  commands,
+}: {
+  state: TransportState;
+  commands: TransportCommands;
+}) {
   const duration = state.clips[state.selected]?.duration ?? 0;
   const disabled = state.busy || !duration;
+  if (!state.clips.length) {
+    return (
+      <section className="transport transport-placeholder" aria-label="Управление анимацией">
+        <span className="transport-empty">Создайте скелет и добавьте анимацию</span>
+      </section>
+    );
+  }
   return (
     <section className="transport" aria-label="Управление анимацией">
       <div className="transport-top">
