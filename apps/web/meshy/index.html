@@ -3,7 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <meta name="color-scheme" content="dark" />
+    <meta name="color-scheme" content="light dark" />
+    <script>
+      try {
+        const preference = localStorage.getItem("meshy-theme");
+        if (preference === "light" || preference === "dark") {
+          document.documentElement.dataset.theme = preference;
+        }
+      } catch {}
+    </script>
     <title>Mesh Studio — просмотр и экспорт 3D</title>
   </head>
   <body>
@@ -25,6 +33,10 @@
         >
         <span class="local-label"><i></i> Локально в браузере</span>
         <div class="header-actions">
+          <button id="theme-button" class="button ghost" type="button" aria-label="Тема: Системная">
+            <span data-theme-icon aria-hidden="true">◐</span>
+            <span data-theme-label>Системная</span>
+          </button>
           <button id="url-button" class="button ghost">По ссылке ↗</button
           ><button id="demo-button" class="button ghost">Открыть пример</button
           ><button id="open-button" class="button">

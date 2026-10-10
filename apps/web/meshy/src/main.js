@@ -1,4 +1,5 @@
 import "./style.css";
+import { setupTheme } from "./theme.js";
 import { mountTransport } from "./transport.tsx";
 import { seekAction, frameTime } from "./playback.ts";
 import * as THREE from "three";
@@ -188,7 +189,9 @@ function setView(view = "iso") {
     .querySelectorAll("[data-view]")
     .forEach((button) => button.classList.toggle("active", button.dataset.view === view));
 }
-function setBackground(color) {
+let customBackground = false;
+function setBackground(color, custom = true) {
+  customBackground = custom;
   scene.background.set(color);
   viewport.style.background = color;
   $("background-color").value = color;
@@ -198,6 +201,11 @@ function setBackground(color) {
     .querySelectorAll("[data-background]")
     .forEach((button) => button.classList.toggle("active", button.dataset.background === color));
 }
+const themeBackground = () =>
+  document.documentElement.dataset.theme === "light" ? "#c6ced6" : "#20242a";
+setupTheme($("theme-button"), () => {
+  if (!customBackground) setBackground(themeBackground(), false);
+});
 function setMode(mode) {
   currentMode = mode;
   const double = $("double-sided").checked;
@@ -232,7 +240,7 @@ function resetView() {
   axes.visible = false;
   $("double-sided").checked = false;
   setMode("material");
-  setBackground("#20242a");
+  setBackground(themeBackground(), false);
   setView("iso");
 }
 function setAnimation(index) {
