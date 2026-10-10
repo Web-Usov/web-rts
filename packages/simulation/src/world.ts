@@ -11,7 +11,7 @@ import {
   type SimulationConfig,
 } from "./config.js";
 import { EventQueue, type SimulationEvent } from "./events.js";
-import { planMoveToTarget, type NavigationTask } from "./navigation.js";
+import { MoveTargetResolution, planMoveToTarget, type NavigationTask } from "./navigation.js";
 import { EntityPathQueryLane } from "./path-query-lane.js";
 import { createSeededRng, type Rng } from "./rng.js";
 import {
@@ -314,13 +314,14 @@ export class World {
       return;
     }
 
+    const resolution = new MoveTargetResolution(this.grid, command.target);
     const planned: Array<{ entityId: EntityId; task: NavigationTask }> = [];
     for (const entityId of applicable) {
       const position = this.positions.get(entityId);
       if (position === undefined) {
         continue;
       }
-      const task = planMoveToTarget(this.grid, position, command.target);
+      const task = planMoveToTarget(this.grid, position, command.target, undefined, resolution);
       if (task === null) {
         this.rejectMove(playerId, command.commandId, "no_path");
         return;

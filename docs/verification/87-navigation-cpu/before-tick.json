@@ -1,0 +1,347 @@
+{
+  "environment": {
+    "node": "v25.9.0",
+    "platform": "darwin",
+    "arch": "arm64",
+    "osRelease": "24.6.0",
+    "cpu": "Apple M1",
+    "logicalCpus": 8,
+    "totalMemoryBytes": 17179869184,
+    "revision": "9507da838f6519c1ce3b0f05e3ddbf20170a8bfc"
+  },
+  "warmups": 5,
+  "samples": 30,
+  "percentile": "nearest-rank",
+  "gcExposed": true,
+  "rows": [
+    {
+      "name": "production-Foundation-40-full-MatchRuntime-step",
+      "minMs": 1.451,
+      "p50Ms": 1.648,
+      "p95Ms": 2.862,
+      "maxMs": 3.874,
+      "metrics": {
+        "tick": 1,
+        "entityCount": 5,
+        "pendingCommandCount": 0,
+        "processedCommands": 16,
+        "reservedCommandPathCost": 16,
+        "commandBudgetUsed": 16,
+        "commandBudgetRemaining": 0,
+        "activeTaskQueries": 0,
+        "aiQueries": 0
+      },
+      "memory": {
+        "heapDeltaBeforeGC": 2723352,
+        "heapDeltaAfterGC": -70184,
+        "arrayBufferDelta": 48000
+      }
+    },
+    {
+      "name": "synthetic-40-connected-cold-saturated-lanes",
+      "minMs": 2.441,
+      "p50Ms": 3.01,
+      "p95Ms": 3.816,
+      "maxMs": 3.847,
+      "metrics": {
+        "activeTaskQueries": 8,
+        "aiQueries": 8,
+        "reservedCommandPathCost": 16,
+        "processedCommands": 1
+      },
+      "memory": {
+        "heapDeltaBeforeGC": 2158336,
+        "heapDeltaAfterGC": 8552,
+        "arrayBufferDelta": 0
+      }
+    },
+    {
+      "name": "synthetic-40-connected-topology-churn-saturated-lanes",
+      "minMs": 2.511,
+      "p50Ms": 2.848,
+      "p95Ms": 3.679,
+      "maxMs": 3.844,
+      "metrics": {
+        "activeTaskQueries": 8,
+        "aiQueries": 8,
+        "reservedCommandPathCost": 16,
+        "processedCommands": 1
+      },
+      "memory": {
+        "heapDeltaBeforeGC": 2248184,
+        "heapDeltaAfterGC": 14376,
+        "arrayBufferDelta": 0
+      }
+    },
+    {
+      "name": "synthetic-40-distinct-components-cold-saturated-lanes",
+      "minMs": 1.381,
+      "p50Ms": 1.795,
+      "p95Ms": 2.742,
+      "maxMs": 2.873,
+      "metrics": {
+        "activeTaskQueries": 8,
+        "aiQueries": 8,
+        "reservedCommandPathCost": 16,
+        "processedCommands": 1
+      },
+      "memory": {
+        "heapDeltaBeforeGC": 10042832,
+        "heapDeltaAfterGC": 19208,
+        "arrayBufferDelta": 251200
+      }
+    },
+    {
+      "name": "synthetic-40-distinct-components-topology-churn-saturated-lanes",
+      "minMs": 1.351,
+      "p50Ms": 1.73,
+      "p95Ms": 2.68,
+      "maxMs": 2.773,
+      "metrics": {
+        "activeTaskQueries": 8,
+        "aiQueries": 8,
+        "reservedCommandPathCost": 16,
+        "processedCommands": 1
+      },
+      "memory": {
+        "heapDeltaBeforeGC": 10040208,
+        "heapDeltaAfterGC": 11520,
+        "arrayBufferDelta": -550400
+      }
+    },
+    {
+      "name": "synthetic-80-connected-cold-saturated-lanes",
+      "minMs": 8.81,
+      "p50Ms": 9.635,
+      "p95Ms": 10.374,
+      "maxMs": 10.779,
+      "metrics": {
+        "activeTaskQueries": 8,
+        "aiQueries": 8,
+        "reservedCommandPathCost": 16,
+        "processedCommands": 1
+      },
+      "memory": {
+        "heapDeltaBeforeGC": 245744,
+        "heapDeltaAfterGC": 64584,
+        "arrayBufferDelta": -217600
+      }
+    },
+    {
+      "name": "synthetic-80-connected-topology-churn-saturated-lanes",
+      "minMs": 8.547,
+      "p50Ms": 9.534,
+      "p95Ms": 15.366,
+      "maxMs": 16.794,
+      "metrics": {
+        "activeTaskQueries": 8,
+        "aiQueries": 8,
+        "reservedCommandPathCost": 16,
+        "processedCommands": 1
+      },
+      "memory": {
+        "heapDeltaBeforeGC": 66785496,
+        "heapDeltaAfterGC": 74864,
+        "arrayBufferDelta": 0
+      }
+    },
+    {
+      "name": "synthetic-80-distinct-components-cold-saturated-lanes",
+      "minMs": 4.458,
+      "p50Ms": 4.811,
+      "p95Ms": 5.471,
+      "maxMs": 5.627,
+      "metrics": {
+        "activeTaskQueries": 8,
+        "aiQueries": 8,
+        "reservedCommandPathCost": 16,
+        "processedCommands": 1
+      },
+      "memory": {
+        "heapDeltaBeforeGC": 35619392,
+        "heapDeltaAfterGC": 76336,
+        "arrayBufferDelta": 0
+      }
+    },
+    {
+      "name": "synthetic-80-distinct-components-topology-churn-saturated-lanes",
+      "minMs": 4.386,
+      "p50Ms": 4.974,
+      "p95Ms": 5.891,
+      "maxMs": 6.216,
+      "metrics": {
+        "activeTaskQueries": 8,
+        "aiQueries": 8,
+        "reservedCommandPathCost": 16,
+        "processedCommands": 1
+      },
+      "memory": {
+        "heapDeltaBeforeGC": 35418784,
+        "heapDeltaAfterGC": 65136,
+        "arrayBufferDelta": -800000
+      }
+    },
+    {
+      "name": "synthetic-128-connected-cold-saturated-lanes",
+      "minMs": 22.495,
+      "p50Ms": 23.395,
+      "p95Ms": 24.352,
+      "maxMs": 24.66,
+      "metrics": {
+        "activeTaskQueries": 8,
+        "aiQueries": 8,
+        "reservedCommandPathCost": 16,
+        "processedCommands": 1
+      },
+      "memory": {
+        "heapDeltaBeforeGC": 29882472,
+        "heapDeltaAfterGC": 133504,
+        "arrayBufferDelta": -2473216
+      }
+    },
+    {
+      "name": "synthetic-128-connected-topology-churn-saturated-lanes",
+      "minMs": 22.568,
+      "p50Ms": 23.279,
+      "p95Ms": 25.306,
+      "maxMs": 28.756,
+      "metrics": {
+        "activeTaskQueries": 8,
+        "aiQueries": 8,
+        "reservedCommandPathCost": 16,
+        "processedCommands": 1
+      },
+      "memory": {
+        "heapDeltaBeforeGC": 30146760,
+        "heapDeltaAfterGC": 133520,
+        "arrayBufferDelta": -1458176
+      }
+    },
+    {
+      "name": "synthetic-128-distinct-components-cold-saturated-lanes",
+      "minMs": 11.31,
+      "p50Ms": 12.072,
+      "p95Ms": 14.36,
+      "maxMs": 14.757,
+      "metrics": {
+        "activeTaskQueries": 8,
+        "aiQueries": 8,
+        "reservedCommandPathCost": 16,
+        "processedCommands": 1
+      },
+      "memory": {
+        "heapDeltaBeforeGC": 18776280,
+        "heapDeltaAfterGC": 133976,
+        "arrayBufferDelta": -409600
+      }
+    },
+    {
+      "name": "synthetic-128-distinct-components-topology-churn-saturated-lanes",
+      "minMs": 11.314,
+      "p50Ms": 12.367,
+      "p95Ms": 14.477,
+      "maxMs": 15.076,
+      "metrics": {
+        "activeTaskQueries": 8,
+        "aiQueries": 8,
+        "reservedCommandPathCost": 16,
+        "processedCommands": 1
+      },
+      "memory": {
+        "heapDeltaBeforeGC": 18774256,
+        "heapDeltaAfterGC": 127392,
+        "arrayBufferDelta": -1032192
+      }
+    },
+    {
+      "name": "synthetic-256-connected-cold-saturated-lanes",
+      "minMs": 106.339,
+      "p50Ms": 114.36,
+      "p95Ms": 123.008,
+      "maxMs": 125.054,
+      "metrics": {
+        "activeTaskQueries": 8,
+        "aiQueries": 8,
+        "reservedCommandPathCost": 16,
+        "processedCommands": 1
+      },
+      "memory": {
+        "heapDeltaBeforeGC": 24729560,
+        "heapDeltaAfterGC": 398104,
+        "arrayBufferDelta": 0
+      }
+    },
+    {
+      "name": "synthetic-256-connected-topology-churn-saturated-lanes",
+      "minMs": 105.167,
+      "p50Ms": 115.296,
+      "p95Ms": 131.841,
+      "maxMs": 134.683,
+      "metrics": {
+        "activeTaskQueries": 8,
+        "aiQueries": 8,
+        "reservedCommandPathCost": 16,
+        "processedCommands": 1
+      },
+      "memory": {
+        "heapDeltaBeforeGC": 26726856,
+        "heapDeltaAfterGC": 310168,
+        "arrayBufferDelta": 0
+      }
+    },
+    {
+      "name": "synthetic-256-distinct-components-cold-saturated-lanes",
+      "minMs": 48.332,
+      "p50Ms": 50.377,
+      "p95Ms": 74.336,
+      "maxMs": 87.453,
+      "metrics": {
+        "activeTaskQueries": 8,
+        "aiQueries": 8,
+        "reservedCommandPathCost": 16,
+        "processedCommands": 1
+      },
+      "memory": {
+        "heapDeltaBeforeGC": 51279744,
+        "heapDeltaAfterGC": 303000,
+        "arrayBufferDelta": 0
+      }
+    },
+    {
+      "name": "synthetic-256-distinct-components-topology-churn-saturated-lanes",
+      "minMs": 48.017,
+      "p50Ms": 50.599,
+      "p95Ms": 55.488,
+      "maxMs": 56.294,
+      "metrics": {
+        "activeTaskQueries": 8,
+        "aiQueries": 8,
+        "reservedCommandPathCost": 16,
+        "processedCommands": 1
+      },
+      "memory": {
+        "heapDeltaBeforeGC": 51288224,
+        "heapDeltaAfterGC": 311784,
+        "arrayBufferDelta": 0
+      }
+    },
+    {
+      "name": "synthetic-256-connected-16-single-commands-saturated-lanes",
+      "minMs": 103.473,
+      "p50Ms": 111.841,
+      "p95Ms": 123.081,
+      "maxMs": 125.051,
+      "metrics": {
+        "activeTaskQueries": 8,
+        "aiQueries": 8,
+        "reservedCommandPathCost": 16,
+        "processedCommands": 16
+      },
+      "memory": {
+        "heapDeltaBeforeGC": 26760032,
+        "heapDeltaAfterGC": 309240,
+        "arrayBufferDelta": -655360
+      }
+    }
+  ]
+}

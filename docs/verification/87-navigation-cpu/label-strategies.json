@@ -1,0 +1,326 @@
+{
+  "warmups": 5,
+  "samples": 30,
+  "rows": [
+    {
+      "size": 40,
+      "partitioned": false,
+      "strategy": "lazy",
+      "minMs": 0.032582999999995366,
+      "p50Ms": 0.10187499999999972,
+      "p95Ms": 0.12262499999999932,
+      "maxMs": 0.1247499999999988,
+      "work": {
+        "componentLabelBuilds": 1,
+        "componentLabelVisitedCells": 1600
+      },
+      "cache": {
+        "revision": 0,
+        "labelledComponents": 1,
+        "labelledCells": 1600,
+        "retainedArrayBytes": 12800
+      },
+      "extraTransientSeenBytes": 0
+    },
+    {
+      "size": 40,
+      "partitioned": false,
+      "strategy": "full",
+      "minMs": 0.04995800000000372,
+      "p50Ms": 0.051833000000002016,
+      "p95Ms": 0.09279199999999577,
+      "maxMs": 0.2587919999999997,
+      "work": {
+        "componentLabelBuilds": 1,
+        "componentLabelVisitedCells": 1600
+      },
+      "cache": {
+        "revision": 0,
+        "labelledComponents": 1,
+        "labelledCells": 1600,
+        "retainedArrayBytes": 12800
+      },
+      "extraTransientSeenBytes": 1600
+    },
+    {
+      "size": 40,
+      "partitioned": true,
+      "strategy": "lazy",
+      "minMs": 0.04862500000000125,
+      "p50Ms": 0.04904200000000003,
+      "p95Ms": 0.12950000000000017,
+      "maxMs": 0.18458400000000097,
+      "work": {
+        "componentLabelBuilds": 1,
+        "componentLabelVisitedCells": 800
+      },
+      "cache": {
+        "revision": 0,
+        "labelledComponents": 1,
+        "labelledCells": 800,
+        "retainedArrayBytes": 12800
+      },
+      "extraTransientSeenBytes": 0
+    },
+    {
+      "size": 40,
+      "partitioned": true,
+      "strategy": "full",
+      "minMs": 0.04766700000000412,
+      "p50Ms": 0.05016700000000185,
+      "p95Ms": 0.0759169999999969,
+      "maxMs": 0.13820799999999878,
+      "work": {
+        "componentLabelBuilds": 2,
+        "componentLabelVisitedCells": 1560
+      },
+      "cache": {
+        "revision": 0,
+        "labelledComponents": 2,
+        "labelledCells": 1560,
+        "retainedArrayBytes": 12800
+      },
+      "extraTransientSeenBytes": 1600
+    },
+    {
+      "size": 80,
+      "partitioned": false,
+      "strategy": "lazy",
+      "minMs": 0.13383299999999565,
+      "p50Ms": 0.13495800000001168,
+      "p95Ms": 0.14287499999999653,
+      "maxMs": 0.15354200000000162,
+      "work": {
+        "componentLabelBuilds": 1,
+        "componentLabelVisitedCells": 6400
+      },
+      "cache": {
+        "revision": 0,
+        "labelledComponents": 1,
+        "labelledCells": 6400,
+        "retainedArrayBytes": 51200
+      },
+      "extraTransientSeenBytes": 0
+    },
+    {
+      "size": 80,
+      "partitioned": false,
+      "strategy": "full",
+      "minMs": 0.18279200000000628,
+      "p50Ms": 0.1865410000000054,
+      "p95Ms": 0.2360000000000042,
+      "maxMs": 0.2687080000000037,
+      "work": {
+        "componentLabelBuilds": 1,
+        "componentLabelVisitedCells": 6400
+      },
+      "cache": {
+        "revision": 0,
+        "labelledComponents": 1,
+        "labelledCells": 6400,
+        "retainedArrayBytes": 51200
+      },
+      "extraTransientSeenBytes": 6400
+    },
+    {
+      "size": 80,
+      "partitioned": true,
+      "strategy": "lazy",
+      "minMs": 0.0692499999999967,
+      "p50Ms": 0.0725840000000062,
+      "p95Ms": 0.08587500000000148,
+      "maxMs": 0.09775000000000489,
+      "work": {
+        "componentLabelBuilds": 1,
+        "componentLabelVisitedCells": 3200
+      },
+      "cache": {
+        "revision": 0,
+        "labelledComponents": 1,
+        "labelledCells": 3200,
+        "retainedArrayBytes": 51200
+      },
+      "extraTransientSeenBytes": 0
+    },
+    {
+      "size": 80,
+      "partitioned": true,
+      "strategy": "full",
+      "minMs": 0.18341600000000824,
+      "p50Ms": 0.18466700000000458,
+      "p95Ms": 0.2028749999999917,
+      "maxMs": 0.22462500000000318,
+      "work": {
+        "componentLabelBuilds": 2,
+        "componentLabelVisitedCells": 6320
+      },
+      "cache": {
+        "revision": 0,
+        "labelledComponents": 2,
+        "labelledCells": 6320,
+        "retainedArrayBytes": 51200
+      },
+      "extraTransientSeenBytes": 6400
+    },
+    {
+      "size": 128,
+      "partitioned": false,
+      "strategy": "lazy",
+      "minMs": 0.3354580000000027,
+      "p50Ms": 0.3365830000000045,
+      "p95Ms": 0.39645799999999554,
+      "maxMs": 0.4190409999999929,
+      "work": {
+        "componentLabelBuilds": 1,
+        "componentLabelVisitedCells": 16384
+      },
+      "cache": {
+        "revision": 0,
+        "labelledComponents": 1,
+        "labelledCells": 16384,
+        "retainedArrayBytes": 131072
+      },
+      "extraTransientSeenBytes": 0
+    },
+    {
+      "size": 128,
+      "partitioned": false,
+      "strategy": "full",
+      "minMs": 0.44225000000000136,
+      "p50Ms": 0.4714170000000024,
+      "p95Ms": 1.0350830000000002,
+      "maxMs": 1.043834000000004,
+      "work": {
+        "componentLabelBuilds": 1,
+        "componentLabelVisitedCells": 16384
+      },
+      "cache": {
+        "revision": 0,
+        "labelledComponents": 1,
+        "labelledCells": 16384,
+        "retainedArrayBytes": 131072
+      },
+      "extraTransientSeenBytes": 16384
+    },
+    {
+      "size": 128,
+      "partitioned": true,
+      "strategy": "lazy",
+      "minMs": 0.16062499999999602,
+      "p50Ms": 0.1617920000000055,
+      "p95Ms": 0.1731670000000065,
+      "maxMs": 0.19366700000000492,
+      "work": {
+        "componentLabelBuilds": 1,
+        "componentLabelVisitedCells": 8192
+      },
+      "cache": {
+        "revision": 0,
+        "labelledComponents": 1,
+        "labelledCells": 8192,
+        "retainedArrayBytes": 131072
+      },
+      "extraTransientSeenBytes": 0
+    },
+    {
+      "size": 128,
+      "partitioned": true,
+      "strategy": "full",
+      "minMs": 0.4349589999999921,
+      "p50Ms": 0.44225000000000136,
+      "p95Ms": 0.48212499999999636,
+      "maxMs": 0.49295800000000156,
+      "work": {
+        "componentLabelBuilds": 2,
+        "componentLabelVisitedCells": 16256
+      },
+      "cache": {
+        "revision": 0,
+        "labelledComponents": 2,
+        "labelledCells": 16256,
+        "retainedArrayBytes": 131072
+      },
+      "extraTransientSeenBytes": 16384
+    },
+    {
+      "size": 256,
+      "partitioned": false,
+      "strategy": "lazy",
+      "minMs": 1.2302080000000046,
+      "p50Ms": 1.247415999999987,
+      "p95Ms": 1.4412920000000042,
+      "maxMs": 1.4674160000000143,
+      "work": {
+        "componentLabelBuilds": 1,
+        "componentLabelVisitedCells": 65536
+      },
+      "cache": {
+        "revision": 0,
+        "labelledComponents": 1,
+        "labelledCells": 65536,
+        "retainedArrayBytes": 524288
+      },
+      "extraTransientSeenBytes": 0
+    },
+    {
+      "size": 256,
+      "partitioned": false,
+      "strategy": "full",
+      "minMs": 1.7695830000000115,
+      "p50Ms": 1.7963749999999834,
+      "p95Ms": 1.8945830000000115,
+      "maxMs": 2.0033750000000055,
+      "work": {
+        "componentLabelBuilds": 1,
+        "componentLabelVisitedCells": 65536
+      },
+      "cache": {
+        "revision": 0,
+        "labelledComponents": 1,
+        "labelledCells": 65536,
+        "retainedArrayBytes": 524288
+      },
+      "extraTransientSeenBytes": 65536
+    },
+    {
+      "size": 256,
+      "partitioned": true,
+      "strategy": "lazy",
+      "minMs": 0.6058330000000183,
+      "p50Ms": 0.6400830000000042,
+      "p95Ms": 0.6704159999999888,
+      "maxMs": 0.768416000000002,
+      "work": {
+        "componentLabelBuilds": 1,
+        "componentLabelVisitedCells": 32768
+      },
+      "cache": {
+        "revision": 0,
+        "labelledComponents": 1,
+        "labelledCells": 32768,
+        "retainedArrayBytes": 524288
+      },
+      "extraTransientSeenBytes": 0
+    },
+    {
+      "size": 256,
+      "partitioned": true,
+      "strategy": "full",
+      "minMs": 1.7600419999999986,
+      "p50Ms": 1.795833000000016,
+      "p95Ms": 1.9023339999999962,
+      "maxMs": 1.93345800000003,
+      "work": {
+        "componentLabelBuilds": 2,
+        "componentLabelVisitedCells": 65280
+      },
+      "cache": {
+        "revision": 0,
+        "labelledComponents": 2,
+        "labelledCells": 65280,
+        "retainedArrayBytes": 524288
+      },
+      "extraTransientSeenBytes": 65536
+    }
+  ]
+}

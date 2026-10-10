@@ -1,0 +1,359 @@
+{
+  "warmups": 5,
+  "samples": 30,
+  "rows": [
+    {
+      "distinct": false,
+      "groupSize": 1,
+      "mode": "cold",
+      "minMs": 3.5888750000000016,
+      "p50Ms": 5.385416000000021,
+      "p95Ms": 12.266500000000008,
+      "maxMs": 12.702083000000016,
+      "counters": {
+        "astarExpandedCells": 250,
+        "blockedTargetVisitedCells": 65532,
+        "componentReuseHits": 0,
+        "componentCandidateEvaluations": 0
+      },
+      "retainedResolutionCacheBytes": 0,
+      "memory": {
+        "sampledAllocatedBytes": 50932216,
+        "heapDeltaBeforeGC": 53668048,
+        "heapDeltaAfterGC": -2872,
+        "arrayBufferDelta": 0
+      }
+    },
+    {
+      "distinct": false,
+      "groupSize": 1,
+      "mode": "warm",
+      "minMs": 3.5423750000000496,
+      "p50Ms": 4.214124999999967,
+      "p95Ms": 9.096165999999982,
+      "maxMs": 9.274999999999977,
+      "counters": {
+        "astarExpandedCells": 250,
+        "blockedTargetVisitedCells": 65532,
+        "componentReuseHits": 0,
+        "componentCandidateEvaluations": 0
+      },
+      "retainedResolutionCacheBytes": 0,
+      "memory": {
+        "sampledAllocatedBytes": 49886864,
+        "heapDeltaBeforeGC": 54849296,
+        "heapDeltaAfterGC": -48608,
+        "arrayBufferDelta": 0
+      }
+    },
+    {
+      "distinct": false,
+      "groupSize": 1,
+      "mode": "rebuild",
+      "minMs": 3.5787090000000035,
+      "p50Ms": 4.124207999999953,
+      "p95Ms": 10.025250000000028,
+      "maxMs": 11.533957999999984,
+      "counters": {
+        "astarExpandedCells": 250,
+        "blockedTargetVisitedCells": 65532,
+        "componentReuseHits": 0,
+        "componentCandidateEvaluations": 0
+      },
+      "retainedResolutionCacheBytes": 0,
+      "memory": {
+        "sampledAllocatedBytes": 47867016,
+        "heapDeltaBeforeGC": 55147496,
+        "heapDeltaAfterGC": -53792,
+        "arrayBufferDelta": 0
+      }
+    },
+    {
+      "distinct": false,
+      "groupSize": 1,
+      "mode": "repeat-10",
+      "minMs": 43.591042000000016,
+      "p50Ms": 47.9275419999999,
+      "p95Ms": 62.30025000000023,
+      "maxMs": 69.1094579999999,
+      "counters": {
+        "astarExpandedCells": 2500,
+        "blockedTargetVisitedCells": 655320,
+        "componentReuseHits": 0,
+        "componentCandidateEvaluations": 0
+      },
+      "retainedResolutionCacheBytes": 0,
+      "memory": {
+        "sampledAllocatedBytes": 266456688,
+        "heapDeltaBeforeGC": 64562744,
+        "heapDeltaAfterGC": -2336,
+        "arrayBufferDelta": 0
+      }
+    },
+    {
+      "distinct": false,
+      "groupSize": 16,
+      "mode": "cold",
+      "minMs": 71.23099999999977,
+      "p50Ms": 82.33637500000077,
+      "p95Ms": 113.4942089999995,
+      "maxMs": 118.11695899999995,
+      "counters": {
+        "astarExpandedCells": 4000,
+        "blockedTargetVisitedCells": 1048512,
+        "componentReuseHits": 0,
+        "componentCandidateEvaluations": 0
+      },
+      "retainedResolutionCacheBytes": 0,
+      "memory": {
+        "sampledAllocatedBytes": 418551496,
+        "heapDeltaBeforeGC": 23888136,
+        "heapDeltaAfterGC": -35184,
+        "arrayBufferDelta": 0
+      }
+    },
+    {
+      "distinct": false,
+      "groupSize": 16,
+      "mode": "warm",
+      "minMs": 67.29862499999945,
+      "p50Ms": 75.62250000000131,
+      "p95Ms": 104.04845800000021,
+      "maxMs": 107.75004200000058,
+      "counters": {
+        "astarExpandedCells": 4000,
+        "blockedTargetVisitedCells": 1048512,
+        "componentReuseHits": 0,
+        "componentCandidateEvaluations": 0
+      },
+      "retainedResolutionCacheBytes": 0,
+      "memory": {
+        "sampledAllocatedBytes": 417744920,
+        "heapDeltaBeforeGC": 23953520,
+        "heapDeltaAfterGC": -35712,
+        "arrayBufferDelta": 0
+      }
+    },
+    {
+      "distinct": false,
+      "groupSize": 16,
+      "mode": "rebuild",
+      "minMs": 67.1230830000004,
+      "p50Ms": 86.68645900000047,
+      "p95Ms": 172.9656670000004,
+      "maxMs": 755.2857079999994,
+      "counters": {
+        "astarExpandedCells": 4000,
+        "blockedTargetVisitedCells": 1048512,
+        "componentReuseHits": 0,
+        "componentCandidateEvaluations": 0
+      },
+      "retainedResolutionCacheBytes": 0,
+      "memory": {
+        "sampledAllocatedBytes": 409664400,
+        "heapDeltaBeforeGC": 23888040,
+        "heapDeltaAfterGC": -33768,
+        "arrayBufferDelta": 0
+      }
+    },
+    {
+      "distinct": false,
+      "groupSize": 16,
+      "mode": "repeat-10",
+      "minMs": 712.2332909999968,
+      "p50Ms": 757.0944999999992,
+      "p95Ms": 976.659083999999,
+      "maxMs": 1688.6933339999996,
+      "counters": {
+        "astarExpandedCells": 40000,
+        "blockedTargetVisitedCells": 10485120,
+        "componentReuseHits": 0,
+        "componentCandidateEvaluations": 0
+      },
+      "retainedResolutionCacheBytes": 0,
+      "memory": {
+        "sampledAllocatedBytes": 4134749864,
+        "heapDeltaBeforeGC": 101306624,
+        "heapDeltaAfterGC": 0,
+        "arrayBufferDelta": 0
+      }
+    },
+    {
+      "distinct": true,
+      "groupSize": 1,
+      "mode": "cold",
+      "minMs": 2.1334590000042226,
+      "p50Ms": 3.1336669999946025,
+      "p95Ms": 9.898916999998619,
+      "maxMs": 10.616792000000714,
+      "counters": {
+        "astarExpandedCells": 250,
+        "blockedTargetVisitedCells": 33276,
+        "componentReuseHits": 0,
+        "componentCandidateEvaluations": 0
+      },
+      "retainedResolutionCacheBytes": 0,
+      "memory": {
+        "sampledAllocatedBytes": 14596048,
+        "heapDeltaBeforeGC": 13468712,
+        "heapDeltaAfterGC": -14256,
+        "arrayBufferDelta": 0
+      }
+    },
+    {
+      "distinct": true,
+      "groupSize": 1,
+      "mode": "warm",
+      "minMs": 1.7510000000038417,
+      "p50Ms": 2.114332999997714,
+      "p95Ms": 3.4047499999942374,
+      "maxMs": 5.55791699999827,
+      "counters": {
+        "astarExpandedCells": 250,
+        "blockedTargetVisitedCells": 33276,
+        "componentReuseHits": 0,
+        "componentCandidateEvaluations": 0
+      },
+      "retainedResolutionCacheBytes": 0,
+      "memory": {
+        "sampledAllocatedBytes": 13133168,
+        "heapDeltaBeforeGC": 13468712,
+        "heapDeltaAfterGC": -62008,
+        "arrayBufferDelta": 655360
+      }
+    },
+    {
+      "distinct": true,
+      "groupSize": 1,
+      "mode": "rebuild",
+      "minMs": 1.7911670000030426,
+      "p50Ms": 2.1243329999997513,
+      "p95Ms": 3.172500000000582,
+      "maxMs": 3.558082999996259,
+      "counters": {
+        "astarExpandedCells": 250,
+        "blockedTargetVisitedCells": 33276,
+        "componentReuseHits": 0,
+        "componentCandidateEvaluations": 0
+      },
+      "retainedResolutionCacheBytes": 0,
+      "memory": {
+        "sampledAllocatedBytes": 14033280,
+        "heapDeltaBeforeGC": 13468864,
+        "heapDeltaAfterGC": -63984,
+        "arrayBufferDelta": 0
+      }
+    },
+    {
+      "distinct": true,
+      "groupSize": 1,
+      "mode": "repeat-10",
+      "minMs": 20.362084000000323,
+      "p50Ms": 24.410541999997804,
+      "p95Ms": 31.741625000002387,
+      "maxMs": 31.804625000004307,
+      "counters": {
+        "astarExpandedCells": 2500,
+        "blockedTargetVisitedCells": 332760,
+        "componentReuseHits": 0,
+        "componentCandidateEvaluations": 0
+      },
+      "retainedResolutionCacheBytes": 0,
+      "memory": {
+        "sampledAllocatedBytes": 134438608,
+        "heapDeltaBeforeGC": 66190248,
+        "heapDeltaAfterGC": -33232,
+        "arrayBufferDelta": 1310720
+      }
+    },
+    {
+      "distinct": true,
+      "groupSize": 16,
+      "mode": "cold",
+      "minMs": 31.415000000000873,
+      "p50Ms": 34.21137499999895,
+      "p95Ms": 42.51733399999648,
+      "maxMs": 174.9889170000024,
+      "counters": {
+        "astarExpandedCells": 3976,
+        "blockedTargetVisitedCells": 522208,
+        "componentReuseHits": 0,
+        "componentCandidateEvaluations": 0
+      },
+      "retainedResolutionCacheBytes": 0,
+      "memory": {
+        "sampledAllocatedBytes": 211411384,
+        "heapDeltaBeforeGC": 8904912,
+        "heapDeltaAfterGC": -35432,
+        "arrayBufferDelta": 0
+      }
+    },
+    {
+      "distinct": true,
+      "groupSize": 16,
+      "mode": "warm",
+      "minMs": 32.509500000000116,
+      "p50Ms": 35.43491699999868,
+      "p95Ms": 39.89041699999507,
+      "maxMs": 43.83875000000262,
+      "counters": {
+        "astarExpandedCells": 3976,
+        "blockedTargetVisitedCells": 522208,
+        "componentReuseHits": 0,
+        "componentCandidateEvaluations": 0
+      },
+      "retainedResolutionCacheBytes": 0,
+      "memory": {
+        "sampledAllocatedBytes": 209299280,
+        "heapDeltaBeforeGC": 7141440,
+        "heapDeltaAfterGC": -31032,
+        "arrayBufferDelta": 0
+      }
+    },
+    {
+      "distinct": true,
+      "groupSize": 16,
+      "mode": "rebuild",
+      "minMs": 32.20720799999981,
+      "p50Ms": 34.35245899999427,
+      "p95Ms": 40.90041600000404,
+      "maxMs": 43.47895799999969,
+      "counters": {
+        "astarExpandedCells": 3976,
+        "blockedTargetVisitedCells": 522208,
+        "componentReuseHits": 0,
+        "componentCandidateEvaluations": 0
+      },
+      "retainedResolutionCacheBytes": 0,
+      "memory": {
+        "sampledAllocatedBytes": 211008648,
+        "heapDeltaBeforeGC": 7192952,
+        "heapDeltaAfterGC": -35432,
+        "arrayBufferDelta": 0
+      }
+    },
+    {
+      "distinct": true,
+      "groupSize": 16,
+      "mode": "repeat-10",
+      "minMs": 326.98995899999863,
+      "p50Ms": 347.179458000006,
+      "p95Ms": 532.7956249999988,
+      "maxMs": 633.0217499999999,
+      "counters": {
+        "astarExpandedCells": 39760,
+        "blockedTargetVisitedCells": 5222080,
+        "componentReuseHits": 0,
+        "componentCandidateEvaluations": 0
+      },
+      "retainedResolutionCacheBytes": 0,
+      "memory": {
+        "sampledAllocatedBytes": 2065054376,
+        "heapDeltaBeforeGC": 85301648,
+        "heapDeltaAfterGC": 80,
+        "arrayBufferDelta": 0
+      }
+    }
+  ],
+  "notes": "Baseline and group-scoped A have no cross-command cache: cold/warm both resolve again. Rebuild is successful topology add/remove plus next resolution. Memory deltas observe end of call, not allocation volume or peak."
+}

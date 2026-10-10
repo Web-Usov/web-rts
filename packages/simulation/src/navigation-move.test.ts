@@ -2,6 +2,7 @@ import { FOUNDATION_MAP, type MapDefinition } from "@web-rts/game-data";
 import { describe, expect, it } from "vitest";
 import { commandPathCost, scheduleCommands } from "./command-scheduler.js";
 import type { QueuedCommand } from "./commands.js";
+import { readComponentCache } from "./navigation-components.js";
 import { planMove, planMoveToTarget, segmentIsTraversable } from "./navigation.js";
 import { advanceToward } from "./systems/movement.js";
 import { createMatchRuntime } from "./match-runtime.js";
@@ -136,6 +137,53 @@ describe("MOVE navigation", () => {
       return { plans, entities: readWorldEntities(world) };
     };
     expect(run()).toEqual(run());
+  });
+
+  it("keeps a resolved blocked destination fixed through removal and an unsafe-segment replan", () => {
+    const world = createWorld({ seed: 87, map: testMap(7, 5), defaultMoveSpeed: 1 });
+    const unit = unitAt(world, 0.5, 0.5);
+    const blocker = world.createEntity({ kind: "BUILDING", definitionId: "test_wall" });
+    world.placeSolidFootprint(blocker, solid(3, 2));
+    world.enqueueCommand(move([unit], { x: 3.2, y: 2.4 }));
+    world.step();
+    const resolved = world.readNavigation(unit)!;
+    expect(resolved.destinationX).toBeCloseTo(2.9999, 12);
+    expect(readComponentCache(world.grid!)).not.toBeNull();
+    world.removeSolidFootprint(blocker);
+    const newBlocker = world.createEntity({ kind: "BUILDING", definitionId: "test_wall" });
+    expect(world.placeSolidFootprint(newBlocker, solid(1, 1))).toEqual({ ok: true });
+    expect(readComponentCache(world.grid!)).toBeNull();
+    world.step();
+    const replanned = world.readNavigation(unit)!;
+    expect(replanned.plannedRevision).toBe(world.topologyRevision);
+    expect([replanned.destinationX, replanned.destinationY]).toEqual([
+      resolved.destinationX,
+      resolved.destinationY,
+    ]);
+    world.stepN(60);
+    expect(world.positions.get(unit)).toEqual({
+      x: resolved.destinationX,
+      y: resolved.destinationY,
+    });
+  });
+
+  it("does not partially replace existing tasks when a warm-cache blocked group fails", () => {
+    const world = createWorld({ seed: 87, map: testMap(7, 5), defaultMoveSpeed: 1 });
+    const first = unitAt(world, 0.5, 0.5),
+      second = unitAt(world, 6.5, 4.5);
+    const blocker = world.createEntity({ kind: "BUILDING", definitionId: "test_wall" });
+    world.placeSolidFootprint(blocker, solid(3, 2));
+    world.enqueueCommand(move([first, second], { x: 3.5, y: 2.5 }));
+    world.step();
+    const before = [world.readNavigation(first), world.readNavigation(second)];
+    // An invalid start exercises failure after the first unit has successfully planned.
+    world.movements.remove(second);
+    world.positions.set(second, { x: 3.5, y: 2.5 });
+    world.drainEvents();
+    world.enqueueCommand(move([first, second], { x: 3.2, y: 2.4 }, "rejected-warm-group"));
+    world.step();
+    expect(rejectionReasons(world)).toEqual(["no_path"]);
+    expect([world.readNavigation(first), world.readNavigation(second)]).toEqual(before);
   });
 
   it("chooses the nearest reachable side, skipping closer disconnected cells", () => {
