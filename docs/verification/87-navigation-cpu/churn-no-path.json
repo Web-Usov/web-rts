@@ -1,0 +1,47 @@
+{
+  "warmups": 5,
+  "samples": 30,
+  "rows": [
+    {
+      "implementation": "baseline",
+      "sourceRevision": "9507da838f6519c1ce3b0f05e3ddbf20170a8bfc",
+      "minMs": 124.21895899999981,
+      "p50Ms": 127.92783299999974,
+      "p95Ms": 136.99429199999986,
+      "maxMs": 141.29387499999984,
+      "metrics": {
+        "activeTaskQueries": 8,
+        "aiQueries": 8,
+        "reservedCommandPathCost": 16
+      },
+      "equivalentUntimedNavigationWork": {
+        "astarExpandedCells": 536416,
+        "blockedTargetVisitedCells": 532416
+      }
+    },
+    {
+      "implementation": "final",
+      "sourceRevision": "f48fe9d5500b3906f12d3158f63d788bc25d152a",
+      "minMs": 97.05708300000151,
+      "p50Ms": 97.54916700000012,
+      "p95Ms": 100.51466700000037,
+      "maxMs": 101.60808299999917,
+      "metrics": {
+        "activeTaskQueries": 8,
+        "aiQueries": 8,
+        "reservedCommandPathCost": 16
+      },
+      "equivalentUntimedNavigationWork": {
+        "astarExpandedCells": 536416,
+        "blockedTargetVisitedCells": 0,
+        "componentLabelRebuilds": 1,
+        "componentLabelBuilds": 1,
+        "componentLabelVisitedCells": 33276,
+        "componentCandidateEvaluations": 33276,
+        "componentCacheHits": 15,
+        "componentReuseHits": 15
+      }
+    }
+  ],
+  "notes": "Reference navigation/world compiled from baseline Git source in temporary directory; remaining dependencies unchanged. Prime excluded; solid wall insertion and cache rebuild included. Synthetic AI is not production G9."
+}

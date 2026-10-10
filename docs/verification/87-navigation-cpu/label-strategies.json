@@ -6,10 +6,10 @@
       "size": 40,
       "partitioned": false,
       "strategy": "lazy",
-      "minMs": 0.03379199999999827,
-      "p50Ms": 0.10241700000000264,
-      "p95Ms": 0.12604100000000074,
-      "maxMs": 0.12650000000000006,
+      "minMs": 0.032582999999995366,
+      "p50Ms": 0.10187499999999972,
+      "p95Ms": 0.12262499999999932,
+      "maxMs": 0.1247499999999988,
       "work": {
         "componentLabelBuilds": 1,
         "componentLabelVisitedCells": 1600
@@ -26,10 +26,10 @@
       "size": 40,
       "partitioned": false,
       "strategy": "full",
-      "minMs": 0.05041700000000304,
-      "p50Ms": 0.05579099999999926,
-      "p95Ms": 0.13812500000000227,
-      "maxMs": 0.2710829999999973,
+      "minMs": 0.04995800000000372,
+      "p50Ms": 0.051833000000002016,
+      "p95Ms": 0.09279199999999577,
+      "maxMs": 0.2587919999999997,
       "work": {
         "componentLabelBuilds": 1,
         "componentLabelVisitedCells": 1600
@@ -46,10 +46,10 @@
       "size": 40,
       "partitioned": true,
       "strategy": "lazy",
-      "minMs": 0.04837500000000006,
-      "p50Ms": 0.048749999999998295,
-      "p95Ms": 0.049500000000001876,
-      "maxMs": 0.050332999999994854,
+      "minMs": 0.04862500000000125,
+      "p50Ms": 0.04904200000000003,
+      "p95Ms": 0.12950000000000017,
+      "maxMs": 0.18458400000000097,
       "work": {
         "componentLabelBuilds": 1,
         "componentLabelVisitedCells": 800
@@ -66,10 +66,10 @@
       "size": 40,
       "partitioned": true,
       "strategy": "full",
-      "minMs": 0.04970799999999542,
-      "p50Ms": 0.052083000000010315,
-      "p95Ms": 0.08020800000001316,
-      "maxMs": 0.1267920000000089,
+      "minMs": 0.04766700000000412,
+      "p50Ms": 0.05016700000000185,
+      "p95Ms": 0.0759169999999969,
+      "maxMs": 0.13820799999999878,
       "work": {
         "componentLabelBuilds": 2,
         "componentLabelVisitedCells": 1560
@@ -86,10 +86,10 @@
       "size": 80,
       "partitioned": false,
       "strategy": "lazy",
-      "minMs": 0.13433299999999804,
-      "p50Ms": 0.13787500000000819,
-      "p95Ms": 0.19658300000000395,
-      "maxMs": 0.2160830000000118,
+      "minMs": 0.13383299999999565,
+      "p50Ms": 0.13495800000001168,
+      "p95Ms": 0.14287499999999653,
+      "maxMs": 0.15354200000000162,
       "work": {
         "componentLabelBuilds": 1,
         "componentLabelVisitedCells": 6400
@@ -106,10 +106,10 @@
       "size": 80,
       "partitioned": false,
       "strategy": "full",
-      "minMs": 0.18299999999999272,
-      "p50Ms": 0.18687500000000057,
-      "p95Ms": 0.21783299999999883,
-      "maxMs": 0.22562499999999375,
+      "minMs": 0.18279200000000628,
+      "p50Ms": 0.1865410000000054,
+      "p95Ms": 0.2360000000000042,
+      "maxMs": 0.2687080000000037,
       "work": {
         "componentLabelBuilds": 1,
         "componentLabelVisitedCells": 6400
@@ -126,10 +126,10 @@
       "size": 80,
       "partitioned": true,
       "strategy": "lazy",
-      "minMs": 0.06645900000000893,
-      "p50Ms": 0.07216700000000742,
-      "p95Ms": 0.08408299999999258,
-      "maxMs": 0.08425000000001148,
+      "minMs": 0.0692499999999967,
+      "p50Ms": 0.0725840000000062,
+      "p95Ms": 0.08587500000000148,
+      "maxMs": 0.09775000000000489,
       "work": {
         "componentLabelBuilds": 1,
         "componentLabelVisitedCells": 3200
@@ -146,10 +146,10 @@
       "size": 80,
       "partitioned": true,
       "strategy": "full",
-      "minMs": 0.18625000000000114,
-      "p50Ms": 0.19787500000001046,
-      "p95Ms": 0.26591600000000426,
-      "maxMs": 0.28504200000000424,
+      "minMs": 0.18341600000000824,
+      "p50Ms": 0.18466700000000458,
+      "p95Ms": 0.2028749999999917,
+      "maxMs": 0.22462500000000318,
       "work": {
         "componentLabelBuilds": 2,
         "componentLabelVisitedCells": 6320
@@ -166,10 +166,10 @@
       "size": 128,
       "partitioned": false,
       "strategy": "lazy",
-      "minMs": 0.33533300000000565,
-      "p50Ms": 0.3381250000000051,
-      "p95Ms": 0.3572499999999934,
-      "maxMs": 0.3616669999999971,
+      "minMs": 0.3354580000000027,
+      "p50Ms": 0.3365830000000045,
+      "p95Ms": 0.39645799999999554,
+      "maxMs": 0.4190409999999929,
       "work": {
         "componentLabelBuilds": 1,
         "componentLabelVisitedCells": 16384
@@ -186,10 +186,10 @@
       "size": 128,
       "partitioned": false,
       "strategy": "full",
-      "minMs": 0.45412499999999056,
-      "p50Ms": 0.48858299999999133,
-      "p95Ms": 0.9920000000000044,
-      "maxMs": 1.0123750000000058,
+      "minMs": 0.44225000000000136,
+      "p50Ms": 0.4714170000000024,
+      "p95Ms": 1.0350830000000002,
+      "maxMs": 1.043834000000004,
       "work": {
         "componentLabelBuilds": 1,
         "componentLabelVisitedCells": 16384
@@ -206,10 +206,10 @@
       "size": 128,
       "partitioned": true,
       "strategy": "lazy",
-      "minMs": 0.1605000000000132,
-      "p50Ms": 0.16150000000000375,
-      "p95Ms": 0.17216700000000174,
-      "maxMs": 0.1723750000000024,
+      "minMs": 0.16062499999999602,
+      "p50Ms": 0.1617920000000055,
+      "p95Ms": 0.1731670000000065,
+      "maxMs": 0.19366700000000492,
       "work": {
         "componentLabelBuilds": 1,
         "componentLabelVisitedCells": 8192
@@ -226,10 +226,10 @@
       "size": 128,
       "partitioned": true,
       "strategy": "full",
-      "minMs": 0.43633299999999053,
-      "p50Ms": 0.45308400000001825,
-      "p95Ms": 0.525792000000024,
-      "maxMs": 0.5382089999999948,
+      "minMs": 0.4349589999999921,
+      "p50Ms": 0.44225000000000136,
+      "p95Ms": 0.48212499999999636,
+      "maxMs": 0.49295800000000156,
       "work": {
         "componentLabelBuilds": 2,
         "componentLabelVisitedCells": 16256
@@ -246,10 +246,10 @@
       "size": 256,
       "partitioned": false,
       "strategy": "lazy",
-      "minMs": 1.225999999999999,
-      "p50Ms": 1.257916999999992,
-      "p95Ms": 1.4095839999999953,
-      "maxMs": 1.418167000000011,
+      "minMs": 1.2302080000000046,
+      "p50Ms": 1.247415999999987,
+      "p95Ms": 1.4412920000000042,
+      "maxMs": 1.4674160000000143,
       "work": {
         "componentLabelBuilds": 1,
         "componentLabelVisitedCells": 65536
@@ -266,10 +266,10 @@
       "size": 256,
       "partitioned": false,
       "strategy": "full",
-      "minMs": 1.7674580000000049,
-      "p50Ms": 1.8250830000000065,
-      "p95Ms": 1.992750000000001,
-      "maxMs": 2.013791999999995,
+      "minMs": 1.7695830000000115,
+      "p50Ms": 1.7963749999999834,
+      "p95Ms": 1.8945830000000115,
+      "maxMs": 2.0033750000000055,
       "work": {
         "componentLabelBuilds": 1,
         "componentLabelVisitedCells": 65536
@@ -286,10 +286,10 @@
       "size": 256,
       "partitioned": true,
       "strategy": "lazy",
-      "minMs": 0.6362500000000182,
-      "p50Ms": 0.650209000000018,
-      "p95Ms": 0.7027090000000271,
-      "maxMs": 0.7479169999999726,
+      "minMs": 0.6058330000000183,
+      "p50Ms": 0.6400830000000042,
+      "p95Ms": 0.6704159999999888,
+      "maxMs": 0.768416000000002,
       "work": {
         "componentLabelBuilds": 1,
         "componentLabelVisitedCells": 32768
@@ -306,10 +306,10 @@
       "size": 256,
       "partitioned": true,
       "strategy": "full",
-      "minMs": 1.7800829999999905,
-      "p50Ms": 1.8229590000000258,
-      "p95Ms": 2.092457999999965,
-      "maxMs": 2.1754999999999995,
+      "minMs": 1.7600419999999986,
+      "p50Ms": 1.795833000000016,
+      "p95Ms": 1.9023339999999962,
+      "maxMs": 1.93345800000003,
       "work": {
         "componentLabelBuilds": 2,
         "componentLabelVisitedCells": 65280

@@ -87,7 +87,7 @@ try {
         [0, [{ type: "MOVE", commandId: "adversarial", entityIds: ids, target: { x: 0, y: 0 } }]],
       ]);
       world.drainEvents();
-      return () => {
+      const execute = () => {
         grid.addFootprint(10002, solid(130, 0, 1, 256));
         const selection = scheduleCommands(queues, undefined, 16, 16, commandPathCost);
         for (const { playerId, command } of selection.selected)
@@ -104,6 +104,18 @@ try {
           reservedCommandPathCost: selection.reservedCost,
         };
       };
+      execute.countWork = () => {
+        grid.addFootprint(10002, solid(130, 0, 1, 256));
+        const work = { astarExpandedCells: 0, blockedTargetVisitedCells: 0 };
+        const requested = { x: 0, y: 0 };
+        const scope = nav.MoveTargetResolution
+          ? new nav.MoveTargetResolution(grid, requested)
+          : undefined;
+        for (let i = 0; i < 16; i++) nav.planMoveToTarget(grid, origin, requested, work, scope);
+        for (let i = 0; i < 16; i++) nav.planMove(grid, origin, destination, work);
+        return work;
+      };
+      return execute;
     }
     const times = [];
     for (let i = 0; i < 35; i++) {
@@ -125,6 +137,7 @@ try {
       p95Ms: times[28],
       maxMs: times[29],
       metrics,
+      equivalentUntimedNavigationWork: setup().countWork(),
     });
   }
   writeFileSync(

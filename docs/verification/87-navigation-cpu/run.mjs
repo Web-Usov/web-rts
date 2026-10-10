@@ -13,6 +13,7 @@ for (const [script, name, gc] of [
   ["scripts/benchmark-navigation-tick.mjs", "tick", true],
   ["scripts/benchmark-navigation-lifecycle.mjs", "lifecycle", true],
   ["docs/verification/87-navigation-cpu/label-strategies.mjs", "label-strategies", false],
+  ["docs/verification/87-navigation-cpu/churn-no-path.mjs", "churn-no-path", false],
 ])
   execFileSync(
     process.execPath,
