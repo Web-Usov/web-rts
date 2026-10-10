@@ -3,7 +3,7 @@ import { performance } from "node:perf_hooks";
 import { cpus, platform, arch } from "node:os";
 import { writeFileSync } from "node:fs";
 import { SpatialGrid } from "../packages/simulation/dist/spatial-grid.js";
-import { planMoveToTarget } from "../packages/simulation/dist/navigation.js";
+import { planMoveToTarget, MoveTargetResolution } from "../packages/simulation/dist/navigation.js";
 import { FOUNDATION_MAP, getEntityDefinition } from "../packages/game-data/dist/index.js";
 
 const warmups = 5;
@@ -57,8 +57,9 @@ for (const size of [40, 80, 128, 256]) {
             : { x: -size / 2 + 2.5 + (i % 4) * 0.1, y: -size / 2 + 2.5 + Math.floor(i / 4) * 0.1 },
         );
         const run = (work) => {
+          const resolution = new MoveTargetResolution(grid, target);
           const destinations = origins.map((origin) => {
-            const task = planMoveToTarget(grid, origin, target, work);
+            const task = planMoveToTarget(grid, origin, target, work, resolution);
             if (!task) throw new Error("expected reachable query");
             return [task.destinationX, task.destinationY];
           });
@@ -72,7 +73,12 @@ for (const size of [40, 80, 128, 256]) {
           timings.push(performance.now() - start);
         }
         timings.sort((a, b) => a - b);
-        const work = { astarExpandedCells: 0, blockedTargetVisitedCells: 0 };
+        const work = {
+          astarExpandedCells: 0,
+          blockedTargetVisitedCells: 0,
+          componentReuseHits: 0,
+          componentCandidateEvaluations: 0,
+        };
         const expected = JSON.stringify(run(work));
         if (JSON.stringify(run()) !== expected) throw new Error("non-repeatable destination");
         const percentile = (p) => +timings[Math.ceil(p * samples) - 1].toFixed(3);

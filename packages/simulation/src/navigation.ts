@@ -44,6 +44,8 @@ export interface NavigationTask {
 export interface NavigationWork {
   astarExpandedCells: number;
   blockedTargetVisitedCells: number;
+  componentReuseHits?: number;
+  componentCandidateEvaluations?: number;
 }
 
 interface OpenNode {
@@ -191,20 +193,75 @@ export function findPath(
   return null;
 }
 
+/** One MOVE only: component membership and projected destination, never routes. */
+export class MoveTargetResolution {
+  private labels: Uint32Array | undefined;
+  private readonly destinations: Vec2[] = [];
+  private revision: number;
+  private readonly requested: Vec2;
+
+  constructor(
+    private readonly grid: SpatialGrid,
+    requested: Vec2,
+  ) {
+    this.requested = { ...requested };
+    this.revision = grid.topologyRevision;
+  }
+
+  matches(grid: SpatialGrid, requested: Vec2): boolean {
+    return (
+      this.grid === grid && this.requested.x === requested.x && this.requested.y === requested.y
+    );
+  }
+
+  resolve(origin: Vec2, work?: NavigationWork): Vec2 | null {
+    if (this.revision !== this.grid.topologyRevision) {
+      this.labels = undefined;
+      this.destinations.length = 0;
+      this.revision = this.grid.topologyRevision;
+    }
+    const start = this.grid.worldToCell(origin);
+    if (!this.grid.isCellInBounds(start) || !this.grid.isWalkable(start)) return null;
+    this.labels ??= new Uint32Array(this.grid.widthCells * this.grid.heightCells);
+    const known = this.labels[this.grid.cellId(start)]!;
+    if (known !== 0) {
+      if (work) work.componentReuseHits = (work.componentReuseHits ?? 0) + 1;
+      return this.destinations[known - 1]!;
+    }
+    const label = this.destinations.length + 1;
+    const result = resolveBlockedTarget(this.grid, start, this.requested, work, this.labels, label);
+    if (result) this.destinations.push(result);
+    return result;
+  }
+}
+
 /** Resolve only blocked endpoints; a valid but unreachable exact target stays no_path. */
 export function planMoveToTarget(
   grid: SpatialGrid,
   origin: Vec2,
   requested: Vec2,
   work?: NavigationWork,
+  resolution?: MoveTargetResolution,
 ): NavigationTask | null {
   if (!grid.containsWorldPoint(requested)) return null;
   if (segmentIsTraversable(grid, requested, requested)) {
     return planMove(grid, origin, requested, work);
   }
-  const start = grid.worldToCell(origin);
-  if (!grid.isCellInBounds(start) || !grid.isWalkable(start)) return null;
+  const scope = resolution?.matches(grid, requested)
+    ? resolution
+    : new MoveTargetResolution(grid, requested);
+  const best = scope.resolve(origin, work);
+  return best === null ? null : planMove(grid, origin, best, work);
+}
 
+function resolveBlockedTarget(
+  grid: SpatialGrid,
+  start: CellCoord,
+  requested: Vec2,
+  work: NavigationWork | undefined,
+  labels: Uint32Array,
+  label: number,
+): Vec2 | null {
   const visited = new Uint8Array(grid.widthCells * grid.heightCells);
   const queue: CellCoord[] = [start];
   visited[grid.cellId(start)] = 1;
@@ -215,7 +272,11 @@ export function planMoveToTarget(
   const inset = 0.0001;
   for (let index = 0; index < queue.length; index += 1) {
     const cell = queue[index]!;
-    if (work) work.blockedTargetVisitedCells += 1;
+    labels[grid.cellId(cell)] = label;
+    if (work) {
+      work.blockedTargetVisitedCells += 1;
+      work.componentCandidateEvaluations = (work.componentCandidateEvaluations ?? 0) + 1;
+    }
     const center = grid.cellToWorldCenter(cell);
     const point = {
       x: Math.max(center.x - 0.5 + inset, Math.min(center.x + 0.5 - inset, requested.x)),
@@ -237,7 +298,7 @@ export function planMoveToTarget(
       queue.push(next);
     }
   }
-  return best === null ? null : planMove(grid, origin, best, work);
+  return best;
 }
 
 /** Plans a MOVE from a world position to an exact world destination. */
