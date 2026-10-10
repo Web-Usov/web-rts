@@ -1,0 +1,11 @@
+{
+  "tool": "mcp__cua_repl / Codex In-app Browser",
+  "levels": [
+    "error",
+    "warn"
+  ],
+  "local": [],
+  "remotePlayer0": [],
+  "remotePlayer1": [],
+  "isolatedGroupFixture": []
+}

@@ -53,7 +53,7 @@ function production() {
     return m;
   };
 }
-function synthetic(size, distinct, churn, singleCommands = false) {
+function synthetic(size, distinct, churn, singleCommands = false, prime = false) {
   const world = createWorld({
     seed: 87,
     map: {
@@ -98,6 +98,7 @@ function synthetic(size, distinct, churn, singleCommands = false) {
   ]);
   world.drainEvents();
   const aiOrigins = origins.slice(0, 8);
+  if (prime) for (const origin of aiOrigins) planMoveToTarget(grid, origin, { x: 0, y: 0 });
   return () => {
     // Cost of successful add/remove included for churn, including invalidation/rebuild on the next query.
     if (churn) {
@@ -181,6 +182,14 @@ rows.push(
     synthetic(256, false, false, true),
   ),
 );
+for (const distinct of [false, true])
+  for (const churn of [false, true])
+    rows.push(
+      measure(
+        `synthetic-256-${distinct ? "distinct-components" : "connected"}-${churn ? "rebuild" : "warm"}-saturated-lanes`,
+        () => synthetic(256, distinct, churn, false, true),
+      ),
+    );
 const report = {
   environment: {
     node: process.version,

@@ -2,6 +2,7 @@
 import { performance } from "node:perf_hooks";
 import { cpus, platform, arch } from "node:os";
 import { writeFileSync } from "node:fs";
+import { readComponentCache } from "../packages/simulation/dist/navigation-components.js";
 import { SpatialGrid } from "../packages/simulation/dist/spatial-grid.js";
 import { planMoveToTarget, MoveTargetResolution } from "../packages/simulation/dist/navigation.js";
 import { FOUNDATION_MAP, getEntityDefinition } from "../packages/game-data/dist/index.js";
@@ -56,10 +57,10 @@ for (const size of [40, 80, 128, 256]) {
             ? { x: -6 + (i % 4) * 0.1, y: -3 + Math.floor(i / 4) * 0.1 }
             : { x: -size / 2 + 2.5 + (i % 4) * 0.1, y: -size / 2 + 2.5 + Math.floor(i / 4) * 0.1 },
         );
-        const run = (work) => {
-          const resolution = new MoveTargetResolution(grid, target);
+        const run = (work, queryGrid = grid) => {
+          const resolution = new MoveTargetResolution(queryGrid, target);
           const destinations = origins.map((origin) => {
-            const task = planMoveToTarget(grid, origin, target, work, resolution);
+            const task = planMoveToTarget(queryGrid, origin, target, work, resolution);
             if (!task) throw new Error("expected reachable query");
             return [task.destinationX, task.destinationY];
           });
@@ -73,6 +74,24 @@ for (const size of [40, 80, 128, 256]) {
           timings.push(performance.now() - start);
         }
         timings.sort((a, b) => a - b);
+        const freshGrid = () => {
+          const fresh = new SpatialGrid(map);
+          for (const id of [1, 2]) {
+            const footprint = grid.footprintOf(id);
+            if (footprint) fresh.addFootprint(id, footprint);
+          }
+          return fresh;
+        };
+        const coldTimings = [];
+        for (let i = 0; i < warmups + samples; i++) {
+          const fresh = freshGrid();
+          const t = performance.now();
+          run(undefined, fresh);
+          if (i >= warmups) coldTimings.push(performance.now() - t);
+        }
+        coldTimings.sort((a, b) => a - b);
+        const coldWork = { astarExpandedCells: 0, blockedTargetVisitedCells: 0 };
+        run(coldWork, freshGrid());
         const work = {
           astarExpandedCells: 0,
           blockedTargetVisitedCells: 0,
@@ -92,6 +111,14 @@ for (const size of [40, 80, 128, 256]) {
           p95Ms: percentile(0.95),
           maxMs: +timings.at(-1).toFixed(3),
           ...work,
+          cache: readComponentCache(grid),
+          cold: {
+            minMs: +coldTimings[0].toFixed(3),
+            p50Ms: +coldTimings[14].toFixed(3),
+            p95Ms: +coldTimings[28].toFixed(3),
+            maxMs: +coldTimings.at(-1).toFixed(3),
+            ...coldWork,
+          },
         });
       }
     }

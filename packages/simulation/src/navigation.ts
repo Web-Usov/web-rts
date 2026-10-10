@@ -1,4 +1,5 @@
 import type { CellCoord } from "@web-rts/game-data";
+import { reachableComponent, type ComponentWork } from "./navigation-components.js";
 import type { SpatialFootprint, SpatialGrid } from "./spatial-grid.js";
 import type { Vec2 } from "./types.js";
 
@@ -41,8 +42,9 @@ export interface NavigationTask {
 }
 
 /** Optional deterministic benchmark counters; never projected to clients. */
-export interface NavigationWork {
+export interface NavigationWork extends ComponentWork {
   astarExpandedCells: number;
+  /** Legacy fallback flood-fill visits. Label builds use componentLabelVisitedCells instead. */
   blockedTargetVisitedCells: number;
   componentReuseHits?: number;
   componentCandidateEvaluations?: number;
@@ -193,10 +195,9 @@ export function findPath(
   return null;
 }
 
-/** One MOVE only: component membership and projected destination, never routes. */
+/** One MOVE only: projected destinations by component; routes are never shared. */
 export class MoveTargetResolution {
-  private labels: Uint32Array | undefined;
-  private readonly destinations: Vec2[] = [];
+  private readonly destinations = new Map<number, Vec2>();
   private revision: number;
   private readonly requested: Vec2;
 
@@ -216,22 +217,20 @@ export class MoveTargetResolution {
 
   resolve(origin: Vec2, work?: NavigationWork): Vec2 | null {
     if (this.revision !== this.grid.topologyRevision) {
-      this.labels = undefined;
-      this.destinations.length = 0;
+      this.destinations.clear();
       this.revision = this.grid.topologyRevision;
     }
     const start = this.grid.worldToCell(origin);
     if (!this.grid.isCellInBounds(start) || !this.grid.isWalkable(start)) return null;
-    this.labels ??= new Uint32Array(this.grid.widthCells * this.grid.heightCells);
-    const known = this.labels[this.grid.cellId(start)]!;
-    if (known !== 0) {
+    const component = reachableComponent(this.grid, start, work);
+    const known = this.destinations.get(component.id);
+    if (known !== undefined) {
       if (work) work.componentReuseHits = (work.componentReuseHits ?? 0) + 1;
-      return this.destinations[known - 1]!;
+      return known;
     }
-    const label = this.destinations.length + 1;
-    const result = resolveBlockedTarget(this.grid, start, this.requested, work, this.labels, label);
-    if (result) this.destinations.push(result);
-    return result;
+    const best = projectIntoComponent(this.grid, component.cells, this.requested, work);
+    this.destinations.set(component.id, best);
+    return best;
   }
 }
 
@@ -254,51 +253,34 @@ export function planMoveToTarget(
   return best === null ? null : planMove(grid, origin, best, work);
 }
 
-function resolveBlockedTarget(
+/** Evaluate every reachable cell; no spatial early exit or cell-center approximation. */
+function projectIntoComponent(
   grid: SpatialGrid,
-  start: CellCoord,
+  cells: Uint32Array,
   requested: Vec2,
-  work: NavigationWork | undefined,
-  labels: Uint32Array,
-  label: number,
-): Vec2 | null {
-  const visited = new Uint8Array(grid.widthCells * grid.heightCells);
-  const queue: CellCoord[] = [start];
-  visited[grid.cellId(start)] = 1;
-  let best: Vec2 | null = null;
+  work?: NavigationWork,
+): Vec2 {
+  let bestX = 0;
+  let bestY = 0;
   let bestDistance = Infinity;
   let bestId = Infinity;
   // Numerical clearance for endpoint edge/corner checks; not a unit radius.
   const inset = 0.0001;
-  for (let index = 0; index < queue.length; index += 1) {
-    const cell = queue[index]!;
-    labels[grid.cellId(cell)] = label;
-    if (work) {
-      work.blockedTargetVisitedCells += 1;
-      work.componentCandidateEvaluations = (work.componentCandidateEvaluations ?? 0) + 1;
-    }
-    const center = grid.cellToWorldCenter(cell);
-    const point = {
-      x: Math.max(center.x - 0.5 + inset, Math.min(center.x + 0.5 - inset, requested.x)),
-      y: Math.max(center.y - 0.5 + inset, Math.min(center.y + 0.5 - inset, requested.y)),
-    };
-    const distance = (point.x - requested.x) ** 2 + (point.y - requested.y) ** 2;
-    const id = grid.cellId(cell);
+  for (const id of cells) {
+    if (work) work.componentCandidateEvaluations = (work.componentCandidateEvaluations ?? 0) + 1;
+    const centerX = grid.originX + ((id % grid.widthCells) + 0.5);
+    const centerY = grid.originY + (Math.floor(id / grid.widthCells) + 0.5);
+    const x = Math.max(centerX - 0.5 + inset, Math.min(centerX + 0.5 - inset, requested.x));
+    const y = Math.max(centerY - 0.5 + inset, Math.min(centerY + 0.5 - inset, requested.y));
+    const distance = (x - requested.x) ** 2 + (y - requested.y) ** 2;
     if (distance < bestDistance || (distance === bestDistance && id < bestId)) {
-      best = point;
+      bestX = x;
+      bestY = y;
       bestDistance = distance;
       bestId = id;
     }
-    for (const offset of NEIGHBOR_OFFSETS) {
-      const next = { x: cell.x + offset.x, y: cell.y + offset.y };
-      if (!grid.isCellInBounds(next) || !grid.isWalkable(next)) continue;
-      const nextId = grid.cellId(next);
-      if (visited[nextId] === 1) continue;
-      visited[nextId] = 1;
-      queue.push(next);
-    }
   }
-  return best;
+  return { x: bestX, y: bestY };
 }
 
 /** Plans a MOVE from a world position to an exact world destination. */

@@ -4,6 +4,7 @@ import { performance } from "node:perf_hooks";
 import { writeFileSync } from "node:fs";
 import { FOUNDATION_MAP } from "../packages/game-data/dist/index.js";
 import { SpatialGrid } from "../packages/simulation/dist/spatial-grid.js";
+import { readComponentCache } from "../packages/simulation/dist/navigation-components.js";
 import * as navigation from "../packages/simulation/dist/navigation.js";
 const warmups = 5,
   samples = 30;
@@ -58,7 +59,7 @@ const rows = [];
 for (const distinct of [false, true])
   for (const n of [1, 16])
     for (const mode of ["cold", "warm", "rebuild", "repeat-10"]) {
-      const grid = setup(distinct);
+      let grid = setup(distinct);
       const run = (w) => {
         if (mode === "rebuild") {
           grid.addFootprint(3, solid(254, 254));
@@ -66,22 +67,29 @@ for (const distinct of [false, true])
         }
         for (let i = 0; i < (mode === "repeat-10" ? 10 : 1); i++) group(grid, n, distinct, w);
       };
-      for (let i = 0; i < warmups; i++) run();
+      for (let i = 0; i < warmups; i++) {
+        if (mode === "cold") grid = setup(distinct);
+        run();
+      }
       const times = [];
       for (let i = 0; i < samples; i++) {
+        if (mode === "cold") grid = setup(distinct);
         const t = performance.now();
         run();
         times.push(performance.now() - t);
       }
       times.sort((a, b) => a - b);
+      if (mode === "cold") grid = setup(distinct);
       const counters = work();
       run(counters);
+      if (mode === "cold") grid = setup(distinct);
       global.gc?.();
       const before = process.memoryUsage();
       run();
       const transient = process.memoryUsage();
       global.gc?.();
       const retained = process.memoryUsage();
+      if (mode === "cold") grid = setup(distinct);
       const session = new Session();
       session.connect();
       await session.post("HeapProfiler.startSampling", {
@@ -103,7 +111,8 @@ for (const distinct of [false, true])
         p95Ms: times[28],
         maxMs: times[29],
         counters,
-        retainedResolutionCacheBytes: 0,
+        retainedResolutionCacheBytes: readComponentCache(grid)?.retainedArrayBytes ?? 0,
+        cache: readComponentCache(grid),
         memory: {
           sampledAllocatedBytes: sampledBytes(profile.head),
           heapDeltaBeforeGC: transient.heapUsed - before.heapUsed,
@@ -120,7 +129,7 @@ writeFileSync(
       samples,
       rows,
       notes:
-        "Baseline and group-scoped A have no cross-command cache: cold/warm both resolve again. Rebuild is successful topology add/remove plus next resolution. Memory deltas observe end of call, not allocation volume or peak.",
+        "Cold uses a fresh grid per sample; warm/rebuild/repeat use a single grid. Baseline and group-scoped A have no cross-command cache: cold/warm both resolve again. Rebuild is successful topology add/remove plus next resolution. Memory deltas observe end of call, not allocation volume or peak.",
     },
     null,
     2,
