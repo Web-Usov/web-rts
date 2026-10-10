@@ -2,6 +2,9 @@
 export const packageName = "@web-rts/game-data" as const;
 
 export {
+  RESOURCE_TYPES,
+  RESOURCE_DEFINITIONS,
+  type ResourceType,
   ENTITY_DEFINITIONS,
   ENTITY_KINDS,
   getEntityDefinition,

@@ -54,7 +54,7 @@ describe("MatchRuntime", () => {
     expect(objectiveOf(snapshot)).toMatchObject({ x: 0, y: 0, controllerPlayerId: null });
     expect(runtime.readMetrics()).toMatchObject({
       tick: 0,
-      entityCount: 3,
+      entityCount: 11,
       pendingCommandCount: 0,
     });
     expect(runtime.drainEvents()).toEqual([]);
@@ -66,7 +66,7 @@ describe("MatchRuntime", () => {
     const second = runtime.readSnapshot();
     expect(second).toEqual(first);
     expect(second.entities[0]).not.toBe(first.entities[0]);
-    expect(Object.keys(first).sort()).toEqual(["entities", "status", "tick"]);
+    expect(Object.keys(first).sort()).toEqual(["entities", "playerEconomies", "status", "tick"]);
   });
 
   it("applies admitted commands on the next step, not on submit", () => {
@@ -83,7 +83,7 @@ describe("MatchRuntime", () => {
 
     expect(runtime.readMetrics()).toMatchObject({
       tick: 1,
-      entityCount: 3,
+      entityCount: 11,
       pendingCommandCount: 0,
     });
     expect(unitOf(runtime.readSnapshot(), 0).x).not.toBe(unit.x);
@@ -289,7 +289,7 @@ describe("MatchRuntime", () => {
       controllerPlayerId: null,
     });
     expect(unitOf(after, 1)).toMatchObject({ controllerPlayerId: 1 });
-    expect(after.entities).toHaveLength(3);
+    expect(after.entities).toHaveLength(11);
     expect(runtime.submitCommand({ playerId: 0 }, move("after-leave", [unit0.entityId]))).toEqual({
       accepted: false,
       reason: "not_participant",

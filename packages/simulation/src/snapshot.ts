@@ -16,6 +16,11 @@ export type MatchEntitySnapshot = {
   /** Generic objective role targeting this entity, if any. */
   objectiveType: ObjectiveType | null;
   objectiveState: ObjectiveState | null;
+  resourceNode?: import("./types.js").ResourceNode;
+  worker?: {
+    carried: { resourceType: import("@web-rts/game-data").ResourceType; amount: number };
+    phase: "IDLE" | import("./types.js").GatherTask["phase"];
+  };
 };
 
 /**
@@ -52,6 +57,17 @@ export function readWorldEntities(world: World): MatchEntitySnapshot[] {
       controllerPlayerId: controller?.controllerPlayerId ?? null,
       objectiveType: objective?.type ?? null,
       objectiveState: objective?.state ?? null,
+      ...(world.resourceNodes.has(entityId)
+        ? { resourceNode: { ...world.resourceNodes.get(entityId)! } }
+        : {}),
+      ...(world.workers.has(entityId)
+        ? {
+            worker: {
+              carried: { ...world.workers.get(entityId)!.carried },
+              phase: world.gatherTasks.get(entityId)?.phase ?? "IDLE",
+            },
+          }
+        : {}),
     });
   }
   return entities;

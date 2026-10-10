@@ -1,4 +1,4 @@
-import type { EntityKind } from "@web-rts/game-data";
+import type { ResourceType, EntityKind } from "@web-rts/game-data";
 
 export { ENTITY_KINDS, type EntityKind } from "@web-rts/game-data";
 
@@ -76,4 +76,30 @@ export interface Objective {
   readonly targetEntityId: EntityId;
   readonly required: boolean;
   state: ObjectiveState;
+}
+
+export interface PlayerEconomy {
+  resources: Record<ResourceType, number>;
+}
+export interface ResourceNode {
+  resourceType: ResourceType;
+  remaining: number;
+}
+export interface Worker {
+  moveSpeed: number;
+  carryCapacity: number;
+  gatherRate: number;
+  carried: { resourceType: ResourceType; amount: number };
+}
+export interface Dropoff {
+  resourceTypes: readonly ResourceType[];
+}
+export interface GatherTask {
+  commandId: string;
+  playerId: PlayerId;
+  sourceEntityId: EntityId;
+  dropoffEntityId: EntityId;
+  phase: "TO_SOURCE" | "GATHERING" | "TO_DROPOFF";
+  /** Fractional rate accumulator; stock and carry remain integer resource units. */
+  gatherProgress: number;
 }
