@@ -276,6 +276,34 @@ describe("Soldier tasks and bounded navigation", () => {
     expect(world.readPathQueryMetrics().activeTaskQueries).toBe(0);
     expect(world.positions.get(soldier)).toEqual({ x: -8.5, y: -8.5 });
   });
+  it("removes dead target memo entries from every Soldier while retaining living target entries", () => {
+    const map: MapDefinition = {
+      ...OPEN_MAP,
+      staticTerrain: [{ x: 13, y: 0, width: 1, height: 40, walkable: false, buildable: false }],
+    };
+    const { world, soldier } = setup(8, map);
+    const second = spawnSoldier(world, { x: -8.5, y: -7.5 }, PLAYER_TEAM);
+    const livingTarget = target(world, -5.5, -8.5);
+    world.step();
+    for (let cycle = 0; cycle < 5; cycle += 1) {
+      const doomed = target(world, -5.5, -8.5);
+      world.step();
+      for (const id of [soldier, second]) {
+        expect(world.soldiers.get(id)!.unreachable.has(doomed)).toBe(true);
+      }
+      world.health.get(doomed)!.current = 0;
+      world.step();
+      expect(world.hasEntity(doomed)).toBe(false);
+      for (const id of [soldier, second]) {
+        const memo = world.soldiers.get(id)!.unreachable;
+        expect([...memo.keys()]).toEqual([livingTarget]);
+      }
+    }
+    world.destroyEntity(livingTarget);
+    for (const id of [soldier, second]) {
+      expect(world.soldiers.get(id)!.unreachable.size).toBe(0);
+    }
+  });
   it("melee approaches a 2×2 Sacred Site using perimeter goals and never crosses solid cells", () => {
     const { world, soldier } = setup();
     world.positions.set(soldier, { x: -3.5, y: -0.5 });

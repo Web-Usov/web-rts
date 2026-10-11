@@ -14,9 +14,11 @@
 
 Unit/regression tests: Team/eligibility/friendly fire, first-strike/cooldown boundaries при разных tickHz, death/Objective, nearest-target/tie-break/stickiness, bounded chase, unreachable retries, MOVE override/rejection/termination, 2×2 approach, shared path lane и deferred replan, bootstrap/control release, snapshot copying и отсутствие internal combat fields в public projection.
 
+Regression review fix: повторные spawn/death циклы недостижимых целей очищают `unreachable` у обоих Soldier сразу при death, сохраняя memo живых целей.
+
 Scenario runner использует существующий `runScenario` с declarative map: одинаковые seed/commands/ticks дают одинаковые positions, Health, combat/task state, events и lethal outcome. Existing movement/objective/reconnect/parity tests сохраняются.
 
-Локально green: frozen install, typecheck, lint, test (в том числе 181 simulation unit tests), test:simulation (5 scenarios), test:server (40 integration tests), build и 8 Playwright E2E.
+Локально green: frozen install, typecheck, lint, test (в том числе 182 simulation unit tests), test:simulation (5 scenarios), test:server (40 integration tests), build и 8 Playwright E2E.
 
 ## Визуальная проверка
 

@@ -133,6 +133,9 @@ export class World {
     this.combats.remove(entityId);
     this.soldiers.remove(entityId);
     this.soldierProfiles.remove(entityId);
+    for (const [, soldier] of this.soldiers.entries()) {
+      soldier.unreachable.delete(entityId);
+    }
     for (const [id, combat] of this.combats.entries()) {
       if (combat.targetEntityId !== entityId) continue;
       combat.targetEntityId = null;
