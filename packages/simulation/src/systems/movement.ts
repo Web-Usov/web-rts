@@ -47,10 +47,13 @@ export function runMovementSystem(
     failedNavigation(entityId: EntityId): void;
     replanNavigation(entityId: EntityId): (() => NavigationTask | null) | undefined;
   },
+  entityIds?: readonly EntityId[],
 ): void {
-  const ids = [
-    ...new Set([...movements.entries()].map(([id]) => id).concat(tasks?.entityIds ?? [])),
-  ].sort((a, b) => a - b);
+  const ids =
+    entityIds ??
+    [...new Set([...movements.entries()].map(([id]) => id).concat(tasks?.entityIds ?? []))].sort(
+      (a, b) => a - b,
+    );
   for (const entityId of ids) {
     tasks?.beforeMovement(entityId);
     const movement = movements.get(entityId);

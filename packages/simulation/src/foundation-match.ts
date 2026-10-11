@@ -1,4 +1,5 @@
 import { getEntityDefinition, type EntityDefinition, type MapDefinition } from "@web-rts/game-data";
+import { PLAYER_TEAM } from "./teams.js";
 import type { EntityId } from "./types.js";
 import type { World } from "./world.js";
 
@@ -28,6 +29,7 @@ export function spawnPlayerUnits(
     world.positions.set(entityId, { x: spawn.unitPosition.x, y: spawn.unitPosition.y });
     world.owners.set(entityId, { ownerPlayerId: playerId });
     world.controllers.set(entityId, { controllerPlayerId: playerId });
+    world.teams.set(entityId, { teamId: world.playerTeams.get(playerId) ?? PLAYER_TEAM });
     byPlayer.set(playerId, entityId);
   });
   return byPlayer;
@@ -54,9 +56,13 @@ export function placeStartingStructures(world: World, map: MapDefinition): Entit
     if (!placed.ok) {
       throw new RangeError(`placement ${placement.definitionId} rejected: ${placed.reason}`);
     }
+    if (definition.maxHealth !== undefined)
+      world.health.set(entityId, { current: definition.maxHealth, max: definition.maxHealth });
+    world.teams.set(entityId, { teamId: PLAYER_TEAM });
     if (placement.objective !== null) {
       world.addObjective({
         type: placement.objective.type,
+        teamId: PLAYER_TEAM,
         targetEntityId: entityId,
         required: placement.objective.required,
         state: "ACTIVE",
@@ -127,5 +133,57 @@ function placeEconomyEntity(
   const placed = world.placeSolidFootprint(id, footprint);
   if (!placed.ok)
     throw new RangeError(`economy placement ${definition.id} rejected: ${placed.reason}`);
+  return id;
+}
+
+/** Starting Soldier supplements Foundation proxies until the later presentation stage. */
+export function spawnPlayerSoldiers(
+  world: World,
+  map: MapDefinition,
+  playerIds: readonly number[],
+): Map<number, EntityId> {
+  const byPlayer = new Map<number, EntityId>();
+  const ordered = [...new Set(playerIds)].sort((a, b) => a - b);
+  ordered.forEach((playerId, index) => {
+    const spawn = map.playerSpawns[index];
+    const teamId = world.playerTeams.get(playerId);
+    if (spawn === undefined || teamId === undefined)
+      throw new RangeError("Soldier requires spawn and authoritative team assignment");
+    const id = spawnSoldier(world, spawn.soldierPosition, teamId);
+    world.owners.set(id, { ownerPlayerId: playerId });
+    world.controllers.set(id, { controllerPlayerId: playerId });
+    byPlayer.set(playerId, id);
+  });
+  return byPlayer;
+}
+
+/** Data definitions provide all starting Soldier stats; simulation owns tasks. */
+export function spawnSoldier(
+  world: World,
+  position: import("./types.js").Position,
+  teamId: import("./types.js").TeamId,
+): EntityId {
+  const definition = requireDefinition("soldier");
+  if (
+    definition.attack === undefined ||
+    definition.soldier === undefined ||
+    definition.maxHealth === undefined
+  )
+    throw new Error("incomplete Soldier definition");
+  const id = world.createEntity({ kind: definition.kind, definitionId: definition.id });
+  world.positions.set(id, { ...position });
+  world.teams.set(id, { teamId });
+  world.health.set(id, { current: definition.maxHealth, max: definition.maxHealth });
+  world.attacks.set(id, definition.attack);
+  world.soldierProfiles.set(id, definition.soldier);
+  world.combats.set(id, { targetEntityId: null, nextAttackTick: 0 });
+  world.soldiers.set(id, {
+    state: "IDLE",
+    targetEntityId: null,
+    anchor: null,
+    plannedTargetCell: null,
+    unreachable: new Map(),
+    excludedUntilExit: new Set(),
+  });
   return id;
 }

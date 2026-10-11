@@ -348,7 +348,19 @@ export function planMove(
   return navigationForPath(grid, origin, pathCells, destination);
 }
 
-/** Builds the shared smoothed route from an already queried cell path. */
+/** One multi-goal query for interactions; never projects into an occupied target. */
+export function planApproach(
+  grid: SpatialGrid,
+  origin: Vec2,
+  goals: readonly CellCoord[],
+): NavigationTask | null {
+  const pathCells = findPath(grid, grid.worldToCell(origin), goals);
+  const goal = pathCells?.at(-1);
+  return pathCells === null || goal === undefined
+    ? null
+    : navigationForPath(grid, origin, pathCells, grid.cellToWorldCenter(goal));
+}
+
 export function navigationForPath(
   grid: SpatialGrid,
   origin: Vec2,

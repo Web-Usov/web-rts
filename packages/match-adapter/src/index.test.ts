@@ -75,15 +75,29 @@ describe("projectGameStateView", () => {
       localPlayerId: 1,
       players: session.players,
     });
+    // G6 internal combat fields stay behind the projection until G11.
     expect(view.entities).toEqual(
-      snapshot.entities.map((entity) => {
-        const projected = { ...entity };
-        delete projected.worker;
-        delete projected.resourceNode;
-        return projected;
-      }),
+      snapshot.entities.map((entity) => ({
+        entityId: entity.entityId,
+        kind: entity.kind,
+        definitionId: entity.definitionId,
+        x: entity.x,
+        y: entity.y,
+        ownerPlayerId: entity.ownerPlayerId,
+        controllerPlayerId: entity.controllerPlayerId,
+        objectiveType: entity.objectiveType,
+        objectiveState: entity.objectiveState,
+      })),
     );
+    expect(
+      view.entities.every(
+        (entity) => !("health" in entity) && !("teamId" in entity) && !("soldierState" in entity),
+      ),
+    ).toBe(true);
     expect(view).not.toHaveProperty("playerEconomies");
+    expect(
+      view.entities.every((entity) => !("worker" in entity) && !("resourceNode" in entity)),
+    ).toBe(true);
     expect(view.entities.find((entity) => entity.kind === "OBJECTIVE")).toMatchObject({
       x: 0,
       y: 0,

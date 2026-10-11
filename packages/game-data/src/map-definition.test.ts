@@ -32,15 +32,17 @@ describe("foundation MapDefinition", () => {
     const keys = new Set<string>();
     for (const spawn of FOUNDATION_MAP.playerSpawns) {
       expect(rectInsideMap(spawn.region)).toBe(true);
-      const cellX = Math.floor(spawn.unitPosition.x - FOUNDATION_MAP.originX);
-      const cellY = Math.floor(spawn.unitPosition.y - FOUNDATION_MAP.originY);
-      expect(cellX).toBeGreaterThanOrEqual(spawn.region.x);
-      expect(cellX).toBeLessThan(spawn.region.x + spawn.region.width);
-      expect(cellY).toBeGreaterThanOrEqual(spawn.region.y);
-      expect(cellY).toBeLessThan(spawn.region.y + spawn.region.height);
-      keys.add(`${spawn.unitPosition.x},${spawn.unitPosition.y}`);
+      for (const position of [spawn.unitPosition, spawn.soldierPosition]) {
+        const cellX = Math.floor(position.x - FOUNDATION_MAP.originX);
+        const cellY = Math.floor(position.y - FOUNDATION_MAP.originY);
+        expect(cellX).toBeGreaterThanOrEqual(spawn.region.x);
+        expect(cellX).toBeLessThan(spawn.region.x + spawn.region.width);
+        expect(cellY).toBeGreaterThanOrEqual(spawn.region.y);
+        expect(cellY).toBeLessThan(spawn.region.y + spawn.region.height);
+        keys.add(`${position.x},${position.y}`);
+      }
     }
-    expect(keys.size).toBe(4);
+    expect(keys.size).toBe(8);
   });
 
   it("references only known footprint definitions in placements", () => {
@@ -73,6 +75,16 @@ describe("foundation MapDefinition", () => {
 });
 
 describe("entity definitions", () => {
+  it("declares melee Soldier stats without embedding behavior", () => {
+    const soldier = getEntityDefinition("soldier")!;
+    expect(soldier.kind).toBe("UNIT");
+    expect(soldier.footprint).toBeNull();
+    expect(soldier.maxHealth).toBeGreaterThan(0);
+    expect(soldier.attack?.range).toBeLessThan(1);
+    expect(Number.isInteger(soldier.attack?.cooldownTicks)).toBe(true);
+    expect(soldier.attack?.allowedTargets).not.toContain("RESOURCE");
+    expect(soldier.soldier!.chaseRadius).toBeGreaterThan(soldier.soldier!.aggroRadius);
+  });
   it("use broad kinds and stable ids", () => {
     expect(ENTITY_KINDS).toEqual(["UNIT", "BUILDING", "RESOURCE", "OBJECTIVE"]);
     expect(getEntityDefinition("sacred_site")?.kind).toBe("OBJECTIVE");

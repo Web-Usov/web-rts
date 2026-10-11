@@ -18,6 +18,18 @@ export type FootprintDefinition = {
 export const RESOURCE_TYPES = ["WOOD"] as const;
 export type ResourceType = (typeof RESOURCE_TYPES)[number];
 export const RESOURCE_DEFINITIONS = { WOOD: { id: "WOOD" } } as const;
+export type AttackProfile = {
+  readonly damage: number;
+  readonly range: number;
+  readonly cooldownTicks: number;
+  readonly allowedTargets: readonly EntityKind[];
+};
+
+export type SoldierProfile = {
+  readonly aggroRadius: number;
+  readonly chaseRadius: number;
+  readonly moveSpeed: number;
+};
 
 export type EntityDefinition = {
   readonly worker?: {
@@ -31,6 +43,9 @@ export type EntityDefinition = {
   readonly kind: EntityKind;
   /** `null` for entities that do not occupy grid cells (units in #002). */
   readonly footprint: FootprintDefinition | null;
+  readonly maxHealth?: number;
+  readonly attack?: AttackProfile;
+  readonly soldier?: SoldierProfile;
 };
 
 export const ENTITY_DEFINITIONS = {
@@ -38,12 +53,14 @@ export const ENTITY_DEFINITIONS = {
   foundation_unit: { id: "foundation_unit", kind: "UNIT", footprint: null },
   worker: {
     id: "worker",
+    maxHealth: 60,
     kind: "UNIT",
     footprint: null,
     worker: { moveSpeed: 3, carryCapacity: 10, gatherRate: 5 },
   },
   town_hall: {
     id: "town_hall",
+    maxHealth: 500,
     kind: "BUILDING",
     footprint: { width: 2, height: 2, blocksMovement: true, blocksBuilding: true },
     dropoff: { resourceTypes: ["WOOD"] },
@@ -54,8 +71,22 @@ export const ENTITY_DEFINITIONS = {
     footprint: { width: 1, height: 1, blocksMovement: true, blocksBuilding: true },
     resourceNode: { resourceType: "WOOD", capacity: 100 },
   },
+  soldier: {
+    id: "soldier",
+    kind: "UNIT",
+    footprint: null,
+    maxHealth: 100,
+    attack: {
+      damage: 10,
+      range: 0.75,
+      cooldownTicks: 10,
+      allowedTargets: ["UNIT", "BUILDING", "OBJECTIVE"],
+    },
+    soldier: { aggroRadius: 5, chaseRadius: 8, moveSpeed: 5 },
+  },
   sacred_site: {
     id: "sacred_site",
+    maxHealth: 1000,
     kind: "OBJECTIVE",
     footprint: { width: 2, height: 2, blocksMovement: true, blocksBuilding: true },
   },

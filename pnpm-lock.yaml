@@ -336,6 +336,9 @@ importers:
       '@types/node':
         specifier: ^22.20.4
         version: 22.20.4
+      '@web-rts/game-data':
+        specifier: workspace:^
+        version: link:../../packages/game-data
       eslint:
         specifier: ^10.11.0
         version: 10.11.0
