@@ -77,7 +77,8 @@ export function createLocalMatchRuntime(
   const deliverRuntimeEvents = (active: MatchRuntime): void => {
     for (const event of active.drainEvents()) {
       if (event.recipientPlayerId === LOCAL_PLAYER_ID) {
-        publishEvent(toGameEvent(event));
+        const wire = toGameEvent(event);
+        if (wire !== null) publishEvent(wire);
       }
     }
   };

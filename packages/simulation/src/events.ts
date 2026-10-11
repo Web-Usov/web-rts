@@ -1,7 +1,18 @@
 import type { CommandRejectionReason } from "./commands.js";
 import type { EntityId, PlayerId } from "./types.js";
 
+export type ActionFailureReason = "no_dropoff" | "target_removed" | "path_blocked";
+
 export type SimulationEvent =
+  | {
+      type: "ACTION_FAILED";
+      commandId: string;
+      playerId: PlayerId;
+      entityId: EntityId;
+      action: "GATHER";
+      reason: ActionFailureReason;
+      tick: number;
+    }
   | {
       type: "COMMAND_APPLIED";
       commandId: string;

@@ -486,7 +486,7 @@ describe("MOVE navigation", () => {
     );
     runtime.step();
     const snapshot = runtime.readSnapshot();
-    expect(Object.keys(snapshot).sort()).toEqual(["entities", "status", "tick"]);
+    expect(Object.keys(snapshot).sort()).toEqual(["entities", "playerEconomies", "status", "tick"]);
     expect(JSON.stringify(snapshot)).not.toMatch(/pathCells|waypoint|plannedRevision|navigation/);
   });
 

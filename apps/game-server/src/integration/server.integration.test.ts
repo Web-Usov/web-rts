@@ -150,6 +150,8 @@ describe("game-server integration", () => {
     client.send(SYNC_MESSAGE, {});
 
     const view = await pending;
+    expect(view.protocolVersion).toBe(PROTOCOL_VERSION);
+    expect(view.gameDataVersion).toBe("0.2.0");
     expect(view.entities).toEqual([]);
     expect(room.phase).toBe("LOBBY");
     expect(room.matchRuntime).toBeNull();
@@ -266,14 +268,14 @@ describe("game-server integration", () => {
     }
   });
 
-  it("rejects game-data version mismatch on join", async () => {
+  it.each(["0.1.0", "9.9.9"])("rejects game-data version %s on join", async (gameDataVersion) => {
     const room = await colyseus.createRoom(FOUNDATION_ROOM_NAME, compatibleOptions);
 
     let caught: unknown;
     try {
       await colyseus.connectTo(room, {
         protocolVersion: PROTOCOL_VERSION,
-        gameDataVersion: "9.9.9",
+        gameDataVersion,
       });
     } catch (error) {
       caught = error;
@@ -470,7 +472,10 @@ describe("game-server integration", () => {
     expect(entityA.x).toBeCloseTo(target.x, 5);
     expect(viewA.localPlayerId).toBe(playerA);
     expect(viewB.localPlayerId).not.toBe(viewA.localPlayerId);
-    expect(viewA.entities.filter((entity) => entity.kind === "UNIT")).toHaveLength(2);
+    expect(
+      viewA.entities.filter((entity) => entity.definitionId === "foundation_unit"),
+    ).toHaveLength(2);
+    expect(viewA.entities.filter((entity) => entity.definitionId === "worker")).toHaveLength(2);
 
     const objectivesA = viewA.entities.filter((entity) => entity.kind === "OBJECTIVE");
     const objectivesB = viewB.entities.filter((entity) => entity.kind === "OBJECTIVE");

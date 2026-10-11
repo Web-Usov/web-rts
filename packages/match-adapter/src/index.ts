@@ -68,7 +68,14 @@ export function projectGameStateView(
   };
 }
 
-export function toGameEvent(event: RuntimeEvent): CommandRejectedEvent {
+export function toGameEvent(event: RuntimeEvent): CommandRejectedEvent | null {
+  if (
+    event.type !== "COMMAND_REJECTED" ||
+    event.reason === "no_dropoff" ||
+    event.reason === "invalid_resource" ||
+    event.reason === "not_worker"
+  )
+    return null;
   return {
     type: "COMMAND_REJECTED",
     commandId: event.commandId,

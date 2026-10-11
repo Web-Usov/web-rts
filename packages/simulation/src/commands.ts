@@ -1,16 +1,23 @@
 import type { EntityId, PlayerId, Vec2 } from "./types.js";
 
 /**
- * Gameplay intent accepted by the simulation kernel (MOVE only for now).
+ * Gameplay intent accepted by the simulation kernel.
  * It carries no player/session identity: the trusted actor travels next to it
  * in {@link QueuedCommand}.
  */
-export type SimulationCommand = {
-  type: "MOVE";
-  commandId: string;
-  entityIds: readonly EntityId[];
-  target: Vec2;
-};
+export type SimulationCommand =
+  | {
+      type: "MOVE";
+      commandId: string;
+      entityIds: readonly EntityId[];
+      target: Vec2;
+    }
+  | {
+      type: "GATHER";
+      commandId: string;
+      workerEntityId: EntityId;
+      resourceEntityId: EntityId;
+    };
 
 /** Trusted issuer of a command. Derived by the host from session/local identity. */
 export type CommandActor = {
@@ -29,7 +36,10 @@ export type CommandRejectionReason =
   | "blocked_target"
   | "not_your_unit"
   | "no_valid_entities"
-  | "no_path";
+  | "no_path"
+  | "no_dropoff"
+  | "invalid_resource"
+  | "not_worker";
 
 export class CommandQueue {
   private readonly pending: QueuedCommand[] = [];

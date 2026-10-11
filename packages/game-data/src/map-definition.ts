@@ -35,6 +35,8 @@ export type StaticTerrainRegion = CellRect & {
 export type PlayerSpawnDefinition = {
   readonly region: CellRect;
   readonly unitPosition: WorldPoint;
+  readonly workerPosition?: WorldPoint;
+  readonly townHallAnchor?: CellCoord;
 };
 
 export const MAP_OBJECTIVE_TYPES = ["PROTECT"] as const;
@@ -88,10 +90,30 @@ export const FOUNDATION_MAP: MapDefinition = {
   heightCells: 40,
   staticTerrain: [],
   playerSpawns: [
-    { region: { x: 12, y: 15, width: 4, height: 4 }, unitPosition: { x: -6, y: -3 } },
-    { region: { x: 24, y: 15, width: 4, height: 4 }, unitPosition: { x: 6, y: -3 } },
-    { region: { x: 12, y: 24, width: 4, height: 4 }, unitPosition: { x: -6, y: 6 } },
-    { region: { x: 24, y: 24, width: 4, height: 4 }, unitPosition: { x: 6, y: 6 } },
+    {
+      region: { x: 12, y: 15, width: 4, height: 4 },
+      unitPosition: { x: -6, y: -3 },
+      workerPosition: { x: -7.5, y: -3.5 },
+      townHallAnchor: { x: 10, y: 12 },
+    },
+    {
+      region: { x: 24, y: 15, width: 4, height: 4 },
+      unitPosition: { x: 6, y: -3 },
+      workerPosition: { x: 7.5, y: -3.5 },
+      townHallAnchor: { x: 28, y: 12 },
+    },
+    {
+      region: { x: 12, y: 24, width: 4, height: 4 },
+      unitPosition: { x: -6, y: 6 },
+      workerPosition: { x: -7.5, y: 6.5 },
+      townHallAnchor: { x: 10, y: 28 },
+    },
+    {
+      region: { x: 24, y: 24, width: 4, height: 4 },
+      unitPosition: { x: 6, y: 6 },
+      workerPosition: { x: 7.5, y: 6.5 },
+      townHallAnchor: { x: 28, y: 28 },
+    },
   ],
   startingPlacements: [
     {
@@ -100,7 +122,12 @@ export const FOUNDATION_MAP: MapDefinition = {
       objective: { type: "PROTECT", required: true },
     },
   ],
-  resourcePlacements: [],
+  resourcePlacements: [
+    { definitionId: "wood_node", anchorCell: { x: 8, y: 18 }, objective: null },
+    { definitionId: "wood_node", anchorCell: { x: 31, y: 18 }, objective: null },
+    { definitionId: "wood_node", anchorCell: { x: 8, y: 25 }, objective: null },
+    { definitionId: "wood_node", anchorCell: { x: 31, y: 25 }, objective: null },
+  ],
 };
 
 const MAP_DEFINITIONS: ReadonlyMap<string, MapDefinition> = new Map([

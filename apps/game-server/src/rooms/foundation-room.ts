@@ -309,6 +309,9 @@ export class FoundationRoom extends Room {
   /** Routes recipient-addressed events to the player's current session. Offline players lose them. */
   private deliverRuntimeEvents(runtime: MatchRuntime): void {
     for (const event of runtime.drainEvents()) {
+      // G5-only events have no public wire contract until G11.
+      const wire = toGameEvent(event);
+      if (wire === null) continue;
       const slot = this.slots
         .list()
         .find((candidate) => candidate.playerId === event.recipientPlayerId);
@@ -328,7 +331,7 @@ export class FoundationRoom extends Room {
       }
       const client = this.clients.find((candidate) => candidate.sessionId === slot.sessionId);
       if (client) {
-        this.sendEvent(client, toGameEvent(event));
+        this.sendEvent(client, wire);
       }
     }
   }

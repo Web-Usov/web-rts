@@ -2,7 +2,7 @@ import type { ComponentStore } from "../component-store.js";
 import { prepareNavigation, type NavigationTask } from "../navigation.js";
 import type { EntityPathQueryLane } from "../path-query-lane.js";
 import type { SpatialGrid } from "../spatial-grid.js";
-import type { Movement, Position } from "../types.js";
+import type { EntityId, Movement, Position } from "../types.js";
 
 const ARRIVAL_EPSILON = 1e-6;
 
@@ -40,8 +40,24 @@ export function runMovementSystem(
     grid: SpatialGrid;
     lane: EntityPathQueryLane;
   },
+  tasks?: {
+    entityIds: readonly EntityId[];
+    beforeMovement(entityId: EntityId): void;
+    afterMovement(entityId: EntityId): void;
+    failedNavigation(entityId: EntityId): void;
+    replanNavigation(entityId: EntityId): (() => NavigationTask | null) | undefined;
+  },
 ): void {
-  for (const [entityId, movement] of [...movements.entries()].sort(([a], [b]) => a - b)) {
+  const ids = [
+    ...new Set([...movements.entries()].map(([id]) => id).concat(tasks?.entityIds ?? [])),
+  ].sort((a, b) => a - b);
+  for (const entityId of ids) {
+    tasks?.beforeMovement(entityId);
+    const movement = movements.get(entityId);
+    if (movement === undefined) {
+      tasks?.afterMovement(entityId);
+      continue;
+    }
     let position = positions.get(entityId);
     if (position === undefined) {
       movements.remove(entityId);
@@ -52,11 +68,16 @@ export function runMovementSystem(
     let remaining = movement.speed * tickDurationSeconds;
     while (true) {
       if (task !== undefined && navigation !== undefined) {
-        const prepared = prepareNavigation(navigation.grid, task, position, () =>
-          navigation.lane.tryReserve(entityId),
+        const prepared = prepareNavigation(
+          navigation.grid,
+          task,
+          position,
+          () => navigation.lane.tryReserve(entityId),
+          tasks?.replanNavigation(entityId),
         );
         if (prepared === "deferred") break;
         if (prepared === null) {
+          tasks?.failedNavigation(entityId);
           navigation.tasks.remove(entityId);
           movements.remove(entityId);
           break;
@@ -95,5 +116,6 @@ export function runMovementSystem(
       movements.set(entityId, { targetX: next.x, targetY: next.y, speed: movement.speed });
       if (remaining <= 0) break;
     }
+    tasks?.afterMovement(entityId);
   }
 }

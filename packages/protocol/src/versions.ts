@@ -10,11 +10,11 @@ export const PROTOCOL_VERSION = 4 as const;
 /**
  * Declarative game-data / balance contract version exchanged at handshake.
  * Kept independent from PROTOCOL_VERSION so assets/rules can diverge from wire shape.
- * G3: foundation map and entity definitions replaced the old bounds helper, so
- * clients still on `0.0.0` no longer share this static contract.
+ * G5: Worker, Town Hall, finite Wood nodes and their foundation map placements
+ * changed the static contract; clients on `0.1.0` must not join this runtime.
  * @see docs/technical-vision.md §11
  */
-export const GAME_DATA_VERSION = "0.1.0" as const;
+export const GAME_DATA_VERSION = "0.2.0" as const;
 
 export type ProtocolVersion = typeof PROTOCOL_VERSION;
 export type GameDataVersion = typeof GAME_DATA_VERSION;

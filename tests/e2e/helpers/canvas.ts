@@ -103,6 +103,11 @@ export async function canvasRightClick(
  * Centroid of pixels matching `filter`, in CSS coordinates relative to the canvas.
  * Returns null when no pixel matches. Does not touch Scene, transport, or simulation.
  */
+// G5 introduces several blue proxy meshes. Track the original Foundation cube
+// as a connected pixel region; exclude stationary regions from later movement reads.
+// Seed is the visually verified spawn in the fixed 1280×720/default-camera fixture.
+const unitTracking = new WeakMap<Page, { stationary: CanvasCentroid[]; last: CanvasCentroid }>();
+
 export async function measureColorCentroid(
   page: Page,
   filter: RgbBand,
@@ -113,9 +118,9 @@ export async function measureColorCentroid(
     throw new Error("canvas boundingBox unavailable");
   }
 
-  const png = await canvas.screenshot();
+  const png = await page.screenshot({ clip: box });
   const sample = await page.evaluate(
-    async ({ b64, band }) => {
+    async ({ b64, band, split }) => {
       const binary = atob(b64);
       const bytes = new Uint8Array(binary.length);
       for (let i = 0; i < binary.length; i += 1) {
@@ -132,6 +137,7 @@ export async function measureColorCentroid(
       }
       ctx.drawImage(bitmap, 0, 0);
       const { data, width, height } = ctx.getImageData(0, 0, offscreen.width, offscreen.height);
+      const mask = new Uint8Array(width * height);
       let sumX = 0;
       let sumY = 0;
       let count = 0;
@@ -151,13 +157,48 @@ export async function measureColorCentroid(
             b - r >= band.minBlueOverRed &&
             b - g >= band.minBlueOverGreen
           ) {
+            mask[y * width + x] = 1;
             sumX += x;
             sumY += y;
             count += 1;
           }
         }
       }
+      const regions: { x: number; y: number; count: number }[] = [];
+      if (split) {
+        for (let id = 0; id < mask.length; id++) {
+          if (mask[id] === 0) continue;
+          const stack = [id];
+          mask[id] = 0;
+          let xSum = 0,
+            ySum = 0,
+            size = 0;
+          while (stack.length) {
+            const cell = stack.pop()!;
+            const x = cell % width,
+              y = Math.floor(cell / width);
+            xSum += x;
+            ySum += y;
+            size++;
+            for (const [nx, ny] of [
+              [x - 1, y],
+              [x + 1, y],
+              [x, y - 1],
+              [x, y + 1],
+            ]) {
+              if (nx! < 0 || nx! >= width || ny! < 0 || ny! >= height) continue;
+              const next = ny! * width + nx!;
+              if (mask[next] === 1) {
+                mask[next] = 0;
+                stack.push(next);
+              }
+            }
+          }
+          if (size >= 20) regions.push({ x: xSum / size, y: ySum / size, count: size });
+        }
+      }
       return {
+        regions,
         count,
         cx: count > 0 ? sumX / count : null,
         cy: count > 0 ? sumY / count : null,
@@ -165,8 +206,29 @@ export async function measureColorCentroid(
         height,
       };
     },
-    { b64: png.toString("base64"), band: filter },
+    { b64: png.toString("base64"), band: filter, split: filter === LOCAL_UNIT_BLUE },
   );
+
+  if (filter === LOCAL_UNIT_BLUE) {
+    const regions = sample.regions.map((region) => ({
+      ...region,
+      x: (region.x * box.width) / sample.width,
+      y: (region.y * box.height) / sample.height,
+    }));
+    const tracking = unitTracking.get(page);
+    const reference = tracking?.last ?? { x: 454, y: 315 };
+    const candidates = regions.filter(
+      (region) => !tracking?.stationary.some((other) => cssDistance(region, other) < 4),
+    );
+    candidates.sort((a, b) => cssDistance(a, reference) - cssDistance(b, reference));
+    const selected = candidates[0];
+    if (selected === undefined) return null;
+    unitTracking.set(page, {
+      stationary: tracking?.stationary ?? regions.filter((region) => region !== selected),
+      last: selected,
+    });
+    return selected;
+  }
 
   if (sample.cx === null || sample.cy === null || sample.count === 0) {
     return null;
@@ -237,7 +299,9 @@ export async function selectLocalUnitByCanvasClick(page: Page): Promise<void> {
 /** PNG bytes of the game canvas (presentation surface). */
 export async function captureCanvasPng(page: Page): Promise<Buffer> {
   const canvas = await canvasLocator(page);
-  return canvas.screenshot();
+  const box = await canvas.boundingBox();
+  if (!box) throw new Error("canvas boundingBox unavailable");
+  return page.screenshot({ clip: box });
 }
 
 /**

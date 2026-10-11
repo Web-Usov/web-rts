@@ -79,6 +79,8 @@ describe("local match runtime", () => {
     expect(match.states.at(-1)).toMatchObject({
       roomId: LOCAL_ROOM_ID,
       phase: "LOBBY",
+      protocolVersion: PROTOCOL_VERSION,
+      gameDataVersion: "0.2.0",
       localPlayerId: LOCAL_PLAYER_ID,
       players: [{ playerId: 0, connected: true }],
       entities: [],
@@ -296,7 +298,10 @@ describe("local match runtime", () => {
     expect(match.states.at(-1)?.tick).toBe(0);
   });
 
-  it("rejects a protocol mismatch without opening a match", () => {
+  it.each([
+    { protocolVersion: PROTOCOL_VERSION + 1, gameDataVersion: GAME_DATA_VERSION },
+    { protocolVersion: PROTOCOL_VERSION, gameDataVersion: "0.1.0" },
+  ])("rejects incompatible handshake %j without opening a match", (versions) => {
     const match = harness();
     const failed: string[] = [];
     const runtime = createLocalMatchRuntime(
@@ -314,9 +319,15 @@ describe("local match runtime", () => {
       () => () => {},
     );
 
-    runtime.handle({ ...connectMessage, protocolVersion: PROTOCOL_VERSION + 1 });
+    runtime.handle({ ...connectMessage, ...versions });
     expect(failed).toEqual(["protocol_mismatch"]);
-    expect(match.events[0]).toMatchObject({ type: "PROTOCOL_MISMATCH" });
+    expect(match.events[0]).toMatchObject({
+      type: "PROTOCOL_MISMATCH",
+      expectedProtocolVersion: PROTOCOL_VERSION,
+      actualProtocolVersion: versions.protocolVersion,
+      expectedGameDataVersion: "0.2.0",
+      actualGameDataVersion: versions.gameDataVersion,
+    });
     expect(match.states).toEqual([]);
     runtime.handle({ type: "start", sessionId: 1 });
     expect(match.states).toEqual([]);

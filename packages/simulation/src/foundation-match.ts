@@ -73,3 +73,59 @@ function requireDefinition(definitionId: string): EntityDefinition {
   }
   return definition;
 }
+
+/** G5 bootstrap: map placement is declarative; dynamic economy/components live in World. */
+export function spawnStartingEconomy(
+  world: World,
+  map: MapDefinition,
+  playerIds: readonly number[],
+): void {
+  const workerDefinition = requireDefinition("worker");
+  const hallDefinition = requireDefinition("town_hall");
+  [...new Set(playerIds)]
+    .sort((a, b) => a - b)
+    .forEach((playerId, index) => {
+      world.playerEconomies.set(playerId, { resources: { WOOD: 0 } });
+      const spawn = map.playerSpawns[index]!;
+      if (spawn.workerPosition === undefined || spawn.townHallAnchor === undefined) return;
+      const worker = world.createEntity({
+        kind: workerDefinition.kind,
+        definitionId: workerDefinition.id,
+      });
+      world.positions.set(worker, { ...spawn.workerPosition });
+      world.owners.set(worker, { ownerPlayerId: playerId });
+      world.controllers.set(worker, { controllerPlayerId: playerId });
+      world.workers.set(worker, {
+        ...workerDefinition.worker!,
+        carried: { resourceType: "WOOD", amount: 0 },
+      });
+      const hall = placeEconomyEntity(world, hallDefinition, spawn.townHallAnchor);
+      world.owners.set(hall, { ownerPlayerId: playerId });
+      world.dropoffs.set(hall, { resourceTypes: [...hallDefinition.dropoff!.resourceTypes] });
+    });
+  for (const placement of map.resourcePlacements) {
+    const definition = requireDefinition(placement.definitionId);
+    const id = placeEconomyEntity(world, definition, placement.anchorCell);
+    if (definition.resourceNode !== undefined)
+      world.resourceNodes.set(id, {
+        resourceType: definition.resourceNode.resourceType,
+        remaining: definition.resourceNode.capacity,
+      });
+  }
+}
+
+function placeEconomyEntity(
+  world: World,
+  definition: EntityDefinition,
+  anchorCell: { readonly x: number; readonly y: number },
+): EntityId {
+  if (world.grid === null || definition.footprint === null)
+    throw new RangeError("economy placement requires a footprint and grid");
+  const id = world.createEntity({ kind: definition.kind, definitionId: definition.id });
+  const footprint = { ...definition.footprint, anchorCell };
+  world.positions.set(id, world.grid.footprintWorldCenter(footprint));
+  const placed = world.placeSolidFootprint(id, footprint);
+  if (!placed.ok)
+    throw new RangeError(`economy placement ${definition.id} rejected: ${placed.reason}`);
+  return id;
+}
