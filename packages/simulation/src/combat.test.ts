@@ -357,11 +357,15 @@ describe("Soldier tasks and bounded navigation", () => {
     for (const player of [2, 7]) {
       expect(
         snapshot.entities.filter((e) => e.ownerPlayerId === player).map((e) => e.definitionId),
-      ).toEqual(["foundation_unit", "soldier"]);
+      ).toEqual(["foundation_unit", "worker", "town_hall", "soldier"]);
       expect(
         snapshot.entities
           .filter((e) => e.ownerPlayerId === player)
-          .every((e) => e.teamId === PLAYER_TEAM && e.controllerPlayerId === player),
+          .every(
+            (e) =>
+              e.teamId === PLAYER_TEAM &&
+              e.controllerPlayerId === (e.kind === "UNIT" ? player : null),
+          ),
       ).toBe(true);
     }
     const site = snapshot.entities.find((e) => e.definitionId === "sacred_site")!;

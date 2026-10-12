@@ -3,7 +3,8 @@ import {
   canvasLeftClick,
   canvasRightClick,
   cssDistance,
-  findLocalArmyCentroid,
+  findSoldierCentroid,
+  findWorkerCentroid,
   expectObjectiveOnCanvas,
 } from "./helpers/canvas.js";
 import { attachPageErrorCapture, expectHud, hudValue } from "./helpers/hud.js";
@@ -15,21 +16,29 @@ test("G6 Local Soldier proxy supports MOVE and blocked-target regression", async
   await expectHud(page, "Status", "connected");
   await page.getByRole("button", { name: "Start" }).click();
   await expectHud(page, "Phase", "RUNNING");
-  await expectHud(page, "Entities", "3");
+  await expectHud(page, "Entities", "9");
   await expectObjectiveOnCanvas(page);
-  // Soldier's separate, declarative spawn; coordinate confirmed by internal playtest.
-  await canvasLeftClick(page, { x: 518, y: 314 });
+  const workerBefore = await findWorkerCentroid(page);
+  const before = await findSoldierCentroid(page);
+  await canvasLeftClick(page, workerBefore);
   await expectHud(page, "Selected", "3");
-  const before = await findLocalArmyCentroid(page);
   await canvasRightClick(page, { x: 800, y: 470 });
   await expectHud(page, "Destination", "marked");
+  // Soldier's separate, declarative spawn; coordinate confirmed by internal playtest.
+  await canvasLeftClick(page, { x: 518, y: 314 });
+  await expectHud(page, "Selected", "9");
+  await canvasRightClick(page, { x: 950, y: 300 });
+  await expectHud(page, "Destination", "marked");
   await expect
-    .poll(async () => cssDistance(before, await findLocalArmyCentroid(page)))
-    .toBeGreaterThan(140);
+    .poll(async () => cssDistance(before, await findSoldierCentroid(page)))
+    .toBeGreaterThan(250);
+  await expect
+    .poll(async () => cssDistance(workerBefore, await findWorkerCentroid(page)))
+    .toBeGreaterThan(100);
   await canvasRightClick(page, { x: 668, y: 362 });
   await expect
-    .poll(async () => cssDistance(before, await findLocalArmyCentroid(page)))
-    .toBeLessThan(100);
+    .poll(async () => cssDistance(before, await findSoldierCentroid(page)))
+    .toBeLessThan(200);
   await expectHud(page, "Last event", "—");
   await expectHud(page, "Objectives", "1");
   errors.assertClean();
@@ -56,26 +65,28 @@ test("G6 Remote Soldier MOVE is visible to both clients and survives reconnect",
     await pageA.getByRole("button", { name: "Start" }).click();
     await expectHud(pageA, "Phase", "RUNNING");
     await expectHud(pageB, "Phase", "RUNNING");
-    await expectHud(pageA, "Entities", "5");
-    await expectHud(pageB, "Entities", "5");
+    await expectHud(pageA, "Entities", "13");
+    await expectHud(pageB, "Entities", "13");
     await canvasLeftClick(pageA, { x: 518, y: 314 });
-    await expectHud(pageA, "Selected", "4");
-    const before = await findLocalArmyCentroid(pageB);
+    await expectHud(pageA, "Selected", "12");
+    const beforeA = await findSoldierCentroid(pageA);
+    const before = await findSoldierCentroid(pageB);
+    expect(cssDistance(beforeA, before)).toBeLessThan(3);
     await canvasRightClick(pageA, { x: 950, y: 300 });
     await expectHud(pageA, "Destination", "marked");
     await expect
-      .poll(async () => cssDistance(before, await findLocalArmyCentroid(pageB)))
-      .toBeGreaterThan(70);
+      .poll(async () => cssDistance(before, await findSoldierCentroid(pageB)))
+      .toBeGreaterThan(250);
     const player = (await hudValue(pageA, "Local player").textContent())!.trim();
     await pageA.reload();
     await expectHud(pageA, "Status", "connected");
     await expectHud(pageA, "Local player", player);
     await expectHud(pageA, "Phase", "RUNNING");
-    await expectHud(pageA, "Entities", "5");
+    await expectHud(pageA, "Entities", "13");
     await expectHud(pageB, "Players", "2");
     await expect
       .poll(async () =>
-        cssDistance(await findLocalArmyCentroid(pageA), await findLocalArmyCentroid(pageB)),
+        cssDistance(await findSoldierCentroid(pageA), await findSoldierCentroid(pageB)),
       )
       .toBeLessThan(3);
     errorsA.assertClean();

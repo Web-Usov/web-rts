@@ -67,7 +67,7 @@ Implementation checkpoint:
 - G5 / #58 — completed: finite Wood, Worker carry и повторяющийся internal GATHER, owned Town Hall drop-off, PlayerEconomy и transport-neutral snapshots/events;
 - **next gameplay stage: G7 / #60 (Construction)**; G5 и G6 prerequisites реализованы. Public economy/GATHER projection остаётся G11, interaction/HUD — G12.
 - G6 / #59 — completed: match-level Team/relationships, tick-based Health/Attack/death, стартовый melee Soldier с bounded auto-aggro/chase и explicit MOVE override;
-- G5 и G6 интегрированы в shared MatchRuntime.
+- G5 и G6 интегрированы в shared MatchRuntime: economy hooks и combat используют один ascending-entityId pass, общие movement/navigation и active-task lane.
 
 Art Direction дополнительно уточнён через #75 / PR #77: основной production-style target — **Stylized Low-Poly / Soft Hand-Painted**.
 

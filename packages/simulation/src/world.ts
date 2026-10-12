@@ -21,8 +21,14 @@ import {
 } from "./spatial-grid.js";
 import { RelationshipPolicy } from "./teams.js";
 import { prepareSoldier, resolveEntityCombat } from "./systems/combat.js";
+import { assessGather, economyHooks, installGatherNavigation } from "./systems/economy.js";
 import { runMovementSystem } from "./systems/movement.js";
 import type {
+  Worker,
+  ResourceNode,
+  Dropoff,
+  GatherTask,
+  PlayerEconomy,
   AttackProfile,
   Combat,
   Health,
@@ -313,15 +319,6 @@ export class World {
     // G9 will construct its own EntityPathQueryLane(aiBudget) and report usage here.
     this.aiQueries = 0;
     this.applyCommands();
-    runMovementSystem(
-      this.positions,
-      this.movements,
-      this.config.tickDurationSeconds,
-      this.grid === null
-        ? undefined
-        : { tasks: this.navigations, grid: this.grid, lane: activeTaskLane },
-      economyHooks(this, this.navigations, activeTaskLane, this.events),
-    );
     const hooks = economyHooks(this, this.navigations, activeTaskLane, this.events);
     // A single ascending entity pass shares active-task budget between combat and
     // MOVE replans. Each entity can reserve at most one query in this lane.

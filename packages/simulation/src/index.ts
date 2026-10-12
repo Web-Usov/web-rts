@@ -88,4 +88,4 @@ export type {
 } from "./types.js";
 
 /** Low-level bootstrap helper for scenario fixtures. Production uses MatchRuntime. */
-export { spawnSoldier } from "./foundation-match.js";
+export { spawnSoldier, spawnStartingEconomy } from "./foundation-match.js";

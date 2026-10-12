@@ -101,12 +101,23 @@ export function spawnStartingEconomy(
       world.positions.set(worker, { ...spawn.workerPosition });
       world.owners.set(worker, { ownerPlayerId: playerId });
       world.controllers.set(worker, { controllerPlayerId: playerId });
+      const teamId = world.playerTeams.get(playerId) ?? PLAYER_TEAM;
+      world.teams.set(worker, { teamId });
+      world.health.set(worker, {
+        current: workerDefinition.maxHealth!,
+        max: workerDefinition.maxHealth!,
+      });
       world.workers.set(worker, {
         ...workerDefinition.worker!,
         carried: { resourceType: "WOOD", amount: 0 },
       });
       const hall = placeEconomyEntity(world, hallDefinition, spawn.townHallAnchor);
       world.owners.set(hall, { ownerPlayerId: playerId });
+      world.teams.set(hall, { teamId });
+      world.health.set(hall, {
+        current: hallDefinition.maxHealth!,
+        max: hallDefinition.maxHealth!,
+      });
       world.dropoffs.set(hall, { resourceTypes: [...hallDefinition.dropoff!.resourceTypes] });
     });
   for (const placement of map.resourcePlacements) {

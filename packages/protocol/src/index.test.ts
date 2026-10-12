@@ -28,7 +28,7 @@ const validMove: MoveCommand = {
 describe("versions", () => {
   it("exports protocol and game-data versions for mismatch detection", () => {
     expect(PROTOCOL_VERSION).toBe(4);
-    expect(GAME_DATA_VERSION).toBe("0.2.0");
+    expect(GAME_DATA_VERSION).toBe("0.3.0");
   });
 
   it("detects compatible and incompatible handshakes", () => {
@@ -53,7 +53,7 @@ describe("versions", () => {
     expect(
       checkProtocolCompatibility({
         protocolVersion: PROTOCOL_VERSION,
-        gameDataVersion: "0.1.0",
+        gameDataVersion: "0.2.0",
       }),
     ).toEqual({
       compatible: false,
