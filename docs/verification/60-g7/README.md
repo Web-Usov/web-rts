@@ -14,12 +14,12 @@
   те же 13 entities и два игрока; перемещённый unit сохраняет положение.
 - Console `error`/`warn` для трёх протестированных tabs: пустые списки.
 
-![Local до MOVE](local-before-move.png)
-![Local после MOVE](local-after-move.png)
-![Remote до MOVE](remote-before-move.png)
-![Remote после MOVE](remote-after-move.png)
-![Второй Remote client после MOVE](remote-peer-after-move.png)
-![Второй Remote client после reconnect](remote-peer-reconnected.png)
+![Local до MOVE](local-before-move.jpg)
+![Local после MOVE](local-after-move.jpg)
+![Remote до MOVE](remote-before-move.jpg)
+![Remote после MOVE](remote-after-move.jpg)
+![Второй Remote client после MOVE](remote-peer-after-move.jpg)
+![Второй Remote client после reconnect](remote-peer-reconnected.jpg)
 
 ## Изолированный construction fixture
 
@@ -39,10 +39,10 @@ production приложением. Это тестовая 2D-визуализа
    topology 2; Wall COMPLETED 30/30, Tower COMPLETED 60/60.
 5. Console `error`/`warn` fixture: пустой список.
 
-![До Wall](fixture-before-wall.png)
-![После Wall: обход blocker](fixture-after-wall.png)
-![Wall completed](fixture-wall-completed.png)
-![Tower completed](fixture-tower-completed.png)
+![До Wall](fixture-before-wall.jpg)
+![После Wall: обход blocker](fixture-after-wall.jpg)
+![Wall completed](fixture-wall-completed.jpg)
+![Tower completed](fixture-tower-completed.jpg)
 
 ## Ограничение
 
