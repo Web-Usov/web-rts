@@ -383,7 +383,9 @@ export async function findLocalUnitCentroid(page: Page): Promise<CanvasCentroid>
         );
         return result.sample?.count ?? 0;
       },
-      { timeout: 2000, intervals: [50, 100] },
+      // Two software-rendered WebGL clients in CI can take >2s for a
+      // DOM + screenshot + pixel probe. Match the objective readability budget.
+      { timeout: 10_000, intervals: [50, 100] },
     )
     .toBeGreaterThanOrEqual(LOCAL_UNIT_MIN_PIXELS);
   if (!result.sample) throw new Error("selected unit remained occluded");
