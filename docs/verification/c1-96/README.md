@@ -50,6 +50,13 @@ PNG — последовательные состояния автоматиче
 ![Клиент 0 повернул камеру](iab-remote-rotation.jpg)
 ![Клиент 1 сохранил исходный ракурс](iab-remote-peer.jpg)
 
+## Проверка после review: изоляция указателей
+
+Дата: 2026-10-13. Playwright Chromium, Local и Remote. Во время настоящего RMB grab через `mouse.down` отправлены дополнительные PointerEvent: window move/up с другим pointerId либо тем же id, но pointerType touch; canvas move/up/cancel/lostpointercapture другого touch pointer. Window events проверяют camera handlers отдельно от Babylon single-mouse device, который при синтетическом mouse up освобождает native capture независимо от pointerId. Они не перемещают камеру, не завершают grab и не создают MOVE. Затем настоящий `mouse.move/up` продолжает и завершает drag; короткий RMB MOVE и middle drag проверены прежним физическим flow. Pageerror/console error отсутствуют.
+
+![Local: настоящий drag после событий второго указателя](local-pointer-identity.png)
+![Remote: настоящий drag после событий второго указателя](remote-pointer-identity.png)
+
 ## Границы проверки
 
 Это camera/input stage, не финальный art target G13. При strategic zoom карта физически меньше перспективного footprint: виден фон вне terrain, target остаётся в bounded navigation range. Cursor anchor уступает map bounds. Математика перехода к полному containment проверена unit regression; никаких simulation, server или protocol изменений нет.

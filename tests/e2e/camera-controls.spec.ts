@@ -190,6 +190,57 @@ for (const mode of ["local", "remote"])
     expect(cssDistance(disabled, await expectObjectiveOnCanvas(page))).toBeLessThan(2);
     await page.mouse.move(800, 400);
 
+    // A second pointer cannot move, finish or cancel an existing physical mouse grab.
+    await home(page);
+    await selectLocalUnitByCanvasClick(page);
+    await page.locator("#game-canvas").evaluate((canvas) => {
+      canvas.addEventListener(
+        "pointerdown",
+        (event) => {
+          canvas.setAttribute("data-review-pointer-id", String((event as PointerEvent).pointerId));
+        },
+        { once: true },
+      );
+    });
+    await page.mouse.move(800, 450);
+    await page.mouse.down({ button: "right" });
+    const grabBefore = await expectObjectiveOnCanvas(page);
+    await page.locator("#game-canvas").evaluate((canvas) => {
+      const id = Number(canvas.getAttribute("data-review-pointer-id"));
+      canvas.removeAttribute("data-review-pointer-id");
+      for (const identity of [
+        { pointerId: id + 10, pointerType: "mouse", target: window },
+        { pointerId: id, pointerType: "touch", target: window },
+        { pointerId: id + 10, pointerType: "touch", target: canvas },
+      ]) {
+        // Mouse up/cancel on canvas also reaches Babylon's single-mouse device,
+        // which releases native capture regardless of the synthetic pointer id.
+        const types =
+          identity.target === canvas
+            ? ["pointermove", "pointerup", "pointercancel", "lostpointercapture"]
+            : ["pointermove", "pointerup"];
+        for (const type of types)
+          identity.target.dispatchEvent(
+            new PointerEvent(type, {
+              pointerId: identity.pointerId,
+              pointerType: identity.pointerType,
+              bubbles: true,
+              clientX: 1050,
+              clientY: 550,
+              button: 2,
+              buttons: 2,
+            }),
+          );
+      }
+    });
+    expect(cssDistance(grabBefore, await expectObjectiveOnCanvas(page))).toBeLessThan(2);
+    await expectHud(page, "Destination", "none");
+    await page.mouse.move(850, 450, { steps: 8 });
+    expect((await expectObjectiveOnCanvas(page)).x - grabBefore.x).toBeGreaterThan(20);
+    await page.mouse.up({ button: "right" });
+    await expectHud(page, "Destination", "none");
+    await shot(page, `${mode}-pointer-identity`);
+
     // Drag never creates a command, including a drag that returns to the start.
     await home(page);
     await selectLocalUnitByCanvasClick(page);

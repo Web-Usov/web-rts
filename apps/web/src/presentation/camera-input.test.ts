@@ -50,6 +50,20 @@ describe("C1 input arbitration", () => {
     gesture.move({ x: 0, y: 0 });
     expect(gesture.up()).toBeNull();
   });
+  it("binds each gesture to both pointer id and type, clearing identity on release/cancel", () => {
+    const gesture = new CameraGesture();
+    gesture.down(2, { x: 0, y: 0 }, 7, "mouse");
+    expect(gesture.owns(7, "mouse")).toBe(true);
+    expect(gesture.owns(8, "mouse")).toBe(false);
+    expect(gesture.owns(7, "touch")).toBe(false);
+    gesture.up();
+    expect(gesture.owns(7, "mouse")).toBe(false);
+    gesture.down(1, { x: 0, y: 0 }, 8, "mouse");
+    expect(gesture.owns(7, "mouse")).toBe(false);
+    expect(gesture.owns(8, "mouse")).toBe(true);
+    gesture.clear();
+    expect(gesture.owns(8, "mouse")).toBe(false);
+  });
   it("middle drag is immediate, cancellation never creates a click", () => {
     const gesture = new CameraGesture();
     gesture.down(1, { x: 0, y: 0 });

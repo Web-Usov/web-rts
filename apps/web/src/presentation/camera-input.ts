@@ -56,10 +56,17 @@ export class CameraGesture {
   private last: ScreenPoint | null = null;
   private button = -1;
   private moved = false;
+  private pointerId: number | null = null;
+  private pointerType: string | null = null;
   get active(): boolean {
     return this.start !== null;
   }
-  down(button: number, point: ScreenPoint): void {
+  owns(pointerId: number, pointerType: string): boolean {
+    return this.active && this.pointerId === pointerId && this.pointerType === pointerType;
+  }
+  down(button: number, point: ScreenPoint, pointerId = 0, pointerType = "mouse"): void {
+    this.pointerId = pointerId;
+    this.pointerType = pointerType;
     this.start = point;
     this.last = point;
     this.button = button;
@@ -83,6 +90,8 @@ export class CameraGesture {
     this.last = null;
     this.button = -1;
     this.moved = false;
+    this.pointerId = null;
+    this.pointerType = null;
   }
 }
 export function blocksCamera(element: EventTarget | null): boolean {
@@ -141,7 +150,7 @@ export function bindCameraInput(
   const down = (event: PointerEvent) => {
     if (!isActive() || event.pointerType !== "mouse" || gesture.active) return;
     canvas.focus({ preventScroll: true });
-    gesture.down(event.button, point(event));
+    gesture.down(event.button, point(event), event.pointerId, event.pointerType);
     if (event.button === 1 || event.button === 2) {
       event.preventDefault();
       canvas.setPointerCapture(event.pointerId);
@@ -149,11 +158,14 @@ export function bindCameraInput(
     }
   };
   const move = (event: PointerEvent) => {
+    if (event.pointerType !== "mouse") return;
+    if (gesture.active && !gesture.owns(event.pointerId, event.pointerType)) return;
     pointer = event.target === canvas ? point(event) : null;
     const drag = gesture.move(point(event));
     if (drag) controller.drag(drag.from, drag.to, view());
   };
   const up = (event: PointerEvent) => {
+    if (!gesture.owns(event.pointerId, event.pointerType)) return;
     // Account for the last movement even if pointermove was coalesced.
     const drag = gesture.move(point(event));
     if (drag) controller.drag(drag.from, drag.to, view());
@@ -174,10 +186,13 @@ export function bindCameraInput(
     )
       click(button, p);
   };
+  const cancel = (event: PointerEvent) => {
+    if (gesture.owns(event.pointerId, event.pointerType)) clear();
+  };
   const lostCapture = (event: PointerEvent) => {
     // Normal pointerup already released this capture. Do not clear held keys:
     // keyboard pan should resume after a drag while the key remains down.
-    if (event.pointerId !== captured) return;
+    if (event.pointerId !== captured || !gesture.owns(event.pointerId, event.pointerType)) return;
     gesture.clear();
     captured = null;
     pointer = null;
@@ -203,7 +218,7 @@ export function bindCameraInput(
   window.addEventListener("pointerup", up);
   canvas.addEventListener("pointerdown", down);
   canvas.addEventListener("pointerleave", leave);
-  canvas.addEventListener("pointercancel", clear);
+  canvas.addEventListener("pointercancel", cancel);
   canvas.addEventListener("lostpointercapture", lostCapture);
   canvas.addEventListener("wheel", wheel, { passive: false });
   canvas.addEventListener("contextmenu", context);
@@ -244,7 +259,7 @@ export function bindCameraInput(
       window.removeEventListener("pointerup", up);
       canvas.removeEventListener("pointerdown", down);
       canvas.removeEventListener("pointerleave", leave);
-      canvas.removeEventListener("pointercancel", clear);
+      canvas.removeEventListener("pointercancel", cancel);
       canvas.removeEventListener("lostpointercapture", lostCapture);
       canvas.removeEventListener("wheel", wheel);
       canvas.removeEventListener("contextmenu", context);
