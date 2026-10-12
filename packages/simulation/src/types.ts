@@ -86,7 +86,19 @@ export interface ResourceNode {
   resourceType: ResourceType;
   remaining: number;
 }
+export interface Construction {
+  state: "UNDER_CONSTRUCTION" | "COMPLETED";
+  workedTicks: number;
+  readonly durationTicks: number;
+}
+export interface BuildTask {
+  commandId: string;
+  playerId: PlayerId;
+  constructionEntityId: EntityId;
+}
+
 export interface Worker {
+  builder: boolean;
   moveSpeed: number;
   carryCapacity: number;
   gatherRate: number;

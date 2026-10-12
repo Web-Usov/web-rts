@@ -80,7 +80,7 @@ describe("local match runtime", () => {
       roomId: LOCAL_ROOM_ID,
       phase: "LOBBY",
       protocolVersion: PROTOCOL_VERSION,
-      gameDataVersion: "0.3.0",
+      gameDataVersion: "0.4.0",
       localPlayerId: LOCAL_PLAYER_ID,
       players: [{ playerId: 0, connected: true }],
       entities: [],
@@ -302,6 +302,7 @@ describe("local match runtime", () => {
     { protocolVersion: PROTOCOL_VERSION + 1, gameDataVersion: GAME_DATA_VERSION },
     { protocolVersion: PROTOCOL_VERSION, gameDataVersion: "0.1.0" },
     { protocolVersion: PROTOCOL_VERSION, gameDataVersion: "0.2.0" },
+    { protocolVersion: PROTOCOL_VERSION, gameDataVersion: "0.3.0" },
   ])("rejects incompatible handshake %j without opening a match", (versions) => {
     const match = harness();
     const failed: string[] = [];
@@ -326,7 +327,7 @@ describe("local match runtime", () => {
       type: "PROTOCOL_MISMATCH",
       expectedProtocolVersion: PROTOCOL_VERSION,
       actualProtocolVersion: versions.protocolVersion,
-      expectedGameDataVersion: "0.3.0",
+      expectedGameDataVersion: "0.4.0",
       actualGameDataVersion: versions.gameDataVersion,
     });
     expect(match.states).toEqual([]);

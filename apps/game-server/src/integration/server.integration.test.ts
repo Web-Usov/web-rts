@@ -151,7 +151,7 @@ describe("game-server integration", () => {
 
     const view = await pending;
     expect(view.protocolVersion).toBe(PROTOCOL_VERSION);
-    expect(view.gameDataVersion).toBe("0.3.0");
+    expect(view.gameDataVersion).toBe("0.4.0");
     expect(view.entities).toEqual([]);
     expect(room.phase).toBe("LOBBY");
     expect(room.matchRuntime).toBeNull();
@@ -268,7 +268,7 @@ describe("game-server integration", () => {
     }
   });
 
-  it.each(["0.1.0", "0.2.0", "9.9.9"])(
+  it.each(["0.1.0", "0.2.0", "0.3.0", "9.9.9"])(
     "rejects game-data version %s on join",
     async (gameDataVersion) => {
       const room = await colyseus.createRoom(FOUNDATION_ROOM_NAME, compatibleOptions);

@@ -14,9 +14,10 @@ export const PROTOCOL_VERSION = 4 as const;
  * changed the static contract; clients on `0.1.0` must not join this runtime.
  * G6: Soldier stats/spawns and destructible Worker/Town Hall Health extend the
  * static contract; clients on `0.2.0` must not join this runtime.
+ * G7: Wall/Tower definitions and tick-based construction require `0.4.0`.
  * @see docs/technical-vision.md §11
  */
-export const GAME_DATA_VERSION = "0.3.0" as const;
+export const GAME_DATA_VERSION = "0.4.0" as const;
 
 export type ProtocolVersion = typeof PROTOCOL_VERSION;
 export type GameDataVersion = typeof GAME_DATA_VERSION;

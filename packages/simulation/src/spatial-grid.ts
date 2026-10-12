@@ -73,7 +73,7 @@ export class SpatialGrid {
   private readonly footprints = new Map<EntityId, SpatialFootprint>();
   private revision = 0;
 
-  constructor(map: MapDefinition) {
+  constructor(private readonly map: MapDefinition) {
     if (
       !Number.isInteger(map.widthCells) ||
       !Number.isInteger(map.heightCells) ||
@@ -224,6 +224,17 @@ export class SpatialGrid {
 
   footprintOf(entityId: EntityId): SpatialFootprint | undefined {
     return this.footprints.get(entityId);
+  }
+
+  /** Isolated admission grid with the future blocker; never mutates live topology. */
+  previewFootprint(footprint: SpatialFootprint): SpatialGrid {
+    const preview = new SpatialGrid(this.map);
+    preview.terrain.set(this.terrain);
+    preview.occupants.set(this.occupants);
+    for (const [id, stored] of this.footprints) preview.footprints.set(id, stored);
+    preview.revision = this.revision;
+    preview.addFootprint(0xffffffff, footprint);
+    return preview;
   }
 
   /** Registers a solid footprint and bumps {@link topologyRevision} once on success. */

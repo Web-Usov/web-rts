@@ -36,6 +36,7 @@ export type EntityDefinition = {
     readonly moveSpeed: number;
     readonly carryCapacity: number;
     readonly gatherRate: number;
+    readonly builder: boolean;
   };
   readonly resourceNode?: { readonly resourceType: ResourceType; readonly capacity: number };
   readonly dropoff?: { readonly resourceTypes: readonly ResourceType[] };
@@ -43,6 +44,7 @@ export type EntityDefinition = {
   readonly kind: EntityKind;
   /** `null` for entities that do not occupy grid cells (units in #002). */
   readonly footprint: FootprintDefinition | null;
+  readonly construction?: { readonly woodCost: number; readonly durationTicks: number };
   readonly maxHealth?: number;
   readonly attack?: AttackProfile;
   readonly soldier?: SoldierProfile;
@@ -56,7 +58,21 @@ export const ENTITY_DEFINITIONS = {
     maxHealth: 60,
     kind: "UNIT",
     footprint: null,
-    worker: { moveSpeed: 3, carryCapacity: 10, gatherRate: 5 },
+    worker: { moveSpeed: 3, carryCapacity: 10, gatherRate: 5, builder: true },
+  },
+  wall: {
+    id: "wall",
+    kind: "BUILDING",
+    maxHealth: 200,
+    footprint: { width: 1, height: 1, blocksMovement: true, blocksBuilding: true },
+    construction: { woodCost: 10, durationTicks: 30 },
+  },
+  tower: {
+    id: "tower",
+    kind: "BUILDING",
+    maxHealth: 300,
+    footprint: { width: 1, height: 1, blocksMovement: true, blocksBuilding: true },
+    construction: { woodCost: 30, durationTicks: 60 },
   },
   town_hall: {
     id: "town_hall",

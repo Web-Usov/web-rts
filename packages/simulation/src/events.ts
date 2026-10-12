@@ -9,7 +9,7 @@ export type SimulationEvent =
       commandId: string;
       playerId: PlayerId;
       entityId: EntityId;
-      action: "GATHER";
+      action: "GATHER" | "BUILD";
       reason: ActionFailureReason;
       tick: number;
     }
