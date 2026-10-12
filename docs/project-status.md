@@ -120,6 +120,11 @@ Follow-up #87 завершён в PR #92: blocked-target resolution переис
 
 Audit #53 остаётся review/verification record. Его исходный текст фиксирует состояние Foundation на момент аудита; текущий implementation contract задают accepted Spec/ADR и child issues #54–#71.
 
+## Самостоятельный client UX checkpoint
+
+- C1 / #96 — RTS Camera Controls v1: самостоятельный этап после G7 и до G8/G9, вне gameplay scope #002. Четыре yaw-ракурса, экранный keyboard/edge/drag pan, cursor-anchored wheel zoom и focus-safe input остаются presentation-only; camera policy зафиксирована в Art Direction §11.
+- C1 не добавляет зависимостей для G8/G9 и не требует G11/G12. G12b (#70) учитывает зарезервированные R/F/Q/E и gesture arbitration; G12a (#65) сможет передать replicated mapId extent в controller без изменения camera math; G13 (#66) проверяет art на normal/strategic zoom.
+
 ## Устойчивые архитектурные опорные точки
 
 - multiplayer server authoritative;

@@ -231,7 +231,7 @@ export function App() {
 
   return (
     <div className="shell">
-      <canvas id="game-canvas" className="viewport" />
+      <canvas id="game-canvas" className="viewport" tabIndex={0} aria-label="Game viewport" />
       <aside className="hud">
         <p className="hud-title">Web RTS</p>
         <p>Foundation match.</p>
@@ -324,9 +324,19 @@ export function App() {
           </div>
         </dl>
         {errorMessage ? <p className="error">{errorMessage}</p> : null}
+        <label className="camera-toggle">
+          <input
+            type="checkbox"
+            defaultChecked
+            onChange={(event) => presentationRef.current?.setEdgeScrolling(event.target.checked)}
+          />
+          Edge scrolling
+        </label>
         <ul>
+          <li>WASD / arrows pan; Shift speeds up</li>
+          <li>Q/E rotate 90°; Home resets view</li>
+          <li>Hold R/F to zoom; wheel zooms at cursor</li>
           <li>Middle or right drag pans</li>
-          <li>Wheel zooms</li>
           <li>Left click selects your primitive unit</li>
           <li>Right click moves the selected unit (marker is UX only)</li>
         </ul>
