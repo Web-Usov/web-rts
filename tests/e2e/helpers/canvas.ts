@@ -129,9 +129,16 @@ export async function measureColorCentroid(
     throw new Error("canvas boundingBox unavailable");
   }
 
+  // Native checkbox colours can match world materials. Ignore blocking overlays.
+  const overlays = await page.locator(".hud, .debug-overlay").evaluateAll((elements) =>
+    elements.map((element) => {
+      const rect = element.getBoundingClientRect();
+      return { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom };
+    }),
+  );
   const png = await page.screenshot({ clip: box });
   const sample = await page.evaluate(
-    async ({ b64, band, split, selected }) => {
+    async ({ b64, band, split, selected, overlays, box }) => {
       const binary = atob(b64);
       const bytes = new Uint8Array(binary.length);
       for (let i = 0; i < binary.length; i += 1) {
@@ -155,6 +162,15 @@ export async function measureColorCentroid(
       const ringMask = selected ? new Uint8Array(width * height) : null;
       for (let y = 0; y < height; y += 1) {
         for (let x = 0; x < width; x += 1) {
+          const cssX = box.x + (x * box.width) / width,
+            cssY = box.y + (y * box.height) / height;
+          if (
+            overlays.some(
+              (rect) =>
+                cssX >= rect.left && cssX < rect.right && cssY >= rect.top && cssY < rect.bottom,
+            )
+          )
+            continue;
           const i = (y * width + x) * 4;
           const r = data[i]!;
           const g = data[i + 1]!;
@@ -274,7 +290,14 @@ export async function measureColorCentroid(
         height,
       };
     },
-    { b64: png.toString("base64"), band: filter, split: filter === LOCAL_UNIT_BLUE, selected },
+    {
+      b64: png.toString("base64"),
+      band: filter,
+      split: filter === LOCAL_UNIT_BLUE,
+      selected,
+      overlays,
+      box,
+    },
   );
 
   if (filter === LOCAL_UNIT_BLUE) {
@@ -344,11 +367,29 @@ export async function findLocalUnitCanvasPoint(page: Page): Promise<{ x: number;
 
 /** Blue player-0 unit centroid. Same palette scan used to aim the selection click. */
 export async function findLocalUnitCentroid(page: Page): Promise<CanvasCentroid> {
-  const sample = await measureColorCentroid(page, LOCAL_UNIT_BLUE);
-  if (!sample || sample.count < LOCAL_UNIT_MIN_PIXELS) {
-    throw new Error(`local unit pixels not found on canvas (count=${sample?.count ?? 0})`);
-  }
-  return sample;
+  // A moving blue proxy can merge with a stationary neighbour in the screenshot.
+  // Once selected, follow its visible ring instead of excluding a merged region
+  // solely because its centroid briefly matches the stationary proxy.
+  const selectedIds = (await hudValue(page, "Selected").textContent())?.trim();
+  const result: { sample: CanvasCentroid | null } = { sample: null };
+  await expect
+    .poll(
+      async () => {
+        result.sample = await measureColorCentroid(
+          page,
+          LOCAL_UNIT_BLUE,
+          "foundation",
+          Boolean(selectedIds && selectedIds !== "none"),
+        );
+        return result.sample?.count ?? 0;
+      },
+      // Two software-rendered WebGL clients in CI can take >2s for a
+      // DOM + screenshot + pixel probe. Match the objective readability budget.
+      { timeout: 10_000, intervals: [50, 100] },
+    )
+    .toBeGreaterThanOrEqual(LOCAL_UNIT_MIN_PIXELS);
+  if (!result.sample) throw new Error("selected unit remained occluded");
+  return result.sample;
 }
 
 /**

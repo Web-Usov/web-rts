@@ -349,7 +349,15 @@ Art direction должен выдерживать сильный диапазо�
 
 Мелкая декорация должна визуально исчезать раньше, чем начинает мешать чтению карты.
 
-Точное поведение camera zoom/rotation и техническая LOD-стратегия этим документом не фиксируются.
+### Camera policy C1 (#96)
+
+Камера локальна и относится только к presentation. Начальный вид карты сохраняется: target в центре `mapGroundExtent(PRESENTED_MAP)`, yaw `−π/4`, pitch `π/3`, radius `28`, zoom limits `12..48`. Home возвращает именно этот вид.
+
+Q/E меняют yaw на −90°/+90° за ~250 ms: четыре разрешённых ракурса, без свободного orbit/tilt и key repeat. WASD/стрелки, edge scrolling и pan остаются экранными при каждом ракурсе; диагонали нормализуются, Shift ускоряет pan. R/F зарезервированы для непрерывного zoom вокруг центра обзора; G12b учитывает эти bindings. Wheel/trackpad плавно приближает точку земли под курсором с нормализацией deltaMode. Middle/right drag перемещает карту непосредственно; короткий RMB сохраняет MOVE, drag не отправляет команду.
+
+Edge scrolling включён по умолчанию (25 CSS px) и отключается checkbox в HUD. Ввод блокируется текстовыми/интерактивными UI областями, неактивным viewport и потерей фокуса; drag/cancel/blur не оставляют удержанных действий. Скорость и анимация используют elapsed dt.
+
+Границы берутся из существующего map extent. Когда перспективный footprint помещается, все углы обзора удерживаются внутри карты. При oversized viewport/strategic zoom полное containment физически невозможно: target ограничен центральной половиной extent по соответствующей оси; когда overflow становится меньше четверти размера карты, этот диапазон плавно сходится к fitting interval. Это сохраняет начальный центр и доступный pan на strategic zoom без reversed limits и скачка при переходе к полному containment. Cursor anchor уступает bounds. Техническая LOD-стратегия остаётся отдельной задачей.
 
 Art Direction также не требует немедленно перерабатывать Foundation camera в ближайшей gameplay spec. Representative in-engine target должен сначала проверить normal gameplay zoom и strategic overview на фактической сцене; отдельная camera implementation issue нужна только если текущая система не обеспечивает требуемую читаемость.
 
@@ -471,7 +479,6 @@ Concepts ниже фиксируют **направление формы, пло
 - точные semantic palette values и четыре multiplayer player colors;
 - финальные пропорции конкретных типов юнитов;
 - building catalog и shape language каждого типа;
-- точные camera limits и rotation policy;
 - production lighting setup;
 - weather implementation;
 - destruction implementation;

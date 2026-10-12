@@ -1,7 +1,6 @@
 import { ArcRotateCamera } from "@babylonjs/core/Cameras/arcRotateCamera.js";
 import "@babylonjs/core/Culling/ray.js";
 import { Engine } from "@babylonjs/core/Engines/engine.js";
-import { PointerEventTypes } from "@babylonjs/core/Events/pointerEvents.js";
 import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight.js";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial.js";
 import { Color3 } from "@babylonjs/core/Maths/math.color.js";
@@ -17,14 +16,10 @@ import type { InterpolatedPose } from "../client/interpolation.js";
 import {
   RTS_CAMERA_ALPHA,
   RTS_CAMERA_BETA,
-  RTS_CAMERA_MAX_RADIUS,
-  RTS_CAMERA_MIN_RADIUS,
-  createRtsCameraPose,
-  panRtsCamera,
-  screenDragToGround,
-  zoomRtsCamera,
+  RtsCameraController,
   type RtsCameraPose,
 } from "./camera.js";
+import { bindCameraInput } from "./camera-input.js";
 import {
   babylonToSimulationGround,
   simulationToBabylonGround,
@@ -41,7 +36,6 @@ import { PresentationState } from "./state.js";
 import type { HudView, PresentationEntity, PresentationSyncData } from "./types.js";
 
 const PALETTE = ["#3d8bfd", "#e15a45", "#e6c34a", "#3cba6e"] as const;
-const DRAG_THRESHOLD_PX = 4;
 const UNIT_HEIGHT = 0.6;
 const OBJECTIVE_HEIGHT = 2.2;
 
@@ -52,6 +46,7 @@ interface EntityVisual {
 export interface PresentationSession {
   dispose(): void;
   readRendererDebugSample(): RendererDebugSample;
+  setEdgeScrolling(enabled: boolean): void;
   /** Development-only. Production builds no-op without loading the Inspector package. */
   showInspector(): Promise<void>;
 }
@@ -93,17 +88,17 @@ export function mountPresentation(
   let inspectorToken: { dispose(): Promise<void>; isDisposed: boolean } | null = null;
 
   const extent = mapGroundExtent(PRESENTED_MAP);
-  const poseHolder = { current: createRtsCameraPose(extent) };
+  const controller = new RtsCameraController(extent);
   const camera = new ArcRotateCamera(
     "rts-camera",
     RTS_CAMERA_ALPHA,
     RTS_CAMERA_BETA,
-    poseHolder.current.radius,
+    controller.pose.radius,
     new Vector3(0, 0, 0),
     scene,
   );
-  lockIsometricCamera(camera);
-  applyPose(camera, poseHolder.current);
+  camera.inputs.clear();
+  applyPose(camera, controller.pose);
 
   const light = new HemisphericLight("sky", new Vector3(0.2, 1, 0.3), scene);
   light.intensity = 0.95;
@@ -215,12 +210,6 @@ export function mountPresentation(
   scene.activeCamera = camera;
   syncVisuals();
 
-  let dragging = false;
-  let dragButton = -1;
-  let lastX = 0;
-  let lastY = 0;
-  let dragDistance = 0;
-
   const updateInterpolatedMeshes = (poses: readonly InterpolatedPose[]): void => {
     for (const pose of poses) {
       let visual = visuals.get(pose.entityId);
@@ -262,96 +251,61 @@ export function mountPresentation(
     }
   };
 
-  const pointerObserver = scene.onPointerObservable.add((info) => {
-    const event = info.event;
-
-    if (info.type === PointerEventTypes.POINTERWHEEL && hasDeltaY(event)) {
-      const delta = event.deltaY > 0 ? 1.5 : -1.5;
-      poseHolder.current = zoomRtsCamera(poseHolder.current, delta);
-      applyPose(camera, poseHolder.current);
-      return;
-    }
-
-    if (info.type === PointerEventTypes.POINTERDOWN) {
-      dragging = true;
-      dragButton = event.button;
-      lastX = scene.pointerX;
-      lastY = scene.pointerY;
-      dragDistance = 0;
-      return;
-    }
-
-    if (
-      info.type === PointerEventTypes.POINTERMOVE &&
-      dragging &&
-      (dragButton === 1 || dragButton === 2)
-    ) {
-      const screenDx = scene.pointerX - lastX;
-      const screenDy = scene.pointerY - lastY;
-      lastX = scene.pointerX;
-      lastY = scene.pointerY;
-      dragDistance += Math.abs(screenDx) + Math.abs(screenDy);
-      const ground = screenDragToGround(screenDx, screenDy, poseHolder.current.radius);
-      poseHolder.current = panRtsCamera(poseHolder.current, ground.x, ground.z, extent);
-      applyPose(camera, poseHolder.current);
-      return;
-    }
-
-    if (info.type !== PointerEventTypes.POINTERUP) {
-      return;
-    }
-
-    const button = dragButton;
-    const moved = dragDistance;
-    dragging = false;
-    dragButton = -1;
-
-    if (button === 0 && moved < DRAG_THRESHOLD_PX) {
-      const pick = info.pickInfo;
-      const id = presentationId(pick?.pickedMesh ?? null);
-      if (id !== null && bindings.clientState.canLocalPlayerControl(id)) {
-        bindings.clientState.select(id);
-      } else {
-        bindings.clientState.select(null);
-      }
-      pushPresentation(bindings.clientState.sample(performance.now()));
-      return;
-    }
-
-    if (button === 2 && moved < DRAG_THRESHOLD_PX) {
-      const pick = info.pickInfo;
-      const point = pick?.pickedPoint;
-      const role = meshRole(pick?.pickedMesh ?? null);
-      if (point && role === "ground") {
-        const entityId = bindings.clientState.getCommandEntityId();
-        if (entityId === null) {
-          return;
+  const cameraInput = bindCameraInput(
+    canvas,
+    controller,
+    () => ({
+      width: Math.max(1, canvas.clientWidth),
+      height: Math.max(1, canvas.clientHeight),
+      fov: camera.fov,
+    }),
+    () => bindings.clientState.getView()?.phase === "RUNNING",
+    (button, point) => {
+      if (button === 0) {
+        const pick = scene.pick(point.x, point.y);
+        const id = presentationId(pick?.pickedMesh ?? null);
+        if (id !== null && bindings.clientState.canLocalPlayerControl(id)) {
+          bindings.clientState.select(id);
+        } else {
+          bindings.clientState.select(null);
         }
-        const simTarget = babylonToSimulationGround({ x: point.x, z: point.z });
-        // Destination marker = instant UX feedback (game-feel), not authority.
-        bindings.clientState.setDestinationMarker(simTarget);
         pushPresentation(bindings.clientState.sample(performance.now()));
-        clientSequence += 1;
-        const command: GameCommand = {
-          type: "MOVE",
-          commandId: bindings.nextCommandId(),
-          clientSequence,
-          entityIds: [entityId],
-          target: simTarget,
-        };
-        bindings.transport.sendCommand(command);
+        return;
       }
-    }
-  });
 
-  const onContextMenu = (event: Event): void => {
-    event.preventDefault();
-  };
-  canvas.addEventListener("contextmenu", onContextMenu);
+      if (button === 2) {
+        const pick = scene.pick(point.x, point.y);
+        const pickedPoint = pick?.pickedPoint;
+        const role = meshRole(pick?.pickedMesh ?? null);
+        if (pickedPoint && role === "ground") {
+          const entityId = bindings.clientState.getCommandEntityId();
+          if (entityId === null) {
+            return;
+          }
+          const simTarget = babylonToSimulationGround({ x: pickedPoint.x, z: pickedPoint.z });
+          // Destination marker = instant UX feedback (game-feel), not authority.
+          bindings.clientState.setDestinationMarker(simTarget);
+          pushPresentation(bindings.clientState.sample(performance.now()));
+          clientSequence += 1;
+          const command: GameCommand = {
+            type: "MOVE",
+            commandId: bindings.nextCommandId(),
+            clientSequence,
+            entityIds: [entityId],
+            target: simTarget,
+          };
+          bindings.transport.sendCommand(command);
+        }
+      }
+    },
+  );
 
   let fpsStamp = performance.now();
+  let cameraStamp = fpsStamp;
   engine.runRenderLoop(() => {
     const now = performance.now();
+    applyPose(camera, cameraInput.step(Math.min(0.1, (now - cameraStamp) / 1000)));
+    cameraStamp = now;
     bindings.clientState.setRenderTimeMs(now);
     updateInterpolatedMeshes(bindings.clientState.sample(now));
     if (onFps && now - fpsStamp >= 250) {
@@ -375,6 +329,9 @@ export function mountPresentation(
   window.addEventListener("resize", onResize);
 
   return {
+    setEdgeScrolling(enabled) {
+      cameraInput.setEdgeEnabled(enabled);
+    },
     readRendererDebugSample() {
       return rendererSample;
     },
@@ -394,8 +351,7 @@ export function mountPresentation(
     dispose() {
       unsubscribeHud();
       unsubscribeState();
-      scene.onPointerObservable.remove(pointerObserver);
-      canvas.removeEventListener("contextmenu", onContextMenu);
+      cameraInput.dispose();
       window.removeEventListener("resize", onResize);
       engine.stopRenderLoop();
       const token = inspectorToken;
@@ -420,19 +376,8 @@ function poseToPresentation(pose: InterpolatedPose): PresentationEntity {
   };
 }
 
-function lockIsometricCamera(camera: ArcRotateCamera): void {
-  camera.lowerAlphaLimit = RTS_CAMERA_ALPHA;
-  camera.upperAlphaLimit = RTS_CAMERA_ALPHA;
-  camera.lowerBetaLimit = RTS_CAMERA_BETA;
-  camera.upperBetaLimit = RTS_CAMERA_BETA;
-  camera.lowerRadiusLimit = RTS_CAMERA_MIN_RADIUS;
-  camera.upperRadiusLimit = RTS_CAMERA_MAX_RADIUS;
-  camera.panningSensibility = 0;
-  camera.wheelPrecision = 50;
-}
-
 function applyPose(camera: ArcRotateCamera, pose: RtsCameraPose): void {
-  camera.alpha = RTS_CAMERA_ALPHA;
+  camera.alpha = pose.alpha;
   camera.beta = RTS_CAMERA_BETA;
   camera.radius = pose.radius;
   camera.target.x = pose.targetX;
@@ -490,10 +435,6 @@ function materialFor(
   material.specularColor = new Color3(0.05, 0.05, 0.05);
   materials.set(colorSlot, material);
   return material;
-}
-
-function hasDeltaY(event: object): event is { deltaY: number } {
-  return "deltaY" in event && typeof event.deltaY === "number";
 }
 
 function presentationId(mesh: AbstractMesh | null): number | null {

@@ -36,6 +36,8 @@ body,
   top: 16px;
   left: 16px;
   width: min(320px, calc(100% - 32px));
+  max-height: calc(100% - 32px);
+  overflow: auto;
   padding: 14px 16px;
   border: 1px solid rgb(255 255 255 / 12%);
   background: rgb(10 14 18 / 78%);
@@ -161,4 +163,15 @@ body,
 .hud ul {
   margin: 0;
   padding-left: 18px;
+}
+
+.camera-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+.viewport:focus {
+  outline: none;
 }
