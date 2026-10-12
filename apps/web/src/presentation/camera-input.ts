@@ -174,6 +174,14 @@ export function bindCameraInput(
     )
       click(button, p);
   };
+  const lostCapture = (event: PointerEvent) => {
+    // Normal pointerup already released this capture. Do not clear held keys:
+    // keyboard pan should resume after a drag while the key remains down.
+    if (event.pointerId !== captured) return;
+    gesture.clear();
+    captured = null;
+    pointer = null;
+  };
   const leave = () => {
     pointer = null;
   };
@@ -196,7 +204,7 @@ export function bindCameraInput(
   canvas.addEventListener("pointerdown", down);
   canvas.addEventListener("pointerleave", leave);
   canvas.addEventListener("pointercancel", clear);
-  canvas.addEventListener("lostpointercapture", clear);
+  canvas.addEventListener("lostpointercapture", lostCapture);
   canvas.addEventListener("wheel", wheel, { passive: false });
   canvas.addEventListener("contextmenu", context);
   return {
@@ -237,7 +245,7 @@ export function bindCameraInput(
       canvas.removeEventListener("pointerdown", down);
       canvas.removeEventListener("pointerleave", leave);
       canvas.removeEventListener("pointercancel", clear);
-      canvas.removeEventListener("lostpointercapture", clear);
+      canvas.removeEventListener("lostpointercapture", lostCapture);
       canvas.removeEventListener("wheel", wheel);
       canvas.removeEventListener("contextmenu", context);
     },

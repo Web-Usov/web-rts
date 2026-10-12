@@ -200,6 +200,18 @@ for (const mode of ["local", "remote"])
     await page.mouse.up({ button: "right" });
     await expectHud(page, "Destination", "none");
     await shot(page, `${mode}-right-drag`);
+    await home(page);
+    await page.keyboard.down("w");
+    await page.mouse.move(800, 450);
+    await page.mouse.down({ button: "right" });
+    await page.mouse.move(900, 450, { steps: 8 });
+    await page.mouse.move(800, 450, { steps: 8 });
+    await page.mouse.up({ button: "right" });
+    const resumedPan = await expectObjectiveOnCanvas(page);
+    await page.waitForTimeout(250);
+    await page.keyboard.up("w");
+    expect((await expectObjectiveOnCanvas(page)).y - resumedPan.y).toBeGreaterThan(10);
+    await expectHud(page, "Destination", "none");
     await page.mouse.move(800, 450);
     await page.mouse.down({ button: "middle" });
     await page.mouse.move(900, 450, { steps: 8 });
