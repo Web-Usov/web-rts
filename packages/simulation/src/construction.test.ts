@@ -4,6 +4,8 @@ import { createWorld, World } from "./world.js";
 import { readWorldEntities } from "./snapshot.js";
 import { spawnSoldier } from "./foundation-match.js";
 import { PLAYER_TEAM, PVE_TEAM } from "./teams.js";
+import { findBreachPath } from "./navigation-breach.js";
+import { findPath } from "./navigation.js";
 import { segmentIsTraversable } from "./navigation.js";
 import { EntityPathQueryLane } from "./path-query-lane.js";
 import { createMatchRuntime } from "./match-runtime.js";
@@ -578,4 +580,34 @@ it("rejects unreachable EXISTING without a spend/reset/reservation or cancelling
   expect(wood(world)).toBe(before);
   expect(world.topologyRevision).toBe(revision);
   expect([...world.constructions.entries()]).toHaveLength(2);
+});
+
+it("under-construction Wall closes a choke and remains a hostile breachable Health target", () => {
+  const { world, id } = fixture(4, {
+    ...map,
+    staticTerrain: [
+      { x: 0, y: 0, width: 16, height: 5, walkable: false, buildable: false },
+      { x: 0, y: 6, width: 16, height: 6, walkable: false, buildable: false },
+    ],
+  });
+  const start = { x: 2, y: 5 },
+    goal = { x: 12, y: 5 };
+  expect(findPath(world.grid!, start, [goal])).not.toBeNull();
+  build(world, id, 8, 5);
+  world.step();
+  const site = siteId(world);
+  expect(findPath(world.grid!, start, [goal])).toBeNull();
+  const route = findBreachPath(
+    world.grid!,
+    start,
+    [goal],
+    (target) =>
+      (world.health.get(target)?.current ?? 0) > 0 &&
+      world.relationships.resolve(PVE_TEAM, world.teams.get(target)?.teamId) === "HOSTILE",
+  );
+  expect(route).toMatchObject({ status: "found", firstBlockerEntityId: site });
+  const revision = world.topologyRevision;
+  world.destroyEntity(site);
+  expect(world.topologyRevision).toBe(revision + 1);
+  expect(findPath(world.grid!, start, [goal])).not.toBeNull();
 });
