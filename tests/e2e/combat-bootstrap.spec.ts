@@ -4,6 +4,7 @@ import {
   canvasRightClick,
   cssDistance,
   findSoldierCentroid,
+  findSelectedSoldierCentroid,
   findWorkerCentroid,
   expectObjectiveOnCanvas,
 } from "./helpers/canvas.js";
@@ -30,14 +31,20 @@ test("G6 Local Soldier proxy supports MOVE and blocked-target regression", async
   await canvasRightClick(page, { x: 950, y: 300 });
   await expectHud(page, "Destination", "marked");
   await expect
-    .poll(async () => cssDistance(before, await findSoldierCentroid(page)))
+    .poll(async () => {
+      const after = await findSelectedSoldierCentroid(page);
+      return after === null ? 0 : cssDistance(before, after);
+    })
     .toBeGreaterThan(250);
   await expect
     .poll(async () => cssDistance(workerBefore, await findWorkerCentroid(page)))
     .toBeGreaterThan(100);
   await canvasRightClick(page, { x: 668, y: 362 });
   await expect
-    .poll(async () => cssDistance(before, await findSoldierCentroid(page)))
+    .poll(async () => {
+      const after = await findSelectedSoldierCentroid(page);
+      return after === null ? Infinity : cssDistance(before, after);
+    })
     .toBeLessThan(200);
   await expectHud(page, "Last event", "—");
   await expectHud(page, "Objectives", "1");

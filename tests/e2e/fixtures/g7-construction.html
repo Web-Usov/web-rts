@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="ru">
+  <meta charset="utf-8" />
+  <title>G7 — изолированный construction fixture</title>
+  <style>
+    body {
+      background: #101820;
+      color: #eef3f5;
+      font: 18px system-ui;
+      margin: 32px;
+    }
+    canvas {
+      display: block;
+      margin-top: 20px;
+      background: #192833;
+    }
+    button {
+      padding: 10px 16px;
+      margin-right: 10px;
+    }
+    p {
+      max-width: 850px;
+    }
+  </style>
+  <h1>G7 — construction / topology fixture</h1>
+  <p>
+    Тестовая 2D-визуализация production World. Синий — MOVE unit, зелёный — Worker, оранжевый —
+    Wall/Tower; пунктир — текущий navigation route. Production BUILD UI отсутствует.
+  </p>
+  <button id="move">MOVE</button
+  ><button id="wall">BUILD Wall</button>
+  <button id="tower">BUILD Tower</button
+  ><button id="step">+10 ticks</button>
+  <output id="status"></output>
+  <canvas id="grid" width="840" height="560"></canvas>
+  <script type="module">
+    import { createWorld } from "../../../apps/web/node_modules/@web-rts/simulation/dist/index.js";
+    import { ENTITY_DEFINITIONS } from "../../../apps/web/node_modules/@web-rts/game-data/dist/index.js";
+    const world = createWorld({
+      seed: 60,
+      map: {
+        id: "g7-fixture",
+        originX: 0,
+        originY: 0,
+        widthCells: 12,
+        heightCells: 8,
+        staticTerrain: [],
+        playerSpawns: [],
+        startingPlacements: [],
+        resourcePlacements: [],
+      },
+    });
+    const mover = world.createEntity({ kind: "UNIT", definitionId: "foundation_unit" });
+    world.positions.set(mover, { x: 2.5, y: 3.5 });
+    world.controllers.set(mover, { controllerPlayerId: 0 });
+    const worker = world.createEntity({ kind: "UNIT", definitionId: "worker" });
+    world.positions.set(worker, { x: 2.5, y: 6.5 });
+    world.controllers.set(worker, { controllerPlayerId: 0 });
+    world.owners.set(worker, { ownerPlayerId: 0 });
+    world.workers.set(worker, {
+      ...ENTITY_DEFINITIONS.worker.worker,
+      carried: { resourceType: "WOOD", amount: 0 },
+    });
+    world.playerEconomies.set(0, { resources: { WOOD: 100 } });
+    const canvas = document.querySelector("canvas"),
+      ctx = canvas.getContext("2d");
+    function render() {
+      ctx.clearRect(0, 0, 840, 560);
+      ctx.strokeStyle = "#35505f";
+      for (let x = 0; x <= 12; x++) {
+        ctx.beginPath();
+        ctx.moveTo(x * 70, 0);
+        ctx.lineTo(x * 70, 560);
+        ctx.stroke();
+      }
+      for (let y = 0; y <= 8; y++) {
+        ctx.beginPath();
+        ctx.moveTo(0, y * 70);
+        ctx.lineTo(840, y * 70);
+        ctx.stroke();
+      }
+      for (const id of world.entityIds()) {
+        const p = world.positions.get(id),
+          fp = world.grid.footprintOf(id),
+          nav = world.readNavigation(id);
+        if (nav) {
+          ctx.strokeStyle = id === mover ? "#75b8ff" : "#92e5a7";
+          ctx.setLineDash([6, 6]);
+          ctx.beginPath();
+          ctx.moveTo(p.x * 70, p.y * 70);
+          for (const wp of nav.waypoints.slice(nav.waypointIndex)) ctx.lineTo(wp.x * 70, wp.y * 70);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+        ctx.fillStyle = fp ? "#ec9e47" : id === mover ? "#5798ee" : "#65d590";
+        if (fp) ctx.fillRect(fp.anchorCell.x * 70 + 4, fp.anchorCell.y * 70 + 4, 62, 62);
+        else {
+          ctx.beginPath();
+          ctx.arc(p.x * 70, p.y * 70, 12, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        const c = world.constructions.get(id);
+        if (c) {
+          ctx.fillStyle = "#101820";
+          ctx.font = "14px system-ui";
+          ctx.fillText(
+            c.state === "COMPLETED" ? "DONE" : `${c.workedTicks}/${c.durationTicks}`,
+            p.x * 70 - 25,
+            p.y * 70 + 4,
+          );
+        }
+      }
+      const sites = [...world.constructions.entries()]
+        .map(
+          ([id, c]) =>
+            `${world.identities.get(id).definitionId}: ${c.state} ${c.workedTicks}/${c.durationTicks}`,
+        )
+        .join("; ");
+      document.querySelector("output").textContent =
+        `tick ${world.tick} · Wood ${world.playerEconomies.get(0).resources.WOOD} · topology ${world.topologyRevision} · ${sites}`;
+    }
+    function send(command) {
+      world.enqueueCommand({ actor: { playerId: 0 }, command });
+      world.step();
+      render();
+    }
+    document.querySelector("#move").onclick = () =>
+      send({
+        type: "MOVE",
+        commandId: "fixture-move",
+        entityIds: [mover],
+        target: { x: 10.5, y: 3.5 },
+      });
+    for (const [id, x, y] of [
+      ["wall", 6, 3],
+      ["tower", 8, 6],
+    ])
+      document.querySelector("#" + id).onclick = () =>
+        send({
+          type: "BUILD",
+          commandId: "fixture-" + id,
+          builderEntityId: worker,
+          target: { type: "NEW", buildingTypeId: id, anchorCell: { x, y } },
+        });
+    document.querySelector("#step").onclick = () => {
+      world.stepN(10);
+      render();
+    };
+    render();
+  </script>
+</html>

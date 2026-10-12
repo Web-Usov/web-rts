@@ -8,6 +8,10 @@ import type { World } from "./world.js";
 export type MatchEntitySnapshot = {
   teamId?: import("./types.js").TeamId;
   health?: { current: number; max: number };
+  construction?: {
+    state: import("./types.js").Construction["state"];
+    progress: number;
+  };
   soldierState?: import("./types.js").SoldierState;
   entityId: EntityId;
   kind: EntityKind;
@@ -51,6 +55,16 @@ export function readWorldEntities(world: World): MatchEntitySnapshot[] {
     const owner = world.owners.get(entityId);
     const controller = world.controllers.get(entityId);
     entities.push({
+      ...(world.constructions.has(entityId)
+        ? {
+            construction: {
+              state: world.constructions.get(entityId)!.state,
+              progress:
+                world.constructions.get(entityId)!.workedTicks /
+                world.constructions.get(entityId)!.durationTicks,
+            },
+          }
+        : {}),
       ...(world.teams.get(entityId) === undefined
         ? {}
         : { teamId: world.teams.get(entityId)!.teamId }),

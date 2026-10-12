@@ -73,7 +73,15 @@ export function toGameEvent(event: RuntimeEvent): CommandRejectedEvent | null {
     event.type !== "COMMAND_REJECTED" ||
     event.reason === "no_dropoff" ||
     event.reason === "invalid_resource" ||
-    event.reason === "not_worker"
+    event.reason === "not_worker" ||
+    event.reason === "not_builder" ||
+    event.reason === "invalid_building" ||
+    event.reason === "invalid_owner" ||
+    event.reason === "insufficient_resources" ||
+    event.reason === "invalid_placement" ||
+    event.reason === "invalid_construction" ||
+    event.reason === "construction_busy" ||
+    event.reason === "already_building"
   )
     return null;
   return {

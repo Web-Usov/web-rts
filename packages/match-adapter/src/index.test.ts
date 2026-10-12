@@ -222,3 +222,41 @@ it("keeps G5 failures and rejection reasons transport-neutral until G11", () => 
       }),
     ).toBeNull();
 });
+
+it("keeps BUILD events/reasons and Construction snapshot fields out of the public wire until G11", () => {
+  for (const reason of [
+    "not_builder",
+    "invalid_building",
+    "invalid_owner",
+    "insufficient_resources",
+    "invalid_placement",
+    "invalid_construction",
+    "construction_busy",
+    "already_building",
+  ] as const)
+    expect(
+      toGameEvent({
+        type: "COMMAND_REJECTED",
+        commandId: "build",
+        recipientPlayerId: 0,
+        reason,
+        tick: 0,
+      }),
+    ).toBeNull();
+  expect(
+    toGameEvent({
+      type: "ACTION_FAILED",
+      commandId: "build",
+      recipientPlayerId: 0,
+      entityId: 1,
+      action: "BUILD",
+      reason: "target_removed",
+      tick: 1,
+    }),
+  ).toBeNull();
+  const snapshot = runningSnapshot();
+  snapshot.entities[0]!.construction = { state: "UNDER_CONSTRUCTION", progress: 0.5 };
+  const view = projectGameStateView(snapshot, { localPlayerId: 0 }, session);
+  expect(view.entities[0]).not.toHaveProperty("construction");
+  expect(gameStateViewSchema.safeParse(view).success).toBe(true);
+});

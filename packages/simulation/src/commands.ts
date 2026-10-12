@@ -17,6 +17,14 @@ export type SimulationCommand =
       commandId: string;
       workerEntityId: EntityId;
       resourceEntityId: EntityId;
+    }
+  | {
+      type: "BUILD";
+      commandId: string;
+      builderEntityId: EntityId;
+      target:
+        | { type: "NEW"; buildingTypeId: string; anchorCell: Vec2 }
+        | { type: "EXISTING"; constructionEntityId: EntityId };
     };
 
 /** Trusted issuer of a command. Derived by the host from session/local identity. */
@@ -39,7 +47,15 @@ export type CommandRejectionReason =
   | "no_path"
   | "no_dropoff"
   | "invalid_resource"
-  | "not_worker";
+  | "not_worker"
+  | "not_builder"
+  | "invalid_building"
+  | "invalid_owner"
+  | "insufficient_resources"
+  | "invalid_placement"
+  | "invalid_construction"
+  | "construction_busy"
+  | "already_building";
 
 export class CommandQueue {
   private readonly pending: QueuedCommand[] = [];

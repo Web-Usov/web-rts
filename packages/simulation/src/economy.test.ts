@@ -52,6 +52,7 @@ function worker(world: World, x = 2.5, y = 5.5, owner = 0, controller = owner): 
     max: ENTITY_DEFINITIONS.worker.maxHealth,
   });
   world.workers.set(id, {
+    builder: true,
     moveSpeed: 5,
     carryCapacity: 10,
     gatherRate: 5,

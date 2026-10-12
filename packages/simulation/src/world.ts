@@ -22,8 +22,11 @@ import {
 import { RelationshipPolicy } from "./teams.js";
 import { prepareSoldier, resolveEntityCombat } from "./systems/combat.js";
 import { assessGather, economyHooks, installGatherNavigation } from "./systems/economy.js";
+import { assessBuild, commitBuild, constructionHooks } from "./systems/construction.js";
 import { runMovementSystem } from "./systems/movement.js";
 import type {
+  Construction,
+  BuildTask,
   Worker,
   ResourceNode,
   Dropoff,
@@ -66,6 +69,8 @@ export class World {
   readonly movements = new ComponentStore<Movement>();
   /** Grid route for in-progress movement. Absent from snapshots and replication. */
   private readonly navigations = new ComponentStore<NavigationTask>();
+  readonly constructions = new ComponentStore<Construction>();
+  readonly buildTasks = new ComponentStore<BuildTask>();
   readonly workers = new ComponentStore<Worker>();
   readonly resourceNodes = new ComponentStore<ResourceNode>();
   readonly dropoffs = new ComponentStore<Dropoff>();
@@ -122,6 +127,11 @@ export class World {
     if (!this.living.delete(entityId)) {
       return;
     }
+    for (const [builder, task] of this.buildTasks.entries()) {
+      if (task.constructionEntityId === entityId) this.failBuild(builder, "target_removed");
+    }
+    this.buildTasks.remove(entityId);
+    this.constructions.remove(entityId);
     this.grid?.removeFootprint(entityId);
     this.identities.remove(entityId);
     this.positions.remove(entityId);
@@ -250,6 +260,23 @@ export class World {
     this.navigations.remove(entityId);
   }
 
+  /** One-shot failure removes the canonical reservation and its navigation. */
+  failBuild(entityId: EntityId, reason: "target_removed" | "path_blocked"): void {
+    const task = this.buildTasks.get(entityId);
+    if (task === undefined) return;
+    this.events.push({
+      type: "ACTION_FAILED",
+      commandId: task.commandId,
+      playerId: task.playerId,
+      entityId,
+      action: "BUILD",
+      reason,
+      tick: this.tick,
+    });
+    this.buildTasks.remove(entityId);
+    this.stopNavigation(entityId);
+  }
+
   private cancelCombatForMove(entityId: EntityId): void {
     const task = this.soldiers.get(entityId);
     if (task !== undefined) {
@@ -319,7 +346,24 @@ export class World {
     // G9 will construct its own EntityPathQueryLane(aiBudget) and report usage here.
     this.aiQueries = 0;
     this.applyCommands();
-    const hooks = economyHooks(this, this.navigations, activeTaskLane, this.events);
+    const economy = economyHooks(this, this.navigations, activeTaskLane, this.events);
+    const construction = constructionHooks(this, activeTaskLane);
+    const hooks = {
+      entityIds: [...economy.entityIds, ...construction.entityIds],
+      beforeMovement: (id: EntityId) => {
+        economy.beforeMovement(id);
+        construction.beforeMovement(id);
+      },
+      afterMovement: (id: EntityId) => {
+        economy.afterMovement(id);
+      },
+      failedNavigation: (id: EntityId) => {
+        economy.failedNavigation(id);
+        construction.failedNavigation(id);
+      },
+      replanNavigation: (id: EntityId) =>
+        construction.replanNavigation(id) ?? economy.replanNavigation(id),
+    };
     // A single ascending entity pass shares active-task budget between combat and
     // MOVE replans. Each entity can reserve at most one query in this lane.
     for (const entityId of this.entityIds()) {
@@ -369,12 +413,21 @@ export class World {
   private applyCommand(queued: QueuedCommand): void {
     if (queued.command.type === "MOVE")
       this.applyMoveCommand(queued.actor.playerId, queued.command);
-    else {
+    else if (queued.command.type === "BUILD") {
+      const result = assessBuild(this, queued.actor.playerId, queued.command);
+      if ("reason" in result) {
+        this.rejectCommand(queued.actor.playerId, queued.command.commandId, result.reason);
+        return;
+      }
+      commitBuild(this, queued.actor.playerId, queued.command, result);
+      this.acceptCommand(queued.actor.playerId, queued.command.commandId);
+    } else {
       const result = assessGather(this, queued.actor.playerId, queued.command);
       if ("reason" in result) {
         this.rejectCommand(queued.actor.playerId, queued.command.commandId, result.reason);
         return;
       }
+      this.buildTasks.remove(queued.command.workerEntityId);
       this.gatherTasks.set(queued.command.workerEntityId, result.task);
       installGatherNavigation(
         this,
@@ -416,6 +469,7 @@ export class World {
     const speed = this.config.defaultMoveSpeed;
     if (this.grid === null) {
       for (const entityId of applicable) {
+        this.buildTasks.remove(entityId);
         this.gatherTasks.remove(entityId);
         this.cancelCombatForMove(entityId);
         this.navigations.remove(entityId);
@@ -448,6 +502,7 @@ export class World {
     }
 
     for (const { entityId, task } of planned) {
+      this.buildTasks.remove(entityId);
       this.gatherTasks.remove(entityId);
       this.movements.remove(entityId);
       this.cancelCombatForMove(entityId);
