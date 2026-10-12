@@ -283,7 +283,9 @@ export async function measureColorCentroid(
       x: (region.x * box.width) / sample.width,
       y: (region.y * box.height) / sample.height,
     }));
-    const tracks = unitTracking.get(page) ?? new Map();
+    const tracks =
+      unitTracking.get(page) ??
+      new Map<UnitProxy, { stationary: CanvasCentroid[]; last: CanvasCentroid }>();
     const tracking = tracks.get(proxy);
     const ring =
       sample.ring === null
