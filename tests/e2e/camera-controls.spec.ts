@@ -103,14 +103,14 @@ for (const mode of ["local", "remote"])
     }
     await home(page);
     const start = await expectObjectiveOnCanvas(page);
-    await hold(page, "ArrowRight", 150);
+    await hold(page, "ArrowUp", 300);
     const slow = await expectObjectiveOnCanvas(page);
     await home(page);
     await page.keyboard.down("Shift");
-    await hold(page, "ArrowRight", 150);
+    await hold(page, "ArrowUp", 300);
     await page.keyboard.up("Shift");
     const fast = await expectObjectiveOnCanvas(page);
-    expect(start.x - fast.x).toBeGreaterThan((start.x - slow.x) * 1.7);
+    expect(fast.y - start.y).toBeGreaterThan((slow.y - start.y) * 1.7);
     await home(page);
     const normal = await captureCanvasPng(page);
     await hold(page, "r", 600);

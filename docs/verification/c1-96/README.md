@@ -5,7 +5,7 @@
 ## Инструменты и flow
 
 - Внутренний **Codex In-app Browser / cua_repl**: реальное открытие Local и Remote, Create/Join/Start, физические клики и удержание клавиш, wheel, screenshot и чтение console logs. Remote дополнительно открыт в двух вкладках одной комнаты: поворот/pan одного клиента не меняют камеру другого.
-- **Playwright Chromium** (`tests/e2e/camera-controls.spec.ts`): одинаковый полный camera flow в Local и Remote, реальные `keyboard.down/up`, `mouse.move/down/up/wheel`; assertions по видимым canvas pixels и HUD, без чтения simulation/transport/scene state.
+- **Playwright Chromium** (`tests/e2e/camera-controls.spec.ts`): одинаковый полный camera flow в Local и Remote, реальные `keyboard.down/up`, `mouse.move/down/up/wheel`; assertions по видимым canvas pixels и HUD, без чтения simulation/transport/scene state. Pixel helper исключает блокирующие overlays и использует selection ring для отслеживания выбранного proxy; временное перекрытие соседним proxy ожидает читаемого кадра без ослабления критериев траектории.
 - Unit tests: экранные оси, нормализация, 90° без drift, dt smoothing, anchored zoom, ground grab при четырёх yaw, input repeat/opposite bindings, wheel deltaMode, click/drag/cancel arbitration, small-map bounds и непрерывность containment. Отдельный NullEngine regression сравнивает pure ground math с Babylon picking при всех yaw/radius.
 
 ## Проверенные состояния

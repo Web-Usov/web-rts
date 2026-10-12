@@ -367,11 +367,27 @@ export async function findLocalUnitCanvasPoint(page: Page): Promise<{ x: number;
 
 /** Blue player-0 unit centroid. Same palette scan used to aim the selection click. */
 export async function findLocalUnitCentroid(page: Page): Promise<CanvasCentroid> {
-  const sample = await measureColorCentroid(page, LOCAL_UNIT_BLUE);
-  if (!sample || sample.count < LOCAL_UNIT_MIN_PIXELS) {
-    throw new Error(`local unit pixels not found on canvas (count=${sample?.count ?? 0})`);
-  }
-  return sample;
+  // A moving blue proxy can merge with a stationary neighbour in the screenshot.
+  // Once selected, follow its visible ring instead of excluding a merged region
+  // solely because its centroid briefly matches the stationary proxy.
+  const selectedIds = (await hudValue(page, "Selected").textContent())?.trim();
+  const result: { sample: CanvasCentroid | null } = { sample: null };
+  await expect
+    .poll(
+      async () => {
+        result.sample = await measureColorCentroid(
+          page,
+          LOCAL_UNIT_BLUE,
+          "foundation",
+          Boolean(selectedIds && selectedIds !== "none"),
+        );
+        return result.sample?.count ?? 0;
+      },
+      { timeout: 2000, intervals: [50, 100] },
+    )
+    .toBeGreaterThanOrEqual(LOCAL_UNIT_MIN_PIXELS);
+  if (!result.sample) throw new Error("selected unit remained occluded");
+  return result.sample;
 }
 
 /**
