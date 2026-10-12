@@ -37,6 +37,7 @@ export type PlayerSpawnDefinition = {
   readonly unitPosition: WorldPoint;
   readonly workerPosition?: WorldPoint;
   readonly townHallAnchor?: CellCoord;
+  readonly soldierPosition: WorldPoint;
 };
 
 export const MAP_OBJECTIVE_TYPES = ["PROTECT"] as const;
@@ -95,24 +96,28 @@ export const FOUNDATION_MAP: MapDefinition = {
       unitPosition: { x: -6, y: -3 },
       workerPosition: { x: -7.5, y: -3.5 },
       townHallAnchor: { x: 10, y: 12 },
+      soldierPosition: { x: -4.5, y: -1.5 },
     },
     {
       region: { x: 24, y: 15, width: 4, height: 4 },
       unitPosition: { x: 6, y: -3 },
       workerPosition: { x: 7.5, y: -3.5 },
       townHallAnchor: { x: 28, y: 12 },
+      soldierPosition: { x: 7.5, y: -1.5 },
     },
     {
       region: { x: 12, y: 24, width: 4, height: 4 },
       unitPosition: { x: -6, y: 6 },
       workerPosition: { x: -7.5, y: 6.5 },
       townHallAnchor: { x: 10, y: 28 },
+      soldierPosition: { x: -4.5, y: 7.5 },
     },
     {
       region: { x: 24, y: 24, width: 4, height: 4 },
       unitPosition: { x: 6, y: 6 },
       workerPosition: { x: 7.5, y: 6.5 },
       townHallAnchor: { x: 28, y: 28 },
+      soldierPosition: { x: 7.5, y: 7.5 },
     },
   ],
   startingPlacements: [

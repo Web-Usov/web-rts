@@ -65,7 +65,9 @@ Implementation checkpoint:
 - G4b / #68 — completed (PR #84): fair command scheduling / path budgets;
 - G4c / #69 — completed (PR #83): deterministic breach-aware planner;
 - G5 / #58 — completed: finite Wood, Worker carry и повторяющийся internal GATHER, owned Town Hall drop-off, PlayerEconomy и transport-neutral snapshots/events;
-- **next gameplay stage: G6 / #59 (Combat)**; G7 / #60 требует и G5, и G6. Public economy/GATHER projection остаётся G11, interaction/HUD — G12.
+- **next gameplay stage: G7 / #60 (Construction)**; G5 и G6 prerequisites реализованы. Public economy/GATHER projection остаётся G11, interaction/HUD — G12.
+- G6 / #59 — completed: match-level Team/relationships, tick-based Health/Attack/death, стартовый melee Soldier с bounded auto-aggro/chase и explicit MOVE override;
+- G5 и G6 интегрированы в shared MatchRuntime: economy hooks и combat используют один ascending-entityId pass, общие movement/navigation и active-task lane.
 
 Art Direction дополнительно уточнён через #75 / PR #77: основной production-style target — **Stylized Low-Poly / Soft Hand-Painted**.
 
@@ -80,7 +82,7 @@ GitHub epic #50 является актуальным tracker implementation dec
        ├─ #68 G4b Fair scheduling / path budgets ✅
        └─ #69 G4c Breach-aware planner ✅
             ↓
-       #58 G5 Economy ✅  ||  #59 G6 Combat ← NEXT
+       #58 G5 Economy ✅  ||  #59 G6 Combat ✅
             ↓
           #60 G7 Construction
           ├─ #61 G8 Garrison
@@ -101,9 +103,9 @@ GitHub epic #50 является актуальным tracker implementation dec
              #67 G14 Full Local/Remote E2E
 ```
 
-G1–G5 завершены. G6 (#59) остаётся следующим prerequisite для G7 (#60). Для G9 дополнительно требуется уже завершённый G4c (#69). Практический максимум остаётся **2 Coding Agents одновременно**.
+G1–G6 завершены. Следующий gameplay stage — G7 (#60), Construction. Для G9 дополнительно требуется уже завершённый G4c (#69). Практический максимум остаётся **2 Coding Agents одновременно**.
 
-Отдельные follow-up задачи не входят в критический путь G4→G5/G6: #87 — измеренная CPU-стоимость blocked-target resolution на больших картах (важно решить до масштабирования карт/AI), #82 — UX обратной связи для скорректированной MOVE destination. Оба вопроса не отменяют завершённый контракт G4.
+Follow-up #87 завершён в PR #92: blocked-target resolution переиспользует topology-revision component labels и command-scoped target resolution. #82 — UX обратной связи для скорректированной MOVE destination — остаётся вне критического пути; он не отменяет завершённый контракт G4.
 
 Параллельный art track: #80 — Core #002 Visual Pack для Worker, Soldier, зданий и Sacred Site; визуальным источником истины остаётся `docs/art-direction.md`. Это подготовка к G13 (#66), не самостоятельное расширение gameplay scope.
 
@@ -123,6 +125,10 @@ Audit #53 остаётся review/verification record. Его исходный �
 - `packages/simulation` не зависит от React, Babylon.js, Colyseus, DOM или Node-specific API;
 - client отправляет intents/commands, а не authoritative state;
 - simulation работает на fixed tick и seeded RNG;
+- Team не выводится из Owner/Controller: authoritative PlayerId → TeamId и симметричная match-level policy определяют FRIENDLY/NEUTRAL/HOSTILE;
+- Soldier auto-combat и MOVE replans расходуют одну active-task lane в ascending entityId order, максимум одна path query/entity/tick; stats находятся в game-data;
+- первый combat strike происходит на первом eligible tick, повторный — не раньше strikeTick + cooldownTicks; lethal damage сразу удаляет active entity/footprint, generic Objective сохраняется до G10;
+- стартовый Soldier дополняет foundation_unit в общем Local/Remote bootstrap; Health/Team/task snapshot остаётся внутренним до G11, public protocol и final combat UI не добавлены;
 - Babylon.js отвечает только за presentation;
 - Colyseus изолирован за `GameTransport` / remote transport boundary;
 - `/?transport=local` исполняет ту же shared simulation в WebWorker через `LocalGameTransport`; обычный `/` остаётся `RemoteGameTransport`; presentation не ветвится по режиму;

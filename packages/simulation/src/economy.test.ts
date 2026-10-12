@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import { ENTITY_DEFINITIONS, type MapDefinition } from "@web-rts/game-data";
 import { createWorld, World } from "./world.js";
+import { spawnSoldier } from "./foundation-match.js";
+import { PLAYER_TEAM, PVE_TEAM } from "./teams.js";
+import { EntityPathQueryLane } from "./path-query-lane.js";
+import { segmentIsTraversable } from "./navigation.js";
 import { readWorldEntities } from "./snapshot.js";
 import { createMatchRuntime } from "./match-runtime.js";
 
@@ -31,6 +35,8 @@ function solid(
     world.resourceNodes.set(id, { resourceType: "WOOD", remaining: 23 });
   else {
     world.owners.set(id, { ownerPlayerId: owner });
+    world.teams.set(id, { teamId: PLAYER_TEAM });
+    world.health.set(id, { current: def.maxHealth!, max: def.maxHealth! });
     world.dropoffs.set(id, { resourceTypes: ["WOOD"] });
   }
   return id;
@@ -40,6 +46,11 @@ function worker(world: World, x = 2.5, y = 5.5, owner = 0, controller = owner): 
   world.positions.set(id, { x, y });
   world.owners.set(id, { ownerPlayerId: owner });
   world.controllers.set(id, { controllerPlayerId: controller });
+  world.teams.set(id, { teamId: PLAYER_TEAM });
+  world.health.set(id, {
+    current: ENTITY_DEFINITIONS.worker.maxHealth,
+    max: ENTITY_DEFINITIONS.worker.maxHealth,
+  });
   world.workers.set(id, {
     moveSpeed: 5,
     carryCapacity: 10,
@@ -503,4 +514,229 @@ it("all four production spawn slots have exactly one owned Hall and controlled W
   expect(snapshot.entities.filter((entity) => entity.resourceNode?.remaining === 100)).toHaveLength(
     4,
   );
+});
+
+describe("G5 + G6 integration", () => {
+  it("gathers and deposits while a Soldier independently chases and fights", () => {
+    const { world, id, source } = fixture();
+    const soldier = spawnSoldier(world, { x: 9.5, y: 8.5 }, PLAYER_TEAM);
+    const enemy = spawnSoldier(world, { x: 13.5, y: 8.5 }, PVE_TEAM);
+    gather(world, id, source);
+    world.stepN(150);
+    expect(wood(world)).toBeGreaterThan(0);
+    expect(world.resourceNodes.get(source)!.remaining).toBeLessThan(23);
+    expect(world.hasEntity(enemy)).toBe(false);
+    expect(world.hasEntity(soldier)).toBe(true);
+    expect(world.health.get(id)!.current).toBe(ENTITY_DEFINITIONS.worker.maxHealth);
+  });
+
+  it.each([false, true])(
+    "shares ascending-id scarce budget (Soldier created first: %s)",
+    (soldierFirst) => {
+      const world = createWorld({
+        seed: 59,
+        map,
+        pathQueriesPerTick: { commandBudget: 4, activeTaskBudget: 1, aiBudget: 1 },
+      });
+      let soldier: number;
+      let id: number;
+      if (soldierFirst) {
+        soldier = spawnSoldier(world, { x: 9.5, y: 8.5 }, PLAYER_TEAM);
+        id = worker(world);
+      } else {
+        id = worker(world);
+        soldier = spawnSoldier(world, { x: 9.5, y: 8.5 }, PLAYER_TEAM);
+      }
+      const source = solid(world, "wood_node", 8, 5);
+      solid(world, "town_hall", 1, 1);
+      const enemy = spawnSoldier(world, { x: 13.5, y: 8.5 }, PVE_TEAM);
+      world.attacks.remove(enemy); // stationary target; no second autonomous planner
+      gather(world, id, source);
+      world.step();
+      world.stopNavigation(id);
+      world.positions.set(enemy, { x: 14.5, y: 8.5 });
+      const before = new Map(
+        [id, soldier].map((entity) => [entity, { ...world.positions.get(entity)! }]),
+      );
+      const reserve = vi.spyOn(EntityPathQueryLane.prototype, "tryReserve");
+      world.step();
+      expect(reserve.mock.calls.map(([entity]) => entity)).toEqual(
+        [id, soldier].sort((a, b) => a - b),
+      );
+      reserve.mockRestore();
+      expect(world.readPathQueryMetrics().activeTaskQueries).toBe(1);
+      const deferred = Math.max(id, soldier);
+      expect(world.positions.get(deferred)).toEqual(before.get(deferred));
+      expect(world.gatherTasks.has(id)).toBe(true);
+      expect(world.soldiers.get(soldier)!.state).toBe("ENGAGING");
+      world.step();
+      expect(world.readPathQueryMetrics().activeTaskQueries).toBe(1);
+      for (const entity of [id, soldier]) {
+        expect(
+          segmentIsTraversable(world.grid!, before.get(entity)!, world.positions.get(entity)!),
+        ).toBe(true);
+      }
+    },
+  );
+
+  it("does not attack friendly Worker/Town Hall or neutral Wood; hostile Soldier damages both destructible types", () => {
+    const { world, id, source, hall } = fixture();
+    const friendly = spawnSoldier(world, { x: 2.5, y: 5 }, PLAYER_TEAM);
+    world.stepN(20);
+    expect(world.soldiers.get(friendly)!.state).toBe("IDLE");
+    expect(world.health.get(id)!.current).toBe(ENTITY_DEFINITIONS.worker.maxHealth);
+    expect(world.health.get(hall)!.current).toBe(ENTITY_DEFINITIONS.town_hall.maxHealth);
+    expect(world.teams.has(source)).toBe(false);
+    expect(world.health.has(source)).toBe(false);
+    world.destroyEntity(friendly);
+    const hostile = spawnSoldier(world, { x: 2.5, y: 5 }, PVE_TEAM);
+    world.step();
+    expect(world.health.get(id)!.current).toBe(
+      ENTITY_DEFINITIONS.worker.maxHealth - ENTITY_DEFINITIONS.soldier.attack.damage,
+    );
+    world.destroyEntity(id);
+    world.positions.set(hostile, { x: 3.5, y: 2.5 });
+    world.stepN(10);
+    expect(world.health.get(hall)!.current).toBe(
+      ENTITY_DEFINITIONS.town_hall.maxHealth - ENTITY_DEFINITIONS.soldier.attack.damage,
+    );
+    expect(world.resourceNodes.get(source)!.remaining).toBe(23);
+  });
+
+  it("lethal damage to a carrying Worker clears both subsystems and never deposits its carry", () => {
+    const { world, id, source } = fixture();
+    gather(world, id, source);
+    until(world, () => world.workers.get(id)!.carried.amount > 0);
+    const position = world.positions.get(id)!;
+    const killer = spawnSoldier(world, { x: position.x, y: position.y + 0.5 }, PVE_TEAM);
+    world.health.get(id)!.current = 10;
+    world.soldiers
+      .get(killer)!
+      .unreachable.set(id, { cellId: 0, revision: world.topologyRevision });
+    world.combats.get(killer)!.targetEntityId = id;
+    world.step();
+    expect(world.hasEntity(id)).toBe(false);
+    for (const store of [
+      world.identities,
+      world.positions,
+      world.workers,
+      world.gatherTasks,
+      world.movements,
+      world.teams,
+      world.health,
+      world.attacks,
+      world.combats,
+      world.soldiers,
+    ])
+      expect(store.has(id)).toBe(false);
+    expect(world.readNavigation(id)).toBeUndefined();
+    expect(world.soldiers.get(killer)!.unreachable.has(id)).toBe(false);
+    expect(world.combats.get(killer)!.targetEntityId).toBeNull();
+    world.stepN(100);
+    expect(wood(world)).toBe(0);
+  });
+
+  it("lethal Town Hall damage fails GATHER with no_dropoff, preserves carry and removes footprint", () => {
+    const { world, id, source, hall } = fixture();
+    gather(world, id, source);
+    until(world, () => world.workers.get(id)!.carried.amount > 0);
+    const carry = world.workers.get(id)!.carried.amount;
+    const killer = spawnSoldier(world, { x: 3.5, y: 2.5 }, PVE_TEAM);
+    world.health.get(hall)!.current = 10;
+    world.step();
+    expect(world.hasEntity(hall)).toBe(false);
+    expect(world.dropoffs.has(hall)).toBe(false);
+    expect(world.health.has(hall)).toBe(false);
+    expect(world.teams.has(hall)).toBe(false);
+    expect(world.grid!.footprintOf(hall)).toBeUndefined();
+    world.drainEvents();
+    world.step(); // Worker processes invalidated pinned drop-off in the next ascending pass
+    expect(world.drainEvents()).toContainEqual(
+      expect.objectContaining({ type: "ACTION_FAILED", entityId: id, reason: "no_dropoff" }),
+    );
+    expect(world.gatherTasks.has(id)).toBe(false);
+    expect(world.workers.get(id)!.carried.amount).toBeGreaterThanOrEqual(carry);
+    const preserved = world.workers.get(id)!.carried.amount;
+    world.destroyEntity(killer);
+    world.stepN(100);
+    expect(world.workers.get(id)!.carried.amount).toBe(preserved);
+    expect(wood(world)).toBe(0);
+  });
+});
+
+it("keeps both tasks on rejected MOVE/GATHER and cancels both only on accepted group MOVE", () => {
+  const { world, id, source } = fixture();
+  const soldier = spawnSoldier(world, { x: 9.5, y: 8.5 }, PLAYER_TEAM);
+  world.controllers.set(soldier, { controllerPlayerId: 0 });
+  const enemy = spawnSoldier(world, { x: 13.5, y: 8.5 }, PVE_TEAM);
+  world.attacks.remove(enemy);
+  gather(world, id, source);
+  world.step();
+  const task = world.gatherTasks.get(id);
+  world.workers.get(id)!.carried.amount = 3;
+  world.enqueueCommand({
+    actor: { playerId: 0 },
+    command: {
+      type: "MOVE",
+      commandId: "rejected-group",
+      entityIds: [id, soldier, source],
+      target: { x: 12.5, y: 10.5 },
+    },
+  });
+  gather(world, soldier, source, "not-worker");
+  gather(world, id, soldier, "invalid-resource");
+  world.step();
+  expect(world.gatherTasks.get(id)).toBe(task);
+  expect(world.soldiers.get(soldier)!.targetEntityId).toBe(enemy);
+  expect(
+    world
+      .drainEvents()
+      .filter((e) => e.type === "COMMAND_REJECTED")
+      .map((e) => e.reason),
+  ).toEqual(["not_your_unit", "not_worker", "invalid_resource"]);
+  world.enqueueCommand({
+    actor: { playerId: 0 },
+    command: {
+      type: "MOVE",
+      commandId: "accepted-group",
+      entityIds: [id, soldier],
+      target: { x: 12.5, y: 10.5 },
+    },
+  });
+  world.step();
+  expect(world.gatherTasks.has(id)).toBe(false);
+  expect(world.workers.get(id)!.carried.amount).toBe(3);
+  expect(world.soldiers.get(soldier)!.state).toBe("MOVING");
+  expect(world.combats.get(soldier)!.targetEntityId).toBeNull();
+});
+
+it("copies combined economy/combat bootstrap snapshots defensively", () => {
+  const runtime = createMatchRuntime({
+    seed: 59,
+    mapId: "foundation",
+    participants: [{ playerId: 0 }],
+  });
+  const snapshot = runtime.readSnapshot();
+  expect(snapshot.entities).toHaveLength(9);
+  const workerView = snapshot.entities.find((e) => e.definitionId === "worker")!;
+  const soldierView = snapshot.entities.find((e) => e.definitionId === "soldier")!;
+  const resourceView = snapshot.entities.find((e) => e.resourceNode)!;
+  workerView.worker!.carried.amount = 999;
+  workerView.health!.current = 0;
+  soldierView.health!.current = 0;
+  resourceView.resourceNode!.remaining = 0;
+  snapshot.playerEconomies[0]!.resources.WOOD = 999;
+  const fresh = runtime.readSnapshot();
+  expect(fresh.entities.find((e) => e.definitionId === "worker")).toMatchObject({
+    teamId: PLAYER_TEAM,
+    health: { current: 60, max: 60 },
+    worker: { carried: { amount: 0 }, phase: "IDLE" },
+  });
+  expect(fresh.entities.find((e) => e.definitionId === "soldier")).toMatchObject({
+    teamId: PLAYER_TEAM,
+    health: { current: 100, max: 100 },
+    soldierState: "IDLE",
+  });
+  expect(fresh.entities.find((e) => e.resourceNode)!.resourceNode!.remaining).toBe(100);
+  expect(fresh.playerEconomies[0]!.resources.WOOD).toBe(0);
 });

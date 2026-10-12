@@ -6,6 +6,9 @@ import type { World } from "./world.js";
  * It is not a wire DTO and does not import protocol.
  */
 export type MatchEntitySnapshot = {
+  teamId?: import("./types.js").TeamId;
+  health?: { current: number; max: number };
+  soldierState?: import("./types.js").SoldierState;
   entityId: EntityId;
   kind: EntityKind;
   definitionId: string;
@@ -48,6 +51,15 @@ export function readWorldEntities(world: World): MatchEntitySnapshot[] {
     const owner = world.owners.get(entityId);
     const controller = world.controllers.get(entityId);
     entities.push({
+      ...(world.teams.get(entityId) === undefined
+        ? {}
+        : { teamId: world.teams.get(entityId)!.teamId }),
+      ...(world.health.get(entityId) === undefined
+        ? {}
+        : { health: { ...world.health.get(entityId)! } }),
+      ...(world.soldiers.get(entityId) === undefined
+        ? {}
+        : { soldierState: world.soldiers.get(entityId)!.state }),
       entityId,
       kind: identity.kind,
       definitionId: identity.definitionId,

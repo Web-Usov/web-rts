@@ -106,11 +106,21 @@ export async function canvasRightClick(
 // G5 introduces several blue proxy meshes. Track the original Foundation cube
 // as a connected pixel region; exclude stationary regions from later movement reads.
 // Seed is the visually verified spawn in the fixed 1280×720/default-camera fixture.
-const unitTracking = new WeakMap<Page, { stationary: CanvasCentroid[]; last: CanvasCentroid }>();
+type UnitProxy = "foundation" | "soldier" | "worker";
+const unitTracking = new WeakMap<
+  Page,
+  Map<UnitProxy, { stationary: CanvasCentroid[]; last: CanvasCentroid }>
+>();
+const unitSeeds = {
+  foundation: { x: 454, y: 315 },
+  soldier: { x: 518, y: 314 },
+  worker: { x: 416, y: 300 },
+} as const;
 
 export async function measureColorCentroid(
   page: Page,
   filter: RgbBand,
+  proxy: UnitProxy = "foundation",
 ): Promise<CanvasCentroid | null> {
   const canvas = await canvasLocator(page);
   const box = await canvas.boundingBox();
@@ -215,18 +225,24 @@ export async function measureColorCentroid(
       x: (region.x * box.width) / sample.width,
       y: (region.y * box.height) / sample.height,
     }));
-    const tracking = unitTracking.get(page);
-    const reference = tracking?.last ?? { x: 454, y: 315 };
+    const tracks = unitTracking.get(page) ?? new Map();
+    const tracking = tracks.get(proxy);
+    const reference = tracking?.last ?? unitSeeds[proxy];
     const candidates = regions.filter(
-      (region) => !tracking?.stationary.some((other) => cssDistance(region, other) < 4),
+      (region) =>
+        !tracking?.stationary.some((other) => cssDistance(region, other) < 4) &&
+        ![...tracks.entries()].some(
+          ([key, other]) => key !== proxy && cssDistance(region, other.last) < 8,
+        ),
     );
     candidates.sort((a, b) => cssDistance(a, reference) - cssDistance(b, reference));
     const selected = candidates[0];
     if (selected === undefined) return null;
-    unitTracking.set(page, {
+    tracks.set(proxy, {
       stationary: tracking?.stationary ?? regions.filter((region) => region !== selected),
       last: selected,
     });
+    unitTracking.set(page, tracks);
     return selected;
   }
 
@@ -358,4 +374,16 @@ export async function measureCanvasPresentationChange(
       afterB64: afterPng.toString("base64"),
     },
   );
+}
+
+/** Tracks one connected blue proxy region, separately from the Foundation/Worker proxies. */
+export async function findSoldierCentroid(page: Page): Promise<CanvasCentroid> {
+  const sample = await measureColorCentroid(page, LOCAL_UNIT_BLUE, "soldier");
+  if (!sample || sample.count < LOCAL_UNIT_MIN_PIXELS) throw new Error("Soldier pixels missing");
+  return sample;
+}
+export async function findWorkerCentroid(page: Page): Promise<CanvasCentroid> {
+  const sample = await measureColorCentroid(page, LOCAL_UNIT_BLUE, "worker");
+  if (!sample || sample.count < LOCAL_UNIT_MIN_PIXELS) throw new Error("Worker pixels missing");
+  return sample;
 }

@@ -26,7 +26,7 @@ test.describe("F10 debug overlay", () => {
     await page.getByRole("button", { name: "Start" }).click();
     await expectHud(page, "Phase", "RUNNING");
 
-    await expect(debugValue(page, "Entities")).toHaveText("8");
+    await expect(debugValue(page, "Entities")).toHaveText("9");
 
     const readTick = async (): Promise<number> =>
       Number((await debugValue(page, "Server tick").textContent())?.trim());

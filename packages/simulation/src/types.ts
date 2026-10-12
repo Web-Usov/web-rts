@@ -75,6 +75,7 @@ export interface Objective {
   readonly type: ObjectiveType;
   readonly targetEntityId: EntityId;
   readonly required: boolean;
+  readonly teamId?: TeamId;
   state: ObjectiveState;
 }
 
@@ -102,4 +103,34 @@ export interface GatherTask {
   phase: "TO_SOURCE" | "GATHERING" | "TO_DROPOFF";
   /** Fractional rate accumulator; stock and carry remain integer resource units. */
   gatherProgress: number;
+}
+
+/** Allegiance id, independent of player slots and entity ids. */
+declare const teamIdBrand: unique symbol;
+export type TeamId = string & { readonly [teamIdBrand]: true };
+
+export interface Team {
+  readonly teamId: TeamId;
+}
+export interface Health {
+  current: number;
+  readonly max: number;
+}
+export type { AttackProfile, SoldierProfile } from "@web-rts/game-data";
+export type SoldierState = "IDLE" | "MOVING" | "ENGAGING";
+export interface SoldierTask {
+  state: SoldierState;
+  targetEntityId: EntityId | null;
+  /** Fixed at acquisition; never follows the chased target. */
+  anchor: Position | null;
+  /** Target cell used to plan the current approach. */
+  plannedTargetCell: number | null;
+  /** Failed acquisition is retried only when target cell/topology changes. */
+  unreachable: Map<EntityId, { cellId: number; revision: number }>;
+  /** Prevent immediate reacquisition from incrementally extending a chase. */
+  excludedUntilExit: Set<EntityId>;
+}
+export interface Combat {
+  targetEntityId: EntityId | null;
+  nextAttackTick: number;
 }

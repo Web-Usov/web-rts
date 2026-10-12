@@ -6,8 +6,10 @@ import {
   placeStartingStructures,
   spawnPlayerUnits,
   spawnStartingEconomy,
+  spawnPlayerSoldiers,
 } from "./foundation-match.js";
 import { readWorldEntities, type MatchEntitySnapshot } from "./snapshot.js";
+import { PLAYER_TEAM } from "./teams.js";
 import type { EntityId, PlayerEconomy, PlayerId } from "./types.js";
 import { createWorld, type World } from "./world.js";
 
@@ -149,10 +151,12 @@ class FoundationMatchRuntime implements MatchRuntime {
     const playerIds = setup.participants.map((participant) => participant.playerId);
     for (const playerId of playerIds) {
       this.queues.set(playerId, []);
+      this.world.playerTeams.set(playerId, PLAYER_TEAM);
     }
     spawnPlayerUnits(this.world, map, playerIds);
     placeStartingStructures(this.world, map);
     spawnStartingEconomy(this.world, map, playerIds);
+    spawnPlayerSoldiers(this.world, map, playerIds);
     this.world.drainEvents();
   }
 

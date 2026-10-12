@@ -54,7 +54,7 @@ describe("MatchRuntime", () => {
     expect(objectiveOf(snapshot)).toMatchObject({ x: 0, y: 0, controllerPlayerId: null });
     expect(runtime.readMetrics()).toMatchObject({
       tick: 0,
-      entityCount: 11,
+      entityCount: 13,
       pendingCommandCount: 0,
     });
     expect(runtime.drainEvents()).toEqual([]);
@@ -83,7 +83,7 @@ describe("MatchRuntime", () => {
 
     expect(runtime.readMetrics()).toMatchObject({
       tick: 1,
-      entityCount: 11,
+      entityCount: 13,
       pendingCommandCount: 0,
     });
     expect(unitOf(runtime.readSnapshot(), 0).x).not.toBe(unit.x);
@@ -289,7 +289,7 @@ describe("MatchRuntime", () => {
       controllerPlayerId: null,
     });
     expect(unitOf(after, 1)).toMatchObject({ controllerPlayerId: 1 });
-    expect(after.entities).toHaveLength(11);
+    expect(after.entities).toHaveLength(13);
     expect(runtime.submitCommand({ playerId: 0 }, move("after-leave", [unit0.entityId]))).toEqual({
       accepted: false,
       reason: "not_participant",

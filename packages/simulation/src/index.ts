@@ -67,3 +67,25 @@ export {
 } from "./types.js";
 /** Low-level kernel for tests/testkit. Production shells use MatchRuntime. */
 export { createWorld, World, type SolidPlacement, type SolidPlacementRefusal } from "./world.js";
+
+export {
+  createTeamId,
+  PLAYER_TEAM,
+  PVE_TEAM,
+  RelationshipPolicy,
+  type Relationship,
+  type TeamRelation,
+} from "./teams.js";
+export type {
+  TeamId,
+  Team,
+  Health,
+  AttackProfile,
+  Combat,
+  SoldierProfile,
+  SoldierState,
+  SoldierTask,
+} from "./types.js";
+
+/** Low-level bootstrap helper for scenario fixtures. Production uses MatchRuntime. */
+export { spawnSoldier, spawnStartingEconomy } from "./foundation-match.js";

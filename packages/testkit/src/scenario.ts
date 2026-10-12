@@ -19,6 +19,7 @@ export interface ScenarioCommandAtTick {
 }
 
 export interface RunScenarioOptions {
+  map?: CreateWorldOptions["map"];
   seed?: number;
   tickHz?: number;
   defaultMoveSpeed?: number;
@@ -42,6 +43,7 @@ export function createTestWorld(options: CreateWorldOptions = {}): World {
 export function runScenario(options: RunScenarioOptions): World {
   const createOptions: CreateWorldOptions = {
     seed: options.seed ?? 1,
+    ...(options.map === undefined ? {} : { map: options.map }),
   };
   if (options.tickHz !== undefined) {
     createOptions.tickHz = options.tickHz;

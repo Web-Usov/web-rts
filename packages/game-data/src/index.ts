@@ -8,6 +8,8 @@ export {
   ENTITY_DEFINITIONS,
   ENTITY_KINDS,
   getEntityDefinition,
+  type AttackProfile,
+  type SoldierProfile,
   type EntityDefinition,
   type EntityDefinitionId,
   type EntityKind,

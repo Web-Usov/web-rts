@@ -19,14 +19,23 @@ import {
   type FootprintPlacementRefusal,
   type SpatialFootprint,
 } from "./spatial-grid.js";
+import { RelationshipPolicy } from "./teams.js";
+import { prepareSoldier, resolveEntityCombat } from "./systems/combat.js";
 import { assessGather, economyHooks, installGatherNavigation } from "./systems/economy.js";
 import { runMovementSystem } from "./systems/movement.js";
 import type {
   Worker,
   ResourceNode,
-  PlayerEconomy,
   Dropoff,
   GatherTask,
+  PlayerEconomy,
+  AttackProfile,
+  Combat,
+  Health,
+  SoldierProfile,
+  SoldierTask,
+  Team,
+  TeamId,
   Controller,
   EntityId,
   EntityIdentity,
@@ -65,6 +74,15 @@ export class World {
   readonly playerEconomies = new Map<PlayerId, PlayerEconomy>();
   readonly owners = new ComponentStore<Owner>();
   readonly controllers = new ComponentStore<Controller>();
+
+  readonly teams = new ComponentStore<Team>();
+  readonly health = new ComponentStore<Health>();
+  readonly attacks = new ComponentStore<AttackProfile>();
+  readonly combats = new ComponentStore<Combat>();
+  readonly soldiers = new ComponentStore<SoldierTask>();
+  readonly soldierProfiles = new ComponentStore<SoldierProfile>();
+  readonly playerTeams = new Map<PlayerId, TeamId>();
+  readonly relationships = new RelationshipPolicy();
 
   private activeTaskQueries = 0;
   private aiQueries = 0;
@@ -115,6 +133,27 @@ export class World {
     this.gatherTasks.remove(entityId);
     this.owners.remove(entityId);
     this.controllers.remove(entityId);
+    this.teams.remove(entityId);
+    this.health.remove(entityId);
+    this.attacks.remove(entityId);
+    this.combats.remove(entityId);
+    this.soldiers.remove(entityId);
+    this.soldierProfiles.remove(entityId);
+    for (const [, soldier] of this.soldiers.entries()) {
+      soldier.unreachable.delete(entityId);
+    }
+    for (const [id, combat] of this.combats.entries()) {
+      if (combat.targetEntityId !== entityId) continue;
+      combat.targetEntityId = null;
+      const soldier = this.soldiers.get(id);
+      if (soldier !== undefined) {
+        this.stopNavigation(id);
+        soldier.state = "IDLE";
+        soldier.targetEntityId = null;
+        soldier.anchor = null;
+        soldier.plannedTargetCell = null;
+      }
+    }
   }
 
   hasEntity(entityId: EntityId): boolean {
@@ -198,6 +237,33 @@ export class World {
     return this.grid?.topologyRevision ?? 0;
   }
 
+  /** Internal task-system bridge; displacement remains owned by Movement. */
+  startNavigation(entityId: EntityId, task: NavigationTask, speed: number): void {
+    this.navigations.set(entityId, task);
+    const waypoint = task.waypoints[0];
+    if (waypoint !== undefined)
+      this.movements.set(entityId, { targetX: waypoint.x, targetY: waypoint.y, speed });
+  }
+
+  stopNavigation(entityId: EntityId): void {
+    this.movements.remove(entityId);
+    this.navigations.remove(entityId);
+  }
+
+  private cancelCombatForMove(entityId: EntityId): void {
+    const task = this.soldiers.get(entityId);
+    if (task !== undefined) {
+      task.state = "MOVING";
+      task.targetEntityId = null;
+      task.anchor = null;
+      task.plannedTargetCell = null;
+      task.unreachable.clear();
+      task.excludedUntilExit.clear();
+    }
+    const combat = this.combats.get(entityId);
+    if (combat !== undefined) combat.targetEntityId = null;
+  }
+
   /**
    * Copy of the simulation-internal navigation task, if the entity is following a path.
    * Not part of {@link MatchSnapshot} or the protocol.
@@ -253,15 +319,29 @@ export class World {
     // G9 will construct its own EntityPathQueryLane(aiBudget) and report usage here.
     this.aiQueries = 0;
     this.applyCommands();
-    runMovementSystem(
-      this.positions,
-      this.movements,
-      this.config.tickDurationSeconds,
-      this.grid === null
-        ? undefined
-        : { tasks: this.navigations, grid: this.grid, lane: activeTaskLane },
-      economyHooks(this, this.navigations, activeTaskLane, this.events),
-    );
+    const hooks = economyHooks(this, this.navigations, activeTaskLane, this.events);
+    // A single ascending entity pass shares active-task budget between combat and
+    // MOVE replans. Each entity can reserve at most one query in this lane.
+    for (const entityId of this.entityIds()) {
+      if (!this.hasEntity(entityId)) continue;
+      const health = this.health.get(entityId);
+      if (health !== undefined && health.current <= 0) {
+        this.destroyEntity(entityId);
+        continue;
+      }
+      prepareSoldier(this, entityId, activeTaskLane);
+      runMovementSystem(
+        this.positions,
+        this.movements,
+        this.config.tickDurationSeconds,
+        this.grid === null
+          ? undefined
+          : { tasks: this.navigations, grid: this.grid, lane: activeTaskLane },
+        hooks,
+        [entityId],
+      );
+      resolveEntityCombat(this, entityId);
+    }
     this.activeTaskQueries = activeTaskLane.used;
     this.tickCount += 1;
   }
@@ -337,11 +417,15 @@ export class World {
     if (this.grid === null) {
       for (const entityId of applicable) {
         this.gatherTasks.remove(entityId);
+        this.cancelCombatForMove(entityId);
         this.navigations.remove(entityId);
         this.movements.set(entityId, {
           targetX: command.target.x,
           targetY: command.target.y,
-          speed: this.workers.get(entityId)?.moveSpeed ?? speed,
+          speed:
+            this.workers.get(entityId)?.moveSpeed ??
+            this.soldierProfiles.get(entityId)?.moveSpeed ??
+            speed,
         });
       }
       this.acceptCommand(playerId, command.commandId);
@@ -366,6 +450,7 @@ export class World {
     for (const { entityId, task } of planned) {
       this.gatherTasks.remove(entityId);
       this.movements.remove(entityId);
+      this.cancelCombatForMove(entityId);
       this.navigations.set(entityId, task);
       const waypoint = task.waypoints[0];
       if (waypoint === undefined) {
@@ -374,7 +459,10 @@ export class World {
       this.movements.set(entityId, {
         targetX: waypoint.x,
         targetY: waypoint.y,
-        speed: this.workers.get(entityId)?.moveSpeed ?? speed,
+        speed:
+          this.workers.get(entityId)?.moveSpeed ??
+          this.soldierProfiles.get(entityId)?.moveSpeed ??
+          speed,
       });
     }
 

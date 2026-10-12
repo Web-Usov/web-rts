@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { FOUNDATION_MAP, type MapDefinition } from "@web-rts/game-data";
 import { placeStartingStructures, spawnPlayerUnits } from "./foundation-match.js";
 import { readWorldEntities } from "./snapshot.js";
+import { PLAYER_TEAM } from "./teams.js";
 import { createWorld } from "./world.js";
 
 describe("match layout from MapDefinition", () => {
@@ -28,7 +29,16 @@ describe("match layout from MapDefinition", () => {
     expect(world.controllers.has(siteId!)).toBe(false);
     expect(world.owners.has(siteId!)).toBe(false);
     expect(world.objectiveEntries()).toEqual([
-      [1, { type: "PROTECT", targetEntityId: siteId, required: true, state: "ACTIVE" }],
+      [
+        1,
+        {
+          type: "PROTECT",
+          targetEntityId: siteId,
+          teamId: PLAYER_TEAM,
+          required: true,
+          state: "ACTIVE",
+        },
+      ],
     ]);
   });
 
@@ -83,6 +93,7 @@ describe("match layout from MapDefinition", () => {
       entityId: units.get(0),
       kind: "UNIT",
       definitionId: "foundation_unit",
+      teamId: PLAYER_TEAM,
       ...FOUNDATION_MAP.playerSpawns[0]!.unitPosition,
       ownerPlayerId: 0,
       controllerPlayerId: 0,
