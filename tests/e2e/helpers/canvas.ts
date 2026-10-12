@@ -121,6 +121,7 @@ export async function measureColorCentroid(
   page: Page,
   filter: RgbBand,
   proxy: UnitProxy = "foundation",
+  selected = false,
 ): Promise<CanvasCentroid | null> {
   const canvas = await canvasLocator(page);
   const box = await canvas.boundingBox();
@@ -130,7 +131,7 @@ export async function measureColorCentroid(
 
   const png = await page.screenshot({ clip: box });
   const sample = await page.evaluate(
-    async ({ b64, band, split }) => {
+    async ({ b64, band, split, selected }) => {
       const binary = atob(b64);
       const bytes = new Uint8Array(binary.length);
       for (let i = 0; i < binary.length; i += 1) {
@@ -151,12 +152,24 @@ export async function measureColorCentroid(
       let sumX = 0;
       let sumY = 0;
       let count = 0;
+      const ringMask = selected ? new Uint8Array(width * height) : null;
       for (let y = 0; y < height; y += 1) {
         for (let x = 0; x < width; x += 1) {
           const i = (y * width + x) * 4;
           const r = data[i]!;
           const g = data[i + 1]!;
           const b = data[i + 2]!;
+          // Exclude HUD white text; component width below separates the
+          // selected unit's wide ground ring from the tiny destination marker.
+          if (
+            ringMask !== null &&
+            x > 336 &&
+            !(x >= 1004 && y < 300) &&
+            r > 220 &&
+            g > 220 &&
+            b > 220
+          )
+            ringMask[y * width + x] = 1;
           if (
             r >= band.minR &&
             r <= band.maxR &&
@@ -207,8 +220,53 @@ export async function measureColorCentroid(
           if (size >= 20) regions.push({ x: xSum / size, y: ySum / size, count: size });
         }
       }
+      let ring: { x: number; y: number } | null = null;
+      let widest = 0;
+      if (ringMask !== null) {
+        for (let id = 0; id < ringMask.length; id++) {
+          if (!ringMask[id]) continue;
+          const stack = [id];
+          ringMask[id] = 0;
+          let minX = width,
+            maxX = 0,
+            minY = height,
+            maxY = 0;
+          let sx = 0,
+            sy = 0,
+            size = 0;
+          while (stack.length) {
+            const cell = stack.pop()!,
+              x = cell % width,
+              y = Math.floor(cell / width);
+            minX = Math.min(minX, x);
+            maxX = Math.max(maxX, x);
+            minY = Math.min(minY, y);
+            maxY = Math.max(maxY, y);
+            sx += x;
+            sy += y;
+            size++;
+            for (let dy = -1; dy <= 1; dy++)
+              for (let dx = -1; dx <= 1; dx++) {
+                const nx = x + dx,
+                  ny = y + dy;
+                if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+                const next = ny * width + nx;
+                if (ringMask[next]) {
+                  ringMask[next] = 0;
+                  stack.push(next);
+                }
+              }
+          }
+          const span = maxX - minX;
+          if (size > 20 && span >= 24 && maxY - minY >= 9 && span > widest) {
+            widest = span;
+            ring = { x: sx / size, y: sy / size };
+          }
+        }
+      }
       return {
         regions,
+        ring,
         count,
         cx: count > 0 ? sumX / count : null,
         cy: count > 0 ? sumY / count : null,
@@ -216,7 +274,7 @@ export async function measureColorCentroid(
         height,
       };
     },
-    { b64: png.toString("base64"), band: filter, split: filter === LOCAL_UNIT_BLUE },
+    { b64: png.toString("base64"), band: filter, split: filter === LOCAL_UNIT_BLUE, selected },
   );
 
   if (filter === LOCAL_UNIT_BLUE) {
@@ -227,23 +285,32 @@ export async function measureColorCentroid(
     }));
     const tracks = unitTracking.get(page) ?? new Map();
     const tracking = tracks.get(proxy);
-    const reference = tracking?.last ?? unitSeeds[proxy];
+    const ring =
+      sample.ring === null
+        ? null
+        : {
+            x: (sample.ring.x * box.width) / sample.width,
+            y: (sample.ring.y * box.height) / sample.height,
+          };
+    if (selected && ring === null) return null;
+    const reference = selected ? ring! : (tracking?.last ?? unitSeeds[proxy]);
     const candidates = regions.filter(
       (region) =>
-        !tracking?.stationary.some((other) => cssDistance(region, other) < 4) &&
-        ![...tracks.entries()].some(
-          ([key, other]) => key !== proxy && cssDistance(region, other.last) < 8,
-        ),
+        selected ||
+        (!tracking?.stationary.some((other) => cssDistance(region, other) < 4) &&
+          ![...tracks.entries()].some(
+            ([key, other]) => key !== proxy && cssDistance(region, other.last) < 8,
+          )),
     );
     candidates.sort((a, b) => cssDistance(a, reference) - cssDistance(b, reference));
-    const selected = candidates[0];
-    if (selected === undefined) return null;
+    const region = candidates[0];
+    if (region === undefined || (selected && cssDistance(region, reference) > 60)) return null;
     tracks.set(proxy, {
-      stationary: tracking?.stationary ?? regions.filter((region) => region !== selected),
-      last: selected,
+      stationary: tracking?.stationary ?? regions.filter((candidate) => candidate !== region),
+      last: region,
     });
     unitTracking.set(page, tracks);
-    return selected;
+    return region;
   }
 
   if (sample.cx === null || sample.cy === null || sample.count === 0) {
@@ -386,4 +453,9 @@ export async function findWorkerCentroid(page: Page): Promise<CanvasCentroid> {
   const sample = await measureColorCentroid(page, LOCAL_UNIT_BLUE, "worker");
   if (!sample || sample.count < LOCAL_UNIT_MIN_PIXELS) throw new Error("Worker pixels missing");
   return sample;
+}
+
+/** Uses the visible white selection ring instead of motion tracking when two blue units move. */
+export async function findSelectedSoldierCentroid(page: Page): Promise<CanvasCentroid | null> {
+  return measureColorCentroid(page, LOCAL_UNIT_BLUE, "soldier", true);
 }
