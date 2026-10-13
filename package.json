@@ -16,7 +16,8 @@
     "test:docker-smoke": "node scripts/docker-lan-smoke.mjs",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint && prettier --check .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "verify:gameplay": "pnpm --silent exec turbo run build --filter=@web-rts/scenario-runner > /dev/null && node tools/scenario-runner/dist/cli.js"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -19,3 +19,9 @@ export {
   type ParityOutcome,
   type ParityRejection,
 } from "./parity.js";
+export {
+  verifyGameplay,
+  type EvidenceValue,
+  type GameplayCheck,
+  type GameplayScenario,
+} from "./verification.js";

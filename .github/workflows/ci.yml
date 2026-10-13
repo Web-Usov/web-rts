@@ -217,7 +217,83 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Simulation scenario tests
-        run: pnpm test:simulation
+        run: |
+          set -o pipefail
+          mkdir -p .artifacts/verification/gameplay
+          pnpm test:simulation 2>&1 | tee .artifacts/verification/gameplay/simulation-tests.log
+
+      - name: Gameplay evidence gates
+        run: |
+          set -euo pipefail
+          output=".artifacts/verification/gameplay"
+          mkdir -p "$output"
+
+          pnpm --silent verify:gameplay move > "$output/move.json" 2> "$output/move.log"
+          pnpm --silent verify:gameplay combat > "$output/combat.json" 2> "$output/combat.log"
+
+          # Reuse the same verification oracle as the existing negative Vitest gate.
+          # This is a deliberately wrong expectation, not a gameplay code mutation.
+          node --input-type=module > "$output/wrong-expectation.json" 2> "$output/wrong-expectation.log" <<'NODE'
+          import { verifyGameplay } from "./packages/testkit/dist/index.js";
+          import { gameplayScenario } from "./tools/scenario-runner/dist/verification-scenarios.js";
+          const scenario = gameplayScenario("move");
+          const execute = scenario.execute;
+          scenario.execute = () => {
+            const result = execute();
+            return {
+              ...result,
+              checks: result.checks.map((check) =>
+                check.id === "arrived-at-target"
+                  ? { ...check, expected: { x: 999, y: -3 } }
+                  : check,
+              ),
+            };
+          };
+          const report = verifyGameplay(scenario);
+          console.log(JSON.stringify(report, null, 2));
+          if (
+            report.status !== "FAIL" ||
+            report.firstMismatchTick !== 120 ||
+            report.checks.find((check) => check.id === "arrived-at-target")?.status !== "FAIL"
+          ) {
+            console.error("Expected mismatch was not detected");
+            process.exitCode = 1;
+          } else {
+            console.error("Expected FAIL: wrong MOVE expectation detected");
+          }
+          NODE
+
+          set +e
+          node tools/scenario-runner/dist/cli.js missing > "$output/unknown.json" 2> "$output/unknown.log"
+          unknown_exit=$?
+          node tools/scenario-runner/dist/cli.js > "$output/malformed.json" 2> "$output/malformed.log"
+          malformed_exit=$?
+          set -e
+          test "$unknown_exit" -eq 2
+          test "$malformed_exit" -eq 2
+
+          node --input-type=module <<'NODE'
+          import assert from "node:assert/strict";
+          import { readFileSync } from "node:fs";
+          for (const [name, expected] of [
+            ["move", "PASS"], ["combat", "PASS"], ["wrong-expectation", "FAIL"],
+            ["unknown", "FAIL"], ["malformed", "FAIL"],
+          ]) {
+            const report = JSON.parse(readFileSync(`.artifacts/verification/gameplay/${name}.json`, "utf8"));
+            assert.equal(report.schemaVersion, 1);
+            assert.equal(report.status, expected, name);
+          }
+          NODE
+          cat "$output/move.log" "$output/combat.log" "$output/wrong-expectation.log" "$output/unknown.log" "$output/malformed.log"
+
+      - name: Upload gameplay verification evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: gameplay-verification-evidence
+          path: .artifacts/verification/gameplay/
+          if-no-files-found: warn
+          retention-days: 14
 
   server-integration:
     name: server-integration
@@ -298,17 +374,21 @@ jobs:
         run: pnpm build
 
       - name: Browser E2E
+        env:
+          F7_SAVE_VERIFICATION_SHOTS: "1"
+          VERIFICATION_DIR: .artifacts/verification/browser
         run: pnpm test:e2e
 
       - name: Upload Playwright artifacts
-        if: failure()
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: playwright-e2e-artifacts
           path: |
             playwright-report/
             test-results/
-          if-no-files-found: ignore
+            .artifacts/verification/browser/
+          if-no-files-found: warn
           retention-days: 14
 
   docker-lan-smoke:
