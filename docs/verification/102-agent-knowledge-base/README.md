@@ -51,11 +51,11 @@ Permanent leave B: `search "pending MOVE" --component runtime --limit 3`, `show 
 
 ## Негативные проверки и воспроизводимость
 
-`node --test scripts/knowledge-base.test.mjs` — 9 tests, включая:
+`node --test scripts/knowledge-base.test.mjs` — 12 tests после review corrections, включая:
 
-- invalid/unsupported YAML, unknown/missing/duplicate fields, empty sections, stale status, oversized note;
+- invalid/unsupported YAML, unknown/missing/duplicate fields, empty sections, invalid status, oversized note;
 - duplicate titles/body/filename mismatch, duplicate list items и affected paths;
-- missing file, modified fingerprint, missing commit, malformed URL, traversal/symlink sources;
+- missing file/modified fingerprint → stale warning, missing commit/malformed URL/traversal/symlink → fatal failure;
 - fake OpenAI/GitHub/AWS key patterns, credential assignments/private-key/email/user-path rejection; error redacts values;
 - no-result `quantum-rutabaga` и typo `blokced` → `[]`, exit 0; unknown show/options/invalid limit → fail;
 - ranking/filter/AND/tie/order/bounds и deterministic index даже при reverse discovery;
@@ -72,3 +72,11 @@ Job `knowledge-base` без install выполняет tests/check/index, gate �
 Project Status Check: **Required** — добавлен устойчивый selective retrieval workflow и AT2 checkpoint; docs/project-status.md обновлён без transient SHA/PR/CI.
 
 Reference: [Universal Modder](https://github.com/rehan-remade/universal-modder/tree/5ba8150e27b4f1bf17ae19dcecdb2341e467885a), `um/kb.py` и knowledge note sections/schema/search изучены, GitHub license API сообщил MIT. Использованы идеи, код не копировался. Python/remote publishing/game-specific stack не перенесены. AT3–AT9 не реализованы.
+
+## Исправления архитектурного review (2026-10-14)
+
+Ветка перебазирована на актуальный main после merged camera verification fix #113. Drift больше не блокирует всю KB: effective stale status, исключение из search/index, show только диагностики reverification, check/CI exit 0 с явным числом stale. Fingerprints сохраняются как freshness evidence, но не становятся обязательной зависимостью каждого будущего PR. Schema/secrets/PII/path safety/duplicates/commit provenance остаются fail-closed для всей базы. Missing remote source (online HTTP 404) — stale; auth/network failure не выдаётся за успешно проверенный источник.
+
+Regression fixtures реально меняют/удаляют один source и подтверждают retrieval другой note, отсутствие stale result/verified header, warnings/exit 0, восстановление после возврата исходного content; all-stale search даёт `[]`. Fatal negative проверяются даже при одновременном drift: fake key/schema/unsafe path/missing commit/duplicate/symlink. Mocked GitHub 404 и auth error проверяют классификацию и redaction; реальные доступные sources проверяются `check --online`. Также реально выполнен весь 12-test KB suite в temporary clean clone после harmless edit AGENTS.md, затем повторно после удаления navigation-components.ts: оба suite PASS, check сообщал 1/2 stale, поиск runtime note продолжал работать. Raw commands/results — `.artifacts/verification/102/review-drift-proof.json` (ignored). Новые тесты policy не являются новым A/B retrieval benchmark; исходные измерения выше остаются historical pilot. Final exact-head CI evidence публикуется в PR #111.
+
+Project Status Check для corrections: **Not required** — исходное изменение AT2 checkpoint уже включено в PR; review fixes уточняют freshness policy внутри того же stage, не меняя roadmap/architecture.

@@ -21,8 +21,9 @@ const LISTS = ["tags", "issues", "prs", "commits", "sources"];
 const SECTIONS = ["Симптом", "Причина", "Решение", "Проверка", "Ограничения"];
 const compare = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
 export const digest = (text) => createHash("sha256").update(text).digest("hex");
+class KBValidationError extends Error {}
 const fail = (message) => {
-  throw new Error(message);
+  throw new KBValidationError(message);
 };
 
 // A deliberately small YAML subset: JSON-quoted strings and flow string arrays.
@@ -69,8 +70,7 @@ export function parseNote(text) {
     meta.tags.some((t) => !/^[a-z0-9][a-z0-9-]*$/.test(t))
   )
     fail("invalid title/context/tags");
-  if (meta.status !== "verified")
-    fail("stale/unverified note: reverify or remove from active notes");
+  if (!["verified", "stale"].includes(meta.status)) fail("invalid note status");
   for (const [key, kind] of [
     ["issues", "issues"],
     ["prs", "pull"],
@@ -99,46 +99,87 @@ export function parseNote(text) {
 }
 
 export function validateSources(note, root = ROOT, { git = true, online = false } = {}) {
+  const stale = note.status === "stale" ? ["note marked stale; reverification required"] : [];
   const paths = new Set();
   for (const source of note.sources) {
     const match = /^([a-zA-Z0-9_./-]+)@([a-f0-9]{64})$/.exec(source);
-    if (!match || match[1].startsWith("/") || match[1].split("/").some((p) => p === ".." || !p))
+    if (
+      !match ||
+      match[1].startsWith("/") ||
+      match[1].split("/").some((p) => p === ".." || p === "." || !p)
+    )
       fail("invalid affected file source");
     const path = match[1];
     if (paths.has(path)) fail("duplicate affected file");
     paths.add(path);
-    // Reject symlinks at every level; sources must stay in the checkout.
+    // Inspect existing ancestors before treating a missing source as stale.
+    // Keep validating subsequent sources: staleness never masks unsafe input.
     let current = root;
+    let missing = false;
     for (const part of path.split("/")) {
       current = resolve(current, part);
-      if (lstatSync(current).isSymbolicLink()) fail("symlink source rejected");
+      let stat;
+      try {
+        stat = lstatSync(current);
+      } catch (error) {
+        if (["ENOENT", "ENOTDIR"].includes(error.code)) {
+          missing = true;
+          break;
+        }
+        fail("source inspection failed (details redacted)");
+      }
+      if (stat.isSymbolicLink()) fail("symlink source rejected");
     }
-    if (digest(readFileSync(current)) !== match[2])
-      fail(`stale source: ${path}; reverify note before updating hash`);
+    if (missing) {
+      stale.push(`missing source: ${path}`);
+      continue;
+    }
+    if (!lstatSync(current).isFile()) fail("source must be a regular file");
+    let content;
+    try {
+      content = readFileSync(current);
+    } catch {
+      fail("source read failed (details redacted)");
+    }
+    if (digest(content) !== match[2]) stale.push(`changed source: ${path}`);
   }
   if (git)
     for (const url of note.commits) {
       const sha = url.split("/").at(-1);
-      execFileSync("git", ["cat-file", "-e", `${sha}^{commit}`], { cwd: root, stdio: "pipe" });
-      execFileSync("git", ["merge-base", "--is-ancestor", sha, "HEAD"], {
-        cwd: root,
-        stdio: "pipe",
-      });
+      try {
+        execFileSync("git", ["cat-file", "-e", `${sha}^{commit}`], { cwd: root, stdio: "pipe" });
+        execFileSync("git", ["merge-base", "--is-ancestor", sha, "HEAD"], {
+          cwd: root,
+          stdio: "pipe",
+        });
+      } catch {
+        fail("commit provenance unavailable or not an ancestor; verify Git history");
+      }
     }
   if (online) {
     for (const url of [...note.issues, ...note.prs]) {
       const endpoint = url.replace("https://github.com/", "repos/").replace("/pull/", "/pulls/");
-      const data = JSON.parse(
-        execFileSync("gh", ["api", endpoint], {
-          cwd: root,
-          encoding: "utf8",
-          stdio: ["ignore", "pipe", "pipe"],
-        }),
-      );
-      if (data.state !== "closed" || (url.includes("/pull/") && !data.merged_at))
-        fail("source is not resolved/merged");
+      let data;
+      try {
+        data = JSON.parse(
+          execFileSync("gh", ["api", endpoint], {
+            cwd: root,
+            encoding: "utf8",
+            stdio: ["ignore", "pipe", "pipe"],
+          }),
+        );
+      } catch (error) {
+        if (String(error.stderr).includes("(HTTP 404)")) {
+          stale.push(`unavailable GitHub source: ${url}`);
+          continue;
+        }
+        fail("GitHub source verification failed (details redacted)");
+      }
+      if (!data || data.state !== "closed" || (url.includes("/pull/") && !data.merged_at))
+        fail("source provenance is not resolved/merged");
     }
   }
+  return stale;
 }
 
 export function loadNotes(root = ROOT, options = {}) {
@@ -150,8 +191,13 @@ export function loadNotes(root = ROOT, options = {}) {
         fail("invalid note filename/symlink");
       const note = parseNote(readFileSync(resolve(directory, file), "utf8"));
       if (file !== `${note.id}.md`) fail("filename must match id");
-      validateSources(note, root, options);
-      return { ...note, path: relative(root, resolve(directory, file)).replaceAll("\\", "/") };
+      const staleReasons = validateSources(note, root, options);
+      return {
+        ...note,
+        status: staleReasons.length ? "stale" : "verified",
+        staleReasons,
+        path: relative(root, resolve(directory, file)).replaceAll("\\", "/"),
+      };
     });
   if (!notes.length) fail("empty knowledge base");
   if (
@@ -172,6 +218,7 @@ const tokens = (text) => [
 ];
 export function buildIndex(notes) {
   return notes
+    .filter((note) => note.status === "verified")
     .map((note) => {
       const weights = new Map();
       for (const [field, weight] of [
@@ -189,6 +236,7 @@ export function buildIndex(notes) {
         .replace(/\s+/g, " ");
       return {
         id: note.id,
+        status: "verified",
         title: note.title,
         component: note.component,
         tags: note.tags,
@@ -221,7 +269,10 @@ export function search(index, query, { component, tags = [], limit = 5 } = {}) {
     .map(({ terms, checksum, ...row }) => row);
 }
 
-export function main(args, root = ROOT) {
+const staleDiagnostic = (note) =>
+  `STALE: ${note.id}; reverification required\n${note.staleReasons.map((reason) => `  - ${reason}`).join("\n")}`;
+
+export function main(args, root = ROOT, { warn = (message) => console.error(message) } = {}) {
   const [command, ...rest] = args;
   if (!["index", "search", "show", "check"].includes(command))
     fail(
@@ -258,28 +309,44 @@ export function main(args, root = ROOT) {
     (command === "show" && positional.length !== 1)
   )
     fail("unexpected/missing argument");
-  // Validate before emitting any data, including search/show. Never serve stale notes.
+  // Fatal validation completes for all notes before emitting any data.
   const notes = loadNotes(root, { online });
+  const stale = notes.filter((note) => note.status === "stale");
   if (command === "check")
-    return `PASS: ${notes.length} notes; schema, content, file fingerprints, commit ancestry${online ? ", live GitHub sources" : " (GitHub availability not checked; use --online)"}`;
+    return `PASS: ${notes.length} notes validated; ${notes.length - stale.length} verified, ${stale.length} stale${online ? "; live GitHub sources checked" : "; GitHub availability not checked (use --online)"}${stale.length ? "\n" + stale.map(staleDiagnostic).join("\n") : ""}`;
   if (command === "show") {
     const note = notes.find((n) => n.id === positional[0]);
     if (!note) fail("unknown note id");
-    return note.text;
+    return note.status === "stale" ? staleDiagnostic(note) : note.text;
   }
+  if (stale.length)
+    warn(`KB WARNING: ${stale.length} stale note(s) excluded; run kb check for diagnostics`);
   const index = buildIndex(notes);
   if (command === "search")
     return JSON.stringify(search(index, positional.join(" "), options), null, 2);
   const output = resolve(root, ".artifacts/verification/kb/index.json");
   mkdirSync(dirname(output), { recursive: true });
-  writeFileSync(output, JSON.stringify({ schemaVersion: 1, notes: index }, null, 2) + "\n");
-  return `Indexed ${notes.length} notes: .artifacts/verification/kb/index.json`;
+  writeFileSync(
+    output,
+    JSON.stringify(
+      {
+        schemaVersion: 1,
+        notes: index,
+        stale: stale.map((note) => ({ id: note.id, status: "stale", reasons: note.staleReasons })),
+      },
+      null,
+      2,
+    ) + "\n",
+  );
+  return `Indexed ${index.length} verified notes; ${stale.length} stale excluded: .artifacts/verification/kb/index.json`;
 }
 if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) {
   try {
     console.log(main(process.argv.slice(2)));
   } catch (error) {
-    console.error(`KB FAIL: ${error instanceof Error ? error.message : "unknown error"}`);
+    console.error(
+      `KB FAIL: ${error instanceof KBValidationError ? error.message : "unexpected I/O error (details redacted)"}`,
+    );
     process.exitCode = 1;
   }
 }
