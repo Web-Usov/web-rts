@@ -13,6 +13,7 @@
 
 - [`specs/001-foundation-network-vertical-slice.md`](./specs/001-foundation-network-vertical-slice.md) — Foundation Spec #001: первый authoritative multiplayer vertical slice, tooling, simulation kernel, transport, client/server integration, tests, CI и LAN startup.
 - [`specs/002-first-economy-defense-vertical-slice.md`](./specs/002-first-economy-defense-vertical-slice.md) — Gameplay Spec #002: first economy/defense slice, foundation hardening, deterministic navigation, Wood/construction/combat/PvE wave и Art Direction integration.
+- [`specs/003-agent-tooling-and-verification.md`](./specs/003-agent-tooling-and-verification.md) — Agent Tooling Spec #003: AT0–AT9, architecture/ADR gates, проверяемые эксперименты, evidence и selective retrieval.
 - [`docker-lan.md`](./docker-lan.md) — Docker Compose startup: порты, LAN URL, env, smoke и ручной checklist со второго устройства.
 
 Корневой [`AGENTS.md`](../AGENTS.md) содержит обязательные правила для coding agents: source-of-truth hierarchy, архитектурные инварианты, scope discipline и требования к PR/tests.
