@@ -1,0 +1,19 @@
+{
+  "name": "Universal Animation Library Standard",
+  "author": "Quaternius",
+  "license": "CC0-1.0",
+  "official_url": "https://quaternius.itch.io/universal-animation-library",
+  "snapshot": "Free Standard distributed 2025-06-10; not the paid Pro/Source packs",
+  "source_repository": "https://github.com/J-Ponzo/gltf-universal-animation-library",
+  "source_commit": "e24c23cf2a1323488a3faa226ea7ea21f644b73e",
+  "source_files": {
+    "AnimationLibrary_Godot_Standard.gltf": "0ff075c7ad6855c5c2c37a171592ee8f0d6ab2f58259e2be77a9b63dd8027765",
+    "AnimationLibrary_Godot_Standard.bin": "6e65377d81558333c4093dbb144a48fd19019343d82b1a3a7992a98ec0e0543c"
+  },
+  "output_file": "quaternius-standard.glb",
+  "output_sha256": "b94b87af722757a3e8971d97e0968c4fca3a1963ec49f216c1935618a9723a09",
+  "conversion": "JSON and BIN packed into GLB 2.0 with 4-byte padding; buffer URI removed. No skeleton, geometry, animation, or key changes.",
+  "animation_count": 46,
+  "catalogue_action_count": 45,
+  "excluded_reference_clip": "A_TPose"
+}

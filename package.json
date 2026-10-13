@@ -16,7 +16,8 @@
     "test:docker-smoke": "node scripts/docker-lan-smoke.mjs",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint && prettier --check .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "build:meshy": "pnpm --filter @web-rts/web build:meshy"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

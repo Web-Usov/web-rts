@@ -4,6 +4,7 @@ dist/
 coverage/
 *.tsbuildinfo
 .DS_Store
+apps/web/dist-pages/
 *.log
 .env
 .env.*

@@ -1,0 +1,13 @@
+{
+  "name": "Ch36 mannequin — static autorig example",
+  "source_file": "Ch36_nonPBR.fbx",
+  "source_sha256": "9fe5c33d4f1173a0621b9787856634c1f8aeeff4aff44572c139a1a002813ede",
+  "origin": "User-provided FBX; original rig uses Mixamo names. No separate CC0 claim.",
+  "publication": "Project owner explicitly requested replacing the bundled example with this mannequin.",
+  "conversion": "FBXLoader -> world-space rest geometry -> GLTFExporter GLB. Skin, bones, original animation and textures removed. Neutral material added. Geometry, normals and UV retained.",
+  "purpose": "Static example for exercising our 22-joint autorig, not a pre-rigged workaround.",
+  "output_file": "mannequin.glb",
+  "output_sha256": "2f46c8b23baa0558c77d205f7c7da966a21a40831e3aca9b0359e207b8805a0c",
+  "vertex_count": 86640,
+  "triangle_count": 28880
+}
