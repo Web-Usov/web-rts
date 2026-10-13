@@ -42,6 +42,7 @@ test("weighted exact-token ranking, AND query, filters, bounded output and stabl
   assert.equal(search(repeated, "blocked", { limit: 10 }).length, 10);
   assert.equal(search(repeated.reverse(), "blocked")[0].id, "item-00");
   assert.deepEqual(search(index, "quantum-rutabaga"), []);
+  assert.deepEqual(search(index, "constructor"), []); // Object prototype is not an indexed term
   assert.deepEqual(search(index, "blokced"), []); // no silent fuzzy "correction"
   assert.deepEqual(search(index, "BLOCKED"), search(index, "blocked"));
   for (const limit of [0, 11, 1.5, NaN]) assert.throws(() => search(index, "x", { limit }));

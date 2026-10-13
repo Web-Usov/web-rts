@@ -212,7 +212,7 @@ export function search(index, query, { component, tags = [], limit = 5 } = {}) {
         (!component || row.component === component) && tags.every((t) => row.tags.includes(t)),
     )
     .map((row) => {
-      const matched = words.filter((w) => row.terms[w]);
+      const matched = words.filter((w) => Object.hasOwn(row.terms, w));
       return { ...row, score: matched.reduce((sum, w) => sum + row.terms[w], 0), matched };
     })
     .filter((row) => !words.length || row.matched.length === words.length)
