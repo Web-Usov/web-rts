@@ -220,3 +220,57 @@ it("ground grab is immediate and correct at all yaw orientations", () => {
     expect(after.z).toBeCloseTo(anchor.z, 10);
   }
 });
+
+// C2: exercise the complete smoothed controller and actual map bounds, rather
+// than only anchoredZoom in isolation. A constrained anchor may move; an
+// interior anchor must stay invariant at every frame and across wheel cycles.
+describe("C2 smoothed ground anchor regression", () => {
+  const view = { width: 1280, height: 720, fov: 0.8 };
+  const idle = { x: 0, y: 0 };
+  for (let turn = 0; turn < 4; turn++) {
+    it(`preserves interior ground without jitter or accumulated drift at yaw ${turn}`, () => {
+      for (const fps of [30, 60, 144]) {
+        const camera = new RtsCameraController(extent);
+        for (let i = 0; i < turn; i++) {
+          camera.rotate(1);
+          camera.step(0.25, idle, 0, false, view);
+        }
+        const point = { x: 850, y: 430 };
+        const anchor = groundAtScreen(camera.pose, point, view);
+        for (let cycle = 0; cycle < 8; cycle++) {
+          for (const delta of [-220, 220]) {
+            camera.wheel(delta, point);
+            for (let i = 0; i < fps; i++) {
+              camera.step(1 / fps, idle, 0, false, view);
+              const actual = groundAtScreen(camera.pose, point, view);
+              expect(Math.hypot(actual.x - anchor.x, actual.z - anchor.z)).toBeLessThan(0.0001);
+            }
+          }
+        }
+        expect(camera.pose.radius).toBeCloseTo(28, 4);
+      }
+    });
+    it(`gives bounds priority and settles without jitter at yaw ${turn}`, () => {
+      const camera = new RtsCameraController(extent);
+      for (let i = 0; i < turn; i++) {
+        camera.rotate(1);
+        camera.step(0.25, idle, 0, false, view);
+      }
+      for (let i = 0; i < 240; i++) camera.step(1 / 60, { x: 1, y: 0 }, 0, false, view);
+      const point = { x: 850, y: 430 };
+      const anchor = groundAtScreen(camera.pose, point, view);
+      camera.wheel(-220, point);
+      for (let i = 0; i < 120; i++) {
+        const pose = camera.step(1 / 60, idle, 0, false, view);
+        expect(boundCamera(pose, extent, view)).toEqual(pose);
+        expect(Number.isFinite(pose.targetX + pose.targetZ + pose.radius)).toBe(true);
+      }
+      const constrained = groundAtScreen(camera.pose, point, view);
+      expect(Math.hypot(constrained.x - anchor.x, constrained.z - anchor.z)).toBeGreaterThan(0.1);
+      const settled = { ...camera.pose };
+      for (let i = 0; i < 60; i++) camera.step(1 / 60, idle, 0, false, view);
+      expect(camera.pose.targetX).toBeCloseTo(settled.targetX, 8);
+      expect(camera.pose.targetZ).toBeCloseTo(settled.targetZ, 8);
+    });
+  }
+});

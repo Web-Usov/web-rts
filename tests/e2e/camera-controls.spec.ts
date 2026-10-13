@@ -7,6 +7,7 @@ import {
   measureColorCentroid,
   cssDistance,
 } from "./helpers/canvas.js";
+import { installGroundReference, measureGroundReference } from "./helpers/camera-reference.js";
 import { attachPageErrorCapture, expectHud } from "./helpers/hud.js";
 
 async function expectObjectiveOnCanvas(page: Page) {
@@ -36,37 +37,9 @@ async function home(page: Page) {
 }
 async function shot(page: Page, name: string) {
   const { mkdir } = await import("node:fs/promises");
-  await mkdir("docs/verification/c1-96", { recursive: true });
-  await page.screenshot({ path: `docs/verification/c1-96/${name}.png` });
-}
-// Read the rendered marker in a small ground region, excluding the white selection ring.
-async function markerCentroid(page: Page) {
-  const clip = { x: 750, y: 450, width: 100, height: 100 };
-  const png = await page.screenshot({ clip });
-  const center = await page.evaluate(async (b64) => {
-    const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
-    const bitmap = await createImageBitmap(new Blob([bytes], { type: "image/png" }));
-    const canvas = document.createElement("canvas");
-    canvas.width = bitmap.width;
-    canvas.height = bitmap.height;
-    const ctx = canvas.getContext("2d")!;
-    ctx.drawImage(bitmap, 0, 0);
-    const { data, width, height } = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    let xSum = 0,
-      ySum = 0,
-      count = 0;
-    for (let y = 0; y < height; y++)
-      for (let x = 0; x < width; x++) {
-        const i = (y * width + x) * 4;
-        if (data[i]! > 230 && data[i + 1]! > 220 && data[i + 2]! > 160) {
-          xSum += x;
-          ySum += y;
-          count++;
-        }
-      }
-    return count ? { x: xSum / count, y: ySum / count, count } : null;
-  }, png.toString("base64"));
-  return center ? { ...center, x: center.x + clip.x, y: center.y + clip.y } : null;
+  const directory = process.env.VERIFICATION_DIR ?? ".artifacts/verification/c2-112";
+  await mkdir(directory, { recursive: true });
+  await page.screenshot({ path: `${directory}/${name}.png` });
 }
 
 for (const mode of ["local", "remote"])
@@ -278,15 +251,16 @@ for (const mode of ["local", "remote"])
     await expectHud(page, "Destination", "marked");
     await shot(page, `${mode}-move`);
 
-    // The rendered ground marker stays under the cursor through wheel zoom.
-    const markerBefore = await markerCentroid(page);
-    expect(markerBefore).not.toBeNull();
-    await page.mouse.move(markerBefore!.x, markerBefore!.y);
+    // The destination is soon occluded by the moving selected unit. Its white
+    // selection ring is not a fixed ground reference. Use an isolated, flat
+    // rendered fiducial; the oracle reads screenshots, not camera state.
+    const interiorCursor = { x: 850, y: 430 };
+    await installGroundReference(page, interiorCursor);
+    const interiorBefore = await measureGroundReference(page);
+    await page.mouse.move(interiorCursor.x, interiorCursor.y);
     await page.mouse.wheel(0, -220);
     await page.waitForTimeout(650);
-    const markerAfter = await markerCentroid(page);
-    expect(markerAfter).not.toBeNull();
-    expect(cssDistance(markerBefore!, markerAfter!)).toBeLessThan(5);
+    expect(cssDistance(interiorBefore, await measureGroundReference(page))).toBeLessThan(2);
     await shot(page, `${mode}-cursor-zoom`);
 
     // Long pan into map boundaries settles, without invalid pose or jitter.
@@ -297,6 +271,65 @@ for (const mode of ["local", "remote"])
     expect(
       await measureCanvasPresentationChange(page, bound, await captureCanvasPng(page)),
     ).toBeLessThan(0.002);
+    // At the right pan limit, zoom-in would move the target beyond the map.
+    // Bounds take precedence: a visible displacement is expected, then settles.
+    const cursor = { x: 850, y: 430 };
+    await installGroundReference(page, cursor);
+    const constrainedBefore = await measureGroundReference(page);
+    await page.mouse.move(cursor.x, cursor.y);
+    await page.mouse.wheel(0, -220);
+    await page.waitForTimeout(650);
+    const constrainedAfter = await measureGroundReference(page);
+    const displacement = cssDistance(constrainedBefore, constrainedAfter);
+    console.log(JSON.stringify({ mode, boundedDisplacement: displacement }));
+    // Both target axes are pinned at 10 in this pose. Projecting the fixed
+    // ground point at radius 28 -> 22.5 predicts 64.2 CSS px of displacement.
+    expect(Math.abs(displacement - 64.2)).toBeLessThan(2);
+    await page.waitForTimeout(350);
+    expect(cssDistance(constrainedAfter, await measureGroundReference(page))).toBeLessThan(1);
+    await shot(page, `${mode}-bounded-zoom`);
     await page.getByRole("checkbox", { name: "Edge scrolling" }).check();
+    errors.assertClean();
+  });
+
+for (const mode of ["local", "remote"])
+  test(`C2 rendered ground anchor at four yaws without drift (${mode})`, async ({ page }) => {
+    test.setTimeout(180_000);
+    const errors = attachPageErrorCapture(page);
+    await page.goto(mode === "local" ? "/?transport=local" : "/");
+    await page.getByRole("button", { name: "Create room", exact: true }).click();
+    await expectHud(page, "Status", "connected");
+    await page.getByRole("button", { name: "Start", exact: true }).click();
+    await expectHud(page, "Phase", "RUNNING");
+    await page.getByRole("checkbox", { name: "Edge scrolling" }).uncheck();
+    for (let orientation = 0; orientation < 4; orientation++) {
+      await home(page);
+      for (let turn = 0; turn < orientation; turn++) {
+        await page.keyboard.press("e");
+        await page.waitForTimeout(350);
+      }
+      const cursor = { x: 850, y: 430 };
+      await installGroundReference(page, cursor);
+      const before = await measureGroundReference(page);
+      expect(cssDistance(cursor, before)).toBeLessThan(2);
+      let maximumDrift = 0;
+      await page.mouse.move(cursor.x, cursor.y);
+      for (const delta of [-220, 220, -220, 220]) {
+        await page.mouse.wheel(0, delta);
+        await page.waitForTimeout(650);
+        const drift = cssDistance(before, await measureGroundReference(page));
+        maximumDrift = Math.max(maximumDrift, drift);
+        expect(drift).toBeLessThan(2);
+      }
+      const settled = await measureGroundReference(page);
+      await page.waitForTimeout(350);
+      expect(cssDistance(settled, await measureGroundReference(page))).toBeLessThan(1);
+      console.log(JSON.stringify({ mode, orientation, maximumDrift }));
+      await shot(page, `${mode}-cursor-zoom-${orientation}`);
+      // Negative control: the pixel oracle must detect actual physical pan.
+      await hold(page, "d", 200);
+      expect(cssDistance(before, await measureGroundReference(page))).toBeGreaterThan(10);
+    }
+
     errors.assertClean();
   });
