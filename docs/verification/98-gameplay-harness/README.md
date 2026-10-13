@@ -39,7 +39,7 @@ Vitest gate tests дополнительно проверяют испорчен
 
 ## C — Реальный browser cross-check
 
-Инструменты: Playwright Chromium и внутренний Codex browser (`cua_repl`, in-app browser). Через внутренний браузер выполнены Local create/start/select/right-click MOVE и Remote create/join/start двух вкладок, MOVE от A с наблюдением переместившегося синего юнита на B. HUD: RUNNING, 2 игрока, 13 entities, objective 1. Внутренние browser warn/error logs пусты: [logs](internal-browser-errors.json). [Screenshot клиента B после MOVE](internal-remote-b.png).
+Инструменты: Playwright Chromium и внутренний Codex browser (`cua_repl`, in-app browser). Через внутренний браузер выполнены Local create/start/select/right-click MOVE и Remote create/join/start двух вкладок, MOVE от A с наблюдением переместившегося синего юнита на B. HUD: RUNNING, 2 игрока, 13 entities, objective 1. Внутренние browser warn/error logs пусты: [logs](internal-browser-errors.json). [Screenshot клиента B после MOVE](internal-remote-b.jpg).
 
 Playwright выполняет отдельные BrowserContexts для Remote A/B; проверяет перемещение центроида конкретного unit на canvas, изменение pixels обоих клиентов, неподвижность objective и чистые console/pageerror logs. Local проверяет WebWorker и отсутствие game-server socket. Regression paths включают диагональный MOVE, blocked target, reconnect и camera/input. MOVE headless и browser подтверждают общее движение по команде и сохранение objective; это не сравнение координат одного идентичного browser/headless replay, поскольку browser tick scheduler работает в реальном времени.
 
