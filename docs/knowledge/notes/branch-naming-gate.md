@@ -8,7 +8,7 @@ status: "verified"
 issues: ["https://github.com/Web-Usov/web-rts/issues/89"]
 prs: ["https://github.com/Web-Usov/web-rts/pull/90"]
 commits: ["https://github.com/Web-Usov/web-rts/commit/9507da838f6519c1ce3b0f05e3ddbf20170a8bfc"]
-sources: ["scripts/validate-branch-name.mjs@3c4c5aeb8a30b1208f9ddcd7739963a6b653af6b6bb323ac7ffd276420f41b21", "scripts/validate-branch-name.test.mjs@1b71757d3ef71e4f33a8c2a5f28b3a7586cb4e222ee3846423a3221404a0ad9c", "docs/agentic-workflow.md@0d56dc6cd60c07f4e87e1c0af2247e1b884d3711577807f8a56c73482d97abe5", ".github/workflows/ci.yml@f0954305e1fb0fd6a53badae1b34da308627f0d155cfc2dcc072103825d6d147", "AGENTS.md@47c9a103126cec1e005ac75b5f7e6495b3e845f6560c74fb125da1d78ea5bfe1"]
+sources: ["scripts/validate-branch-name.mjs@3c4c5aeb8a30b1208f9ddcd7739963a6b653af6b6bb323ac7ffd276420f41b21", "scripts/validate-branch-name.test.mjs@1b71757d3ef71e4f33a8c2a5f28b3a7586cb4e222ee3846423a3221404a0ad9c", "docs/agentic-workflow.md@0d56dc6cd60c07f4e87e1c0af2247e1b884d3711577807f8a56c73482d97abe5", ".github/workflows/ci.yml@a7bbb658d69093e0e260d01b5ae4aff4637039c21291170e63fd1373f8762887", "AGENTS.md@47c9a103126cec1e005ac75b5f7e6495b3e845f6560c74fb125da1d78ea5bfe1"]
 ---
 # Имена task branches: быстрый CI gate
 

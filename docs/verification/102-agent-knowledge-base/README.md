@@ -67,7 +67,7 @@ Permanent leave B: `search "pending MOVE" --component runtime --limit 3`, `show 
 
 Локально прошли `pnpm install --frozen-lockfile`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm test:server`, `pnpm kb check --online`, `pnpm test:kb`, branch-name tests. Turbo workspace checks использовали существующий content-addressed cache; KB tests исполнялись заново. Отдельно реально выполнены 43 source regression tests navigation-component-cache/navigation-move/match-runtime (3 files). CI evidence указывается в PR на exact head; подробные logs — `.artifacts/verification/102/`. Gameplay/runtime/renderer не меняются, browser screenshots для AT2 tooling не требуются. Existing full-CI browser/Docker jobs сохраняются.
 
-Job `knowledge-base` без install выполняет tests/check/index, gate требует success и для docs-only PR; тяжёлые docs-only jobs не включаются. Полный pipeline на этой implementation PR проверяет tooling изменение как обычно.
+Job `knowledge-base` без install выполняет tests/check/index, gate требует success и для docs-only PR; тяжёлые docs-only jobs не включаются. GitHub run на промежуточном head обнаружил shallow checkout в `unit-tests`: root `pnpm test` также вызывает KB tests и не находил provenance commits. Исправлено `fetch-depth: 0` для этого job (у knowledge-base уже full history); validation не ослаблялась. Полный pipeline на этой implementation PR проверяет tooling изменение как обычно.
 
 Project Status Check: **Required** — добавлен устойчивый selective retrieval workflow и AT2 checkpoint; docs/project-status.md обновлён без transient SHA/PR/CI.
 
