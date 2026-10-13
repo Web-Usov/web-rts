@@ -1,6 +1,0 @@
-{
-  "schemaVersion": 1,
-  "scenarioId": "missing",
-  "status": "FAIL",
-  "reason": "Unknown scenario: missing. Available: move, combat"
-}

@@ -1,9 +1,0 @@
-
- RUN  v5.0.1 /Users/alex/Documents/Develop/web-usov/web-rts_98/tools/scenario-runner
-
-
- Test Files  1 passed (1)
-      Tests  2 passed (2)
-   Start at  15:00:53
-   Duration  1.11s (transform 76%, import 17%, tests 6%, worker 1%)
-

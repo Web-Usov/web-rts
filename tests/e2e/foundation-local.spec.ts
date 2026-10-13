@@ -159,7 +159,7 @@ test("G4a blocked ground target moves to a nearby reachable point", async ({ pag
 async function saveLocalShot(page: Page, fileName: string): Promise<void> {
   const { mkdir } = await import("node:fs/promises");
   const path = await import("node:path");
-  const dir = path.resolve("docs/verification/f11");
+  const dir = path.resolve(process.env.VERIFICATION_DIR ?? "docs/verification/f11");
   await mkdir(dir, { recursive: true });
   await page.screenshot({ path: path.join(dir, fileName), fullPage: true });
 }
