@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "scenarioId": null,
+  "status": "FAIL",
+  "reason": "Usage: pnpm verify:gameplay <move|combat>"
+}

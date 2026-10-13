@@ -1,0 +1,85 @@
+
+> web-rts@ typecheck /Users/alex/Documents/Develop/web-usov/web-rts_98
+> turbo run typecheck
+
+• turbo 2.11.3
+
+   • Packages in scope: @web-rts/bot-client, @web-rts/game-data, @web-rts/game-server, @web-rts/match-adapter, @web-rts/protocol, @web-rts/scenario-runner, @web-rts/simulation, @web-rts/testkit, @web-rts/web
+   • Running typecheck in 9 packages
+   • Remote caching disabled, using shared worktree cache
+
+@web-rts/bot-client:typecheck: cache hit, replaying logs e083bd0b13b6d8f0
+@web-rts/protocol:typecheck: cache hit, replaying logs 180da177ac898473
+@web-rts/game-data:typecheck: cache hit, replaying logs beac7dcedbafc2c8
+@web-rts/bot-client:typecheck: 
+@web-rts/bot-client:typecheck: > @web-rts/bot-client@0.0.0 typecheck /Users/alex/Documents/Develop/web-usov/web-rts-g1/tools/bot-client
+@web-rts/bot-client:typecheck: > tsc -p tsconfig.json --noEmit
+@web-rts/bot-client:typecheck: 
+@web-rts/protocol:typecheck: 
+@web-rts/protocol:typecheck: > @web-rts/protocol@0.0.0 typecheck /Users/alex/Documents/Develop/web-usov/web-rts_g7-60/packages/protocol
+@web-rts/protocol:typecheck: > tsc -p tsconfig.json --noEmit
+@web-rts/protocol:typecheck: 
+@web-rts/game-data:typecheck: 
+@web-rts/game-data:typecheck: > @web-rts/game-data@0.0.0 typecheck /Users/alex/Documents/Develop/web-usov/web-rts_g7-60/packages/game-data
+@web-rts/game-data:typecheck: > tsc -p tsconfig.json --noEmit
+@web-rts/game-data:typecheck: 
+@web-rts/game-data:build: cache hit, replaying logs 8e6461032519d4e9
+@web-rts/game-data:build: 
+@web-rts/game-data:build: > @web-rts/game-data@0.0.0 build /Users/alex/Documents/Develop/web-usov/web-rts_g7-60/packages/game-data
+@web-rts/game-data:build: > tsc -p tsconfig.json
+@web-rts/game-data:build: 
+@web-rts/simulation:typecheck: cache hit, replaying logs 0a76c6ea638e3d7c
+@web-rts/simulation:typecheck: 
+@web-rts/simulation:typecheck: > @web-rts/simulation@0.0.0 typecheck /Users/alex/Documents/Develop/web-usov/web-rts_g7-60/packages/simulation
+@web-rts/simulation:typecheck: > tsc -p tsconfig.json --noEmit
+@web-rts/simulation:typecheck: 
+@web-rts/protocol:build: cache hit, replaying logs 4120d1784eab4b3b
+@web-rts/protocol:build: 
+@web-rts/protocol:build: > @web-rts/protocol@0.0.0 build /Users/alex/Documents/Develop/web-usov/web-rts_g7-60/packages/protocol
+@web-rts/protocol:build: > tsc -p tsconfig.json
+@web-rts/protocol:build: 
+@web-rts/simulation:build: cache hit, replaying logs e7c27638ce0f56d6
+@web-rts/simulation:build: 
+@web-rts/simulation:build: > @web-rts/simulation@0.0.0 build /Users/alex/Documents/Develop/web-usov/web-rts_g7-60/packages/simulation
+@web-rts/simulation:build: > tsc -p tsconfig.json
+@web-rts/simulation:build: 
+@web-rts/match-adapter:typecheck: cache hit, replaying logs a4dce70b316c70ad
+@web-rts/match-adapter:typecheck: 
+@web-rts/match-adapter:typecheck: > @web-rts/match-adapter@0.0.0 typecheck /Users/alex/Documents/Develop/web-usov/web-rts_g7-60/packages/match-adapter
+@web-rts/match-adapter:typecheck: > tsc -p tsconfig.json --noEmit
+@web-rts/match-adapter:typecheck: 
+@web-rts/match-adapter:build: cache hit, replaying logs baa1f895aa85ae5a
+@web-rts/match-adapter:build: 
+@web-rts/match-adapter:build: > @web-rts/match-adapter@0.0.0 build /Users/alex/Documents/Develop/web-usov/web-rts_g7-60/packages/match-adapter
+@web-rts/match-adapter:build: > tsc -p tsconfig.json
+@web-rts/match-adapter:build: 
+@web-rts/testkit:typecheck: cache hit, replaying logs a22d0ad8d3b2af33
+@web-rts/testkit:typecheck: 
+@web-rts/testkit:typecheck: > @web-rts/testkit@0.0.0 typecheck /Users/alex/Documents/Develop/web-usov/web-rts_98/packages/testkit
+@web-rts/testkit:typecheck: > tsc -p tsconfig.json --noEmit
+@web-rts/testkit:typecheck: 
+@web-rts/testkit:build: cache hit, replaying logs afe03e82d5682550
+@web-rts/testkit:build: 
+@web-rts/testkit:build: > @web-rts/testkit@0.0.0 build /Users/alex/Documents/Develop/web-usov/web-rts_98/packages/testkit
+@web-rts/testkit:build: > tsc -p tsconfig.json
+@web-rts/testkit:build: 
+@web-rts/scenario-runner:typecheck: cache miss, executing 2720469a62502638
+@web-rts/web:typecheck: cache hit, replaying logs 5dc6c5fe29f542d3
+@web-rts/web:typecheck: 
+@web-rts/web:typecheck: > @web-rts/web@0.0.0 typecheck /Users/alex/Documents/Develop/web-usov/web-rts_98/apps/web
+@web-rts/web:typecheck: > tsc -p tsconfig.json --noEmit && tsc -p tsconfig.node.json --noEmit
+@web-rts/web:typecheck: 
+@web-rts/game-server:typecheck: cache hit, replaying logs ec15fde7da9f206b
+@web-rts/game-server:typecheck: 
+@web-rts/game-server:typecheck: > @web-rts/game-server@0.0.0 typecheck /Users/alex/Documents/Develop/web-usov/web-rts_98/apps/game-server
+@web-rts/game-server:typecheck: > tsc -p tsconfig.typecheck.json --noEmit
+@web-rts/game-server:typecheck: 
+@web-rts/scenario-runner:typecheck: 
+@web-rts/scenario-runner:typecheck: > @web-rts/scenario-runner@0.0.0 typecheck /Users/alex/Documents/Develop/web-usov/web-rts_98/tools/scenario-runner
+@web-rts/scenario-runner:typecheck: > tsc -p tsconfig.json --noEmit
+@web-rts/scenario-runner:typecheck: 
+
+ Tasks:    14 successful, 14 total
+Cached:    13 cached, 14 total
+  Time:    793ms 
+

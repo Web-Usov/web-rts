@@ -1,0 +1,44 @@
+[
+  {
+    "experiment": "wrong expectation",
+    "exitCode": 1
+  },
+  {
+    "experiment": "combat damage set to zero",
+    "exitCode": 1
+  },
+  {
+    "experiment": "rollback",
+    "exitCode": 0
+  },
+  {
+    "experiment": "baseline Vitest combat",
+    "repeat": 1,
+    "durationSeconds": 1.968907666974701,
+    "exitCode": 0
+  },
+  {
+    "experiment": "baseline Vitest combat",
+    "repeat": 2,
+    "durationSeconds": 2.6534855000209063,
+    "exitCode": 0
+  },
+  {
+    "experiment": "baseline Vitest combat",
+    "repeat": 3,
+    "durationSeconds": 2.37693391693756,
+    "exitCode": 0
+  },
+  {
+    "experiment": "baseline Vitest combat",
+    "repeat": 4,
+    "durationSeconds": 2.2811087919399142,
+    "exitCode": 0
+  },
+  {
+    "experiment": "baseline Vitest combat",
+    "repeat": 5,
+    "durationSeconds": 2.4836314580170438,
+    "exitCode": 0
+  }
+]

@@ -219,6 +219,11 @@ jobs:
       - name: Simulation scenario tests
         run: pnpm test:simulation
 
+      - name: Gameplay evidence gates
+        run: |
+          pnpm --silent verify:gameplay move
+          pnpm --silent verify:gameplay combat
+
   server-integration:
     name: server-integration
     needs: changes

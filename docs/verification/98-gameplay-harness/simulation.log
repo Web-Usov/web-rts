@@ -1,0 +1,62 @@
+
+> web-rts@ test:simulation /Users/alex/Documents/Develop/web-usov/web-rts_98
+> turbo run test --filter=@web-rts/scenario-runner
+
+• turbo 2.11.3
+
+   • Packages in scope: @web-rts/scenario-runner
+   • Running test in 1 package
+   • Remote caching disabled, using shared worktree cache
+
+@web-rts/game-data:build: cache hit, replaying logs 8e6461032519d4e9
+@web-rts/game-data:build: 
+@web-rts/game-data:build: > @web-rts/game-data@0.0.0 build /Users/alex/Documents/Develop/web-usov/web-rts_g7-60/packages/game-data
+@web-rts/game-data:build: > tsc -p tsconfig.json
+@web-rts/game-data:build: 
+@web-rts/protocol:build: cache hit, replaying logs 4120d1784eab4b3b
+@web-rts/protocol:build: 
+@web-rts/protocol:build: > @web-rts/protocol@0.0.0 build /Users/alex/Documents/Develop/web-usov/web-rts_g7-60/packages/protocol
+@web-rts/protocol:build: > tsc -p tsconfig.json
+@web-rts/protocol:build: 
+@web-rts/simulation:build: cache hit, replaying logs e7c27638ce0f56d6
+@web-rts/simulation:build: 
+@web-rts/simulation:build: > @web-rts/simulation@0.0.0 build /Users/alex/Documents/Develop/web-usov/web-rts_g7-60/packages/simulation
+@web-rts/simulation:build: > tsc -p tsconfig.json
+@web-rts/simulation:build: 
+@web-rts/match-adapter:build: cache hit, replaying logs baa1f895aa85ae5a
+@web-rts/match-adapter:build: 
+@web-rts/match-adapter:build: > @web-rts/match-adapter@0.0.0 build /Users/alex/Documents/Develop/web-usov/web-rts_g7-60/packages/match-adapter
+@web-rts/match-adapter:build: > tsc -p tsconfig.json
+@web-rts/match-adapter:build: 
+@web-rts/testkit:build: cache hit, replaying logs afe03e82d5682550
+@web-rts/testkit:build: 
+@web-rts/testkit:build: > @web-rts/testkit@0.0.0 build /Users/alex/Documents/Develop/web-usov/web-rts_98/packages/testkit
+@web-rts/testkit:build: > tsc -p tsconfig.json
+@web-rts/testkit:build: 
+@web-rts/scenario-runner:test: cache miss, executing 149206fe3a433c79
+@web-rts/scenario-runner:test: 
+@web-rts/scenario-runner:test: > @web-rts/scenario-runner@0.0.0 test /Users/alex/Documents/Develop/web-usov/web-rts_98/tools/scenario-runner
+@web-rts/scenario-runner:test: > vitest run
+@web-rts/scenario-runner:test: 
+@web-rts/scenario-runner:test: 
+@web-rts/scenario-runner:test:  RUN  v5.0.1 /Users/alex/Documents/Develop/web-usov/web-rts_98/tools/scenario-runner
+@web-rts/scenario-runner:test: 
+@web-rts/scenario-runner:test:  ✓ |scenario-runner| src/construction.test.ts (1 test) 82ms
+@web-rts/scenario-runner:test:  ✓ |scenario-runner| src/combat.test.ts (2 tests) 124ms
+@web-rts/scenario-runner:test:  ✓ |scenario-runner| src/index.test.ts (4 tests) 11ms
+@web-rts/scenario-runner:test:  ✓ |scenario-runner| src/verification.test.ts (6 tests) 88ms
+@web-rts/scenario-runner:test: 
+@web-rts/scenario-runner:test:  Test Files  4 passed (4)
+@web-rts/scenario-runner:test:       Tests  13 passed (13)
+@web-rts/scenario-runner:test:    Start at  15:06:21
+@web-rts/scenario-runner:test:    Duration  2.53s (transform 72%, import 22%, tests 5%, worker 1%)
+@web-rts/scenario-runner:test: 
+@web-rts/scenario-runner:test:   Transform  |scenario-runner| transforming modules took 4.80s · 72% of tracked time, re-done on every run
+@web-rts/scenario-runner:test:              persist transforms across runs with fsModuleCache: true
+@web-rts/scenario-runner:test:              learn more: https://vitest.dev/guide/improving-performance#caching-between-reruns
+@web-rts/scenario-runner:test: 
+
+ Tasks:    6 successful, 6 total
+Cached:    5 cached, 6 total
+  Time:    5.535s 
+

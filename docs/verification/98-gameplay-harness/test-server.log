@@ -1,0 +1,1643 @@
+
+> web-rts@ test:server /Users/alex/Documents/Develop/web-usov/web-rts_98
+> turbo run test:integration --filter=@web-rts/game-server
+
+• turbo 2.11.3
+
+   • Packages in scope: @web-rts/game-server
+   • Running test:integration in 1 package
+   • Remote caching disabled, using shared worktree cache
+
+@web-rts/protocol:build: cache hit, replaying logs 4120d1784eab4b3b
+@web-rts/game-data:build: cache hit, replaying logs 8e6461032519d4e9
+@web-rts/game-data:build: 
+@web-rts/game-data:build: > @web-rts/game-data@0.0.0 build /Users/alex/Documents/Develop/web-usov/web-rts_g7-60/packages/game-data
+@web-rts/game-data:build: > tsc -p tsconfig.json
+@web-rts/game-data:build: 
+@web-rts/protocol:build: 
+@web-rts/protocol:build: > @web-rts/protocol@0.0.0 build /Users/alex/Documents/Develop/web-usov/web-rts_g7-60/packages/protocol
+@web-rts/protocol:build: > tsc -p tsconfig.json
+@web-rts/protocol:build: 
+@web-rts/simulation:build: cache hit, replaying logs e7c27638ce0f56d6
+@web-rts/simulation:build: 
+@web-rts/simulation:build: > @web-rts/simulation@0.0.0 build /Users/alex/Documents/Develop/web-usov/web-rts_g7-60/packages/simulation
+@web-rts/simulation:build: > tsc -p tsconfig.json
+@web-rts/simulation:build: 
+@web-rts/match-adapter:build: cache hit, replaying logs baa1f895aa85ae5a
+@web-rts/match-adapter:build: 
+@web-rts/match-adapter:build: > @web-rts/match-adapter@0.0.0 build /Users/alex/Documents/Develop/web-usov/web-rts_g7-60/packages/match-adapter
+@web-rts/match-adapter:build: > tsc -p tsconfig.json
+@web-rts/match-adapter:build: 
+@web-rts/testkit:build: cache hit, replaying logs afe03e82d5682550
+@web-rts/testkit:build: 
+@web-rts/testkit:build: > @web-rts/testkit@0.0.0 build /Users/alex/Documents/Develop/web-usov/web-rts_98/packages/testkit
+@web-rts/testkit:build: > tsc -p tsconfig.json
+@web-rts/testkit:build: 
+@web-rts/game-server:test:integration: cache miss, executing e996938e717ca29e
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: > @web-rts/game-server@0.0.0 test:integration /Users/alex/Documents/Develop/web-usov/web-rts_98/apps/game-server
+@web-rts/game-server:test:integration: > vitest run --config vitest.integration.config.ts
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration:  RUN  v5.0.1 /Users/alex/Documents/Develop/web-usov/web-rts_98/apps/game-server
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts
+@web-rts/game-server:test:integration: ℹ️  optional .env file not found: .env.test, .env
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration:    ___      _                                   ___   _  ___  
+@web-rts/game-server:test:integration:   / __\___ | |_   _ ___  ___ _   _ ___  __   __/ _ \ / |( _ ) 
+@web-rts/game-server:test:integration:  / /  / _ \| | | | / __|/ _ \ | | / __| \ \ / / | | || |/ _ \ 
+@web-rts/game-server:test:integration: / /__| (_) | | |_| \__ \  __/ |_| \__ \  \ V /| |_| || | (_) |
+@web-rts/game-server:test:integration: \____/\___/|_|\__, |___/\___|\__,_|___/   \_/  \___(_)_|\___/ 
+@web-rts/game-server:test:integration:               |___/                                           
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration:              · Multiplayer Framework for Node.js ·
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: 💖 Consider becoming a Sponsor on GitHub → https://github.com/sponsors/endel
+@web-rts/game-server:test:integration: 🌟 Give us a star on GitHub → https://github.com/colyseus/colyseus
+@web-rts/game-server:test:integration: ☁️  Deploy and scale your project on Colyseus Cloud → https://cloud.colyseus.io
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > creates a room and lets 2–4 headless clients join
+@web-rts/game-server:test:integration: {"level":"info","event":"room_created","roomId":"R5bXD6Mgh","matchId":"R5bXD6Mgh","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > creates a room and lets 2–4 headless clients join
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"R5bXD6Mgh","matchId":"R5bXD6Mgh","tick":0,"playerId":0,"sessionId":"DVItG20Zj"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > creates a room and lets 2–4 headless clients join
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > creates a room and lets 2–4 headless clients join
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"R5bXD6Mgh","matchId":"R5bXD6Mgh","tick":0,"playerId":1,"sessionId":"C0OuMV8fi"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > creates a room and lets 2–4 headless clients join
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > creates a room and lets 2–4 headless clients join
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > creates a room and lets 2–4 headless clients join
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"R5bXD6Mgh","matchId":"R5bXD6Mgh","tick":0,"playerId":2,"sessionId":"BXOKbwyHT"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > creates a room and lets 2–4 headless clients join
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > creates a room and lets 2–4 headless clients join
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > creates a room and lets 2–4 headless clients join
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > creates a room and lets 2–4 headless clients join
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"R5bXD6Mgh","matchId":"R5bXD6Mgh","tick":0,"playerId":3,"sessionId":"94A-Lpg01"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > delivers the first lobby snapshot to a freshly connected client
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"R5bXD6Mgh","matchId":"R5bXD6Mgh","tick":0,"playerId":3,"sessionId":"94A-Lpg01"}
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"R5bXD6Mgh","matchId":"R5bXD6Mgh","tick":0,"playerId":2,"sessionId":"BXOKbwyHT"}
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"R5bXD6Mgh","matchId":"R5bXD6Mgh","tick":0,"playerId":1,"sessionId":"C0OuMV8fi"}
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"R5bXD6Mgh","matchId":"R5bXD6Mgh","tick":0,"playerId":0,"sessionId":"DVItG20Zj"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > delivers the first lobby snapshot to a freshly connected client
+@web-rts/game-server:test:integration: {"level":"info","event":"room_disposed","roomId":"R5bXD6Mgh","matchId":"R5bXD6Mgh","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > delivers the first lobby snapshot to a freshly connected client
+@web-rts/game-server:test:integration: {"level":"info","event":"room_created","roomId":"raHOyVUbZ","matchId":"raHOyVUbZ","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > delivers the first lobby snapshot to a freshly connected client
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > delivers the first lobby snapshot to a freshly connected client
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > delivers the first lobby snapshot to a freshly connected client
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > delivers the first lobby snapshot to a freshly connected client
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"raHOyVUbZ","matchId":"raHOyVUbZ","tick":0,"playerId":0,"sessionId":"9EgEEXhLg"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > sends the same connected player list to every client after sync
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"raHOyVUbZ","matchId":"raHOyVUbZ","tick":0,"playerId":0,"sessionId":"9EgEEXhLg"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > sends the same connected player list to every client after sync
+@web-rts/game-server:test:integration: {"level":"info","event":"room_disposed","roomId":"raHOyVUbZ","matchId":"raHOyVUbZ","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > sends the same connected player list to every client after sync
+@web-rts/game-server:test:integration: {"level":"info","event":"room_created","roomId":"rKBNJ4aqn","matchId":"rKBNJ4aqn","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > sends the same connected player list to every client after sync
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"rKBNJ4aqn","matchId":"rKBNJ4aqn","tick":0,"playerId":0,"sessionId":"LIoPjKO5f"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > sends the same connected player list to every client after sync
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > sends the same connected player list to every client after sync
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"rKBNJ4aqn","matchId":"rKBNJ4aqn","tick":0,"playerId":1,"sessionId":"6PgGNoooU"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > sends the same connected player list to every client after sync
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects the 5th client when the room is full
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"rKBNJ4aqn","matchId":"rKBNJ4aqn","tick":0,"playerId":1,"sessionId":"6PgGNoooU"}
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"rKBNJ4aqn","matchId":"rKBNJ4aqn","tick":0,"playerId":0,"sessionId":"LIoPjKO5f"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects the 5th client when the room is full
+@web-rts/game-server:test:integration: {"level":"info","event":"room_disposed","roomId":"rKBNJ4aqn","matchId":"rKBNJ4aqn","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects the 5th client when the room is full
+@web-rts/game-server:test:integration: {"level":"info","event":"room_created","roomId":"CrrxDoYiz","matchId":"CrrxDoYiz","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects the 5th client when the room is full
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"CrrxDoYiz","matchId":"CrrxDoYiz","tick":0,"playerId":0,"sessionId":"Y1dnzDTw_"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > rejects the 5th client when the room is full
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects the 5th client when the room is full
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"CrrxDoYiz","matchId":"CrrxDoYiz","tick":0,"playerId":1,"sessionId":"IZH602Zu0"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > rejects the 5th client when the room is full
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > rejects the 5th client when the room is full
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects the 5th client when the room is full
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"CrrxDoYiz","matchId":"CrrxDoYiz","tick":0,"playerId":2,"sessionId":"oLq3yQFML"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > rejects the 5th client when the room is full
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > rejects the 5th client when the room is full
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > rejects the 5th client when the room is full
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects the 5th client when the room is full
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"CrrxDoYiz","matchId":"CrrxDoYiz","tick":0,"playerId":3,"sessionId":"bzsz24Mkr"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > rejects the 5th client when the room is full
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > rejects the 5th client when the room is full
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > rejects the 5th client when the room is full
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > rejects the 5th client when the room is full
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > spawns unique positions after a non-zero player is replaced
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"CrrxDoYiz","matchId":"CrrxDoYiz","tick":0,"playerId":3,"sessionId":"bzsz24Mkr"}
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"CrrxDoYiz","matchId":"CrrxDoYiz","tick":0,"playerId":2,"sessionId":"oLq3yQFML"}
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"CrrxDoYiz","matchId":"CrrxDoYiz","tick":0,"playerId":1,"sessionId":"IZH602Zu0"}
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"CrrxDoYiz","matchId":"CrrxDoYiz","tick":0,"playerId":0,"sessionId":"Y1dnzDTw_"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > spawns unique positions after a non-zero player is replaced
+@web-rts/game-server:test:integration: {"level":"info","event":"room_disposed","roomId":"CrrxDoYiz","matchId":"CrrxDoYiz","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > spawns unique positions after a non-zero player is replaced
+@web-rts/game-server:test:integration: {"level":"info","event":"room_created","roomId":"kiO-MHDOz","matchId":"kiO-MHDOz","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > spawns unique positions after a non-zero player is replaced
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > spawns unique positions after a non-zero player is replaced
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > spawns unique positions after a non-zero player is replaced
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > spawns unique positions after a non-zero player is replaced
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"kiO-MHDOz","matchId":"kiO-MHDOz","tick":0,"playerId":0,"sessionId":"1dJxBEgBu"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > spawns unique positions after a non-zero player is replaced
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > spawns unique positions after a non-zero player is replaced
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"kiO-MHDOz","matchId":"kiO-MHDOz","tick":0,"playerId":1,"sessionId":"XLw3pQlz3"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > spawns unique positions after a non-zero player is replaced
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > spawns unique positions after a non-zero player is replaced
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > spawns unique positions after a non-zero player is replaced
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"kiO-MHDOz","matchId":"kiO-MHDOz","tick":0,"playerId":2,"sessionId":"60R7dNCt-"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > spawns unique positions after a non-zero player is replaced
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > spawns unique positions after a non-zero player is replaced
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > spawns unique positions after a non-zero player is replaced
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > spawns unique positions after a non-zero player is replaced
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"kiO-MHDOz","matchId":"kiO-MHDOz","tick":0,"playerId":3,"sessionId":"R91Wb7ywg"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > spawns unique positions after a non-zero player is replaced
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > spawns unique positions after a non-zero player is replaced
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > spawns unique positions after a non-zero player is replaced
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > spawns unique positions after a non-zero player is replaced
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"kiO-MHDOz","matchId":"kiO-MHDOz","tick":0,"playerId":1,"sessionId":"XLw3pQlz3"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > spawns unique positions after a non-zero player is replaced
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > spawns unique positions after a non-zero player is replaced
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > spawns unique positions after a non-zero player is replaced
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > spawns unique positions after a non-zero player is replaced
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"kiO-MHDOz","matchId":"kiO-MHDOz","tick":0,"playerId":4,"sessionId":"AiBY8OUqK"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > spawns unique positions after a non-zero player is replaced
+@web-rts/game-server:test:integration: {"level":"info","event":"match_started","roomId":"kiO-MHDOz","matchId":"kiO-MHDOz","tick":0,"entityCount":21}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > frees a slot on leave so a new client can join a previously full room
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"kiO-MHDOz","matchId":"kiO-MHDOz","tick":0,"playerId":4,"sessionId":"AiBY8OUqK"}
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"kiO-MHDOz","matchId":"kiO-MHDOz","tick":0,"playerId":3,"sessionId":"R91Wb7ywg"}
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"kiO-MHDOz","matchId":"kiO-MHDOz","tick":0,"playerId":2,"sessionId":"60R7dNCt-"}
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"kiO-MHDOz","matchId":"kiO-MHDOz","tick":0,"playerId":0,"sessionId":"1dJxBEgBu"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > frees a slot on leave so a new client can join a previously full room
+@web-rts/game-server:test:integration: {"level":"info","event":"room_disposed","roomId":"kiO-MHDOz","matchId":"kiO-MHDOz","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > frees a slot on leave so a new client can join a previously full room
+@web-rts/game-server:test:integration: {"level":"info","event":"room_created","roomId":"PqoUzM2q-","matchId":"PqoUzM2q-","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > frees a slot on leave so a new client can join a previously full room
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > frees a slot on leave so a new client can join a previously full room
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > frees a slot on leave so a new client can join a previously full room
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > frees a slot on leave so a new client can join a previously full room
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"PqoUzM2q-","matchId":"PqoUzM2q-","tick":0,"playerId":0,"sessionId":"oxPHz34WK"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > frees a slot on leave so a new client can join a previously full room
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > frees a slot on leave so a new client can join a previously full room
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"PqoUzM2q-","matchId":"PqoUzM2q-","tick":0,"playerId":1,"sessionId":"EHb-wMv8R"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > frees a slot on leave so a new client can join a previously full room
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > frees a slot on leave so a new client can join a previously full room
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > frees a slot on leave so a new client can join a previously full room
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"PqoUzM2q-","matchId":"PqoUzM2q-","tick":0,"playerId":2,"sessionId":"dZqGBcs1z"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > frees a slot on leave so a new client can join a previously full room
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > frees a slot on leave so a new client can join a previously full room
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > frees a slot on leave so a new client can join a previously full room
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > frees a slot on leave so a new client can join a previously full room
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > frees a slot on leave so a new client can join a previously full room
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > frees a slot on leave so a new client can join a previously full room
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > frees a slot on leave so a new client can join a previously full room
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > frees a slot on leave so a new client can join a previously full room
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > frees a slot on leave so a new client can join a previously full room
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > frees a slot on leave so a new client can join a previously full room
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"PqoUzM2q-","matchId":"PqoUzM2q-","tick":0,"playerId":3,"sessionId":"d5K8jGWY8"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > frees a slot on leave so a new client can join a previously full room
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"PqoUzM2q-","matchId":"PqoUzM2q-","tick":0,"playerId":0,"sessionId":"oxPHz34WK"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > frees a slot on leave so a new client can join a previously full room
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"PqoUzM2q-","matchId":"PqoUzM2q-","tick":0,"playerId":4,"sessionId":"qqULR-Dtj"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects protocol version mismatch as auth error, not reconnect/shutdown code
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"PqoUzM2q-","matchId":"PqoUzM2q-","tick":0,"playerId":4,"sessionId":"qqULR-Dtj"}
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"PqoUzM2q-","matchId":"PqoUzM2q-","tick":0,"playerId":3,"sessionId":"d5K8jGWY8"}
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"PqoUzM2q-","matchId":"PqoUzM2q-","tick":0,"playerId":2,"sessionId":"dZqGBcs1z"}
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"PqoUzM2q-","matchId":"PqoUzM2q-","tick":0,"playerId":1,"sessionId":"EHb-wMv8R"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects protocol version mismatch as auth error, not reconnect/shutdown code
+@web-rts/game-server:test:integration: {"level":"info","event":"room_disposed","roomId":"PqoUzM2q-","matchId":"PqoUzM2q-","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects protocol version mismatch as auth error, not reconnect/shutdown code
+@web-rts/game-server:test:integration: {"level":"info","event":"room_created","roomId":"1NR7hplH5","matchId":"1NR7hplH5","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > rejects protocol version mismatch as auth error, not reconnect/shutdown code
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > rejects protocol version mismatch as auth error, not reconnect/shutdown code
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > rejects protocol version mismatch as auth error, not reconnect/shutdown code
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects protocol version mismatch as auth error, not reconnect/shutdown code
+@web-rts/game-server:test:integration: {"level":"warn","event":"protocol_mismatch","roomId":"1NR7hplH5","matchId":"1NR7hplH5","tick":0,"sessionId":"otmPZFhSF","reason":"protocol_mismatch"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects protocol version mismatch as auth error, not reconnect/shutdown code
+@web-rts/game-server:test:integration: {"level":"info","event":"room_disposed","roomId":"1NR7hplH5","matchId":"1NR7hplH5","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects game-data version 0.1.0 on join
+@web-rts/game-server:test:integration: {"level":"info","event":"room_created","roomId":"a2-6fOODH","matchId":"a2-6fOODH","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > rejects game-data version 0.1.0 on join
+@web-rts/game-server:test:integration: Room connection was closed unexpectedly (4002): 
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects game-data version 0.1.0 on join
+@web-rts/game-server:test:integration: {"level":"warn","event":"protocol_mismatch","roomId":"a2-6fOODH","matchId":"a2-6fOODH","tick":0,"sessionId":"R6NL8jtaC","reason":"protocol_mismatch"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects game-data version 0.1.0 on join
+@web-rts/game-server:test:integration: {"level":"info","event":"room_disposed","roomId":"a2-6fOODH","matchId":"a2-6fOODH","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects game-data version 0.2.0 on join
+@web-rts/game-server:test:integration: {"level":"info","event":"room_created","roomId":"euCXOs82j","matchId":"euCXOs82j","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > rejects game-data version 0.2.0 on join
+@web-rts/game-server:test:integration: Room connection was closed unexpectedly (4002): 
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects game-data version 0.2.0 on join
+@web-rts/game-server:test:integration: {"level":"warn","event":"protocol_mismatch","roomId":"euCXOs82j","matchId":"euCXOs82j","tick":0,"sessionId":"PTNDH6jFb","reason":"protocol_mismatch"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects game-data version 0.2.0 on join
+@web-rts/game-server:test:integration: {"level":"info","event":"room_disposed","roomId":"euCXOs82j","matchId":"euCXOs82j","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects game-data version 0.3.0 on join
+@web-rts/game-server:test:integration: {"level":"info","event":"room_created","roomId":"nP7V8g3Xq","matchId":"nP7V8g3Xq","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > rejects game-data version 0.3.0 on join
+@web-rts/game-server:test:integration: Room connection was closed unexpectedly (4002): 
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects game-data version 0.3.0 on join
+@web-rts/game-server:test:integration: {"level":"warn","event":"protocol_mismatch","roomId":"nP7V8g3Xq","matchId":"nP7V8g3Xq","tick":0,"sessionId":"U4btrEYYT","reason":"protocol_mismatch"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects game-data version 0.3.0 on join
+@web-rts/game-server:test:integration: {"level":"info","event":"room_disposed","roomId":"nP7V8g3Xq","matchId":"nP7V8g3Xq","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects game-data version 9.9.9 on join
+@web-rts/game-server:test:integration: {"level":"info","event":"room_created","roomId":"eIhayREbP","matchId":"eIhayREbP","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > rejects game-data version 9.9.9 on join
+@web-rts/game-server:test:integration: Room connection was closed unexpectedly (4002): 
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > records simulation tick duration after the match starts
+@web-rts/game-server:test:integration: Room connection was closed unexpectedly (4002): 
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects game-data version 9.9.9 on join
+@web-rts/game-server:test:integration: {"level":"warn","event":"protocol_mismatch","roomId":"eIhayREbP","matchId":"eIhayREbP","tick":0,"sessionId":"6AqOR_VjF","reason":"protocol_mismatch"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects game-data version 9.9.9 on join
+@web-rts/game-server:test:integration: {"level":"info","event":"room_disposed","roomId":"eIhayREbP","matchId":"eIhayREbP","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > records simulation tick duration after the match starts
+@web-rts/game-server:test:integration: {"level":"info","event":"room_created","roomId":"xLsg-j90X","matchId":"xLsg-j90X","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > records simulation tick duration after the match starts
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"xLsg-j90X","matchId":"xLsg-j90X","tick":0,"playerId":0,"sessionId":"vydBL51aB"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > records simulation tick duration after the match starts
+@web-rts/game-server:test:integration: {"level":"info","event":"match_started","roomId":"xLsg-j90X","matchId":"xLsg-j90X","tick":0,"entityCount":9}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > records simulation tick duration after the match starts
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects malformed commands without crashing the room
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"xLsg-j90X","matchId":"xLsg-j90X","tick":1,"playerId":0,"sessionId":"vydBL51aB"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects malformed commands without crashing the room
+@web-rts/game-server:test:integration: {"level":"info","event":"room_disposed","roomId":"xLsg-j90X","matchId":"xLsg-j90X","tick":1}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects malformed commands without crashing the room
+@web-rts/game-server:test:integration: {"level":"info","event":"room_created","roomId":"3rzVioNK_","matchId":"3rzVioNK_","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > records simulation tick duration after the match starts
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects malformed commands without crashing the room
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"3rzVioNK_","matchId":"3rzVioNK_","tick":0,"playerId":0,"sessionId":"-IsOM4qkW"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects malformed commands without crashing the room
+@web-rts/game-server:test:integration: {"level":"info","event":"match_started","roomId":"3rzVioNK_","matchId":"3rzVioNK_","tick":0,"entityCount":9}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects malformed commands without crashing the room
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"3rzVioNK_","matchId":"3rzVioNK_","tick":0,"playerId":0,"sessionId":"-IsOM4qkW","reason":"invalid_schema","commandId":"unknown"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > rejects malformed commands without crashing the room
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects identity spoofing via playerId in the command payload
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"3rzVioNK_","matchId":"3rzVioNK_","tick":0,"playerId":0,"sessionId":"-IsOM4qkW"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects identity spoofing via playerId in the command payload
+@web-rts/game-server:test:integration: {"level":"info","event":"room_disposed","roomId":"3rzVioNK_","matchId":"3rzVioNK_","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects identity spoofing via playerId in the command payload
+@web-rts/game-server:test:integration: {"level":"info","event":"room_created","roomId":"tK7S1huZa","matchId":"tK7S1huZa","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects identity spoofing via playerId in the command payload
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"tK7S1huZa","matchId":"tK7S1huZa","tick":0,"playerId":0,"sessionId":"FtU08eiMk"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects identity spoofing via playerId in the command payload
+@web-rts/game-server:test:integration: {"level":"info","event":"match_started","roomId":"tK7S1huZa","matchId":"tK7S1huZa","tick":0,"entityCount":9}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects identity spoofing via playerId in the command payload
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"tK7S1huZa","matchId":"tK7S1huZa","tick":0,"playerId":0,"sessionId":"FtU08eiMk","reason":"invalid_schema","commandId":"move-1"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > rejects identity spoofing via playerId in the command payload
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > creates the shared MatchRuntime from room seed/map and slot participants
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"tK7S1huZa","matchId":"tK7S1huZa","tick":0,"playerId":0,"sessionId":"FtU08eiMk"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > creates the shared MatchRuntime from room seed/map and slot participants
+@web-rts/game-server:test:integration: {"level":"info","event":"room_disposed","roomId":"tK7S1huZa","matchId":"tK7S1huZa","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > creates the shared MatchRuntime from room seed/map and slot participants
+@web-rts/game-server:test:integration: {"level":"info","event":"room_created","roomId":"0gfotP82p","matchId":"0gfotP82p","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > creates the shared MatchRuntime from room seed/map and slot participants
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"0gfotP82p","matchId":"0gfotP82p","tick":0,"playerId":0,"sessionId":"fJjD42D7L"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > creates the shared MatchRuntime from room seed/map and slot participants
+@web-rts/game-server:test:integration: {"level":"info","event":"match_started","roomId":"0gfotP82p","matchId":"0gfotP82p","tick":0,"entityCount":9}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > creates the shared MatchRuntime from room seed/map and slot participants
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > creates the shared MatchRuntime from room seed/map and slot participants
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > starts simulation via client start message with seed/map
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"0gfotP82p","matchId":"0gfotP82p","tick":1,"playerId":0,"sessionId":"fJjD42D7L"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > starts simulation via client start message with seed/map
+@web-rts/game-server:test:integration: {"level":"info","event":"room_disposed","roomId":"0gfotP82p","matchId":"0gfotP82p","tick":1}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > starts simulation via client start message with seed/map
+@web-rts/game-server:test:integration: {"level":"info","event":"room_created","roomId":"ysoQ3nJXA","matchId":"ysoQ3nJXA","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > starts simulation via client start message with seed/map
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"ysoQ3nJXA","matchId":"ysoQ3nJXA","tick":0,"playerId":0,"sessionId":"_AN-fZWEL"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > starts simulation via client start message with seed/map
+@web-rts/game-server:test:integration: {"level":"info","event":"match_started","roomId":"ysoQ3nJXA","matchId":"ysoQ3nJXA","tick":0,"entityCount":9}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > survives client leave without crashing the room/process
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"ysoQ3nJXA","matchId":"ysoQ3nJXA","tick":0,"playerId":0,"sessionId":"_AN-fZWEL"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > survives client leave without crashing the room/process
+@web-rts/game-server:test:integration: {"level":"info","event":"room_disposed","roomId":"ysoQ3nJXA","matchId":"ysoQ3nJXA","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > survives client leave without crashing the room/process
+@web-rts/game-server:test:integration: {"level":"info","event":"room_created","roomId":"PGP6QaV2x","matchId":"PGP6QaV2x","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > survives client leave without crashing the room/process
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > survives client leave without crashing the room/process
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"PGP6QaV2x","matchId":"PGP6QaV2x","tick":0,"playerId":0,"sessionId":"4XxO-q1Lv"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > survives client leave without crashing the room/process
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > survives client leave without crashing the room/process
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"PGP6QaV2x","matchId":"PGP6QaV2x","tick":0,"playerId":1,"sessionId":"59Sx4685o"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > survives client leave without crashing the room/process
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > survives client leave without crashing the room/process
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"PGP6QaV2x","matchId":"PGP6QaV2x","tick":0,"playerId":0,"sessionId":"4XxO-q1Lv"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > survives client leave without crashing the room/process
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > survives client leave without crashing the room/process
+@web-rts/game-server:test:integration: {"level":"info","event":"match_started","roomId":"PGP6QaV2x","matchId":"PGP6QaV2x","tick":0,"entityCount":9}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > replicates authoritative MOVE movement to both clients
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"PGP6QaV2x","matchId":"PGP6QaV2x","tick":1,"playerId":1,"sessionId":"59Sx4685o"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > replicates authoritative MOVE movement to both clients
+@web-rts/game-server:test:integration: {"level":"info","event":"room_disposed","roomId":"PGP6QaV2x","matchId":"PGP6QaV2x","tick":1}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > replicates authoritative MOVE movement to both clients
+@web-rts/game-server:test:integration: {"level":"info","event":"room_created","roomId":"5wyuKvFSF","matchId":"5wyuKvFSF","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > replicates authoritative MOVE movement to both clients
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"5wyuKvFSF","matchId":"5wyuKvFSF","tick":0,"playerId":0,"sessionId":"PE7XAf8x-"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > replicates authoritative MOVE movement to both clients
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > replicates authoritative MOVE movement to both clients
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"5wyuKvFSF","matchId":"5wyuKvFSF","tick":0,"playerId":1,"sessionId":"dWv_Iry4c"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > replicates authoritative MOVE movement to both clients
+@web-rts/game-server:test:integration: {"level":"info","event":"match_started","roomId":"5wyuKvFSF","matchId":"5wyuKvFSF","tick":0,"entityCount":13}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > delivers simulation-generated COMMAND_REJECTED on the tick boundary
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"5wyuKvFSF","matchId":"5wyuKvFSF","tick":4,"playerId":1,"sessionId":"dWv_Iry4c"}
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"5wyuKvFSF","matchId":"5wyuKvFSF","tick":4,"playerId":0,"sessionId":"PE7XAf8x-"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > delivers simulation-generated COMMAND_REJECTED on the tick boundary
+@web-rts/game-server:test:integration: {"level":"info","event":"room_disposed","roomId":"5wyuKvFSF","matchId":"5wyuKvFSF","tick":4}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > delivers simulation-generated COMMAND_REJECTED on the tick boundary
+@web-rts/game-server:test:integration: {"level":"info","event":"room_created","roomId":"8wMwJZKh1","matchId":"8wMwJZKh1","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > delivers simulation-generated COMMAND_REJECTED on the tick boundary
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"8wMwJZKh1","matchId":"8wMwJZKh1","tick":0,"playerId":0,"sessionId":"ltNa_0yu9"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > delivers simulation-generated COMMAND_REJECTED on the tick boundary
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > delivers simulation-generated COMMAND_REJECTED on the tick boundary
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"8wMwJZKh1","matchId":"8wMwJZKh1","tick":0,"playerId":1,"sessionId":"zN9-h9HCV"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > delivers simulation-generated COMMAND_REJECTED on the tick boundary
+@web-rts/game-server:test:integration: {"level":"info","event":"match_started","roomId":"8wMwJZKh1","matchId":"8wMwJZKh1","tick":0,"entityCount":13}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > delivers simulation-generated COMMAND_REJECTED on the tick boundary
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > delivers simulation-generated COMMAND_REJECTED on the tick boundary
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > delivers simulation-generated COMMAND_REJECTED on the tick boundary
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"8wMwJZKh1","matchId":"8wMwJZKh1","tick":1,"playerId":0,"sessionId":"ltNa_0yu9","reason":"out_of_bounds","commandId":"oob"}
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"8wMwJZKh1","matchId":"8wMwJZKh1","tick":1,"playerId":0,"sessionId":"ltNa_0yu9","reason":"not_your_unit","commandId":"foreign"}
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"8wMwJZKh1","matchId":"8wMwJZKh1","tick":1,"playerId":0,"sessionId":"ltNa_0yu9","reason":"not_your_unit","commandId":"objective"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > delivers simulation-generated COMMAND_REJECTED on the tick boundary
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > delivers simulation-generated COMMAND_REJECTED on the tick boundary
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > reads one runtime snapshot per broadcast for every recipient
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"8wMwJZKh1","matchId":"8wMwJZKh1","tick":1,"playerId":1,"sessionId":"zN9-h9HCV"}
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"8wMwJZKh1","matchId":"8wMwJZKh1","tick":1,"playerId":0,"sessionId":"ltNa_0yu9"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > reads one runtime snapshot per broadcast for every recipient
+@web-rts/game-server:test:integration: {"level":"info","event":"room_disposed","roomId":"8wMwJZKh1","matchId":"8wMwJZKh1","tick":1}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > reads one runtime snapshot per broadcast for every recipient
+@web-rts/game-server:test:integration: {"level":"info","event":"room_created","roomId":"fnS6RIpcl","matchId":"fnS6RIpcl","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > reads one runtime snapshot per broadcast for every recipient
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > reads one runtime snapshot per broadcast for every recipient
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"fnS6RIpcl","matchId":"fnS6RIpcl","tick":0,"playerId":0,"sessionId":"davY4IyDS"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > reads one runtime snapshot per broadcast for every recipient
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > reads one runtime snapshot per broadcast for every recipient
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"fnS6RIpcl","matchId":"fnS6RIpcl","tick":0,"playerId":1,"sessionId":"l_ORWQNwM"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > reads one runtime snapshot per broadcast for every recipient
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > reads one runtime snapshot per broadcast for every recipient
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > reads one runtime snapshot per broadcast for every recipient
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"fnS6RIpcl","matchId":"fnS6RIpcl","tick":0,"playerId":2,"sessionId":"n2nuxnPM0"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > reads one runtime snapshot per broadcast for every recipient
+@web-rts/game-server:test:integration: {"level":"info","event":"match_started","roomId":"fnS6RIpcl","matchId":"fnS6RIpcl","tick":0,"entityCount":17}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects a new join after START and keeps the running match intact
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"fnS6RIpcl","matchId":"fnS6RIpcl","tick":2,"playerId":2,"sessionId":"n2nuxnPM0"}
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"fnS6RIpcl","matchId":"fnS6RIpcl","tick":2,"playerId":1,"sessionId":"l_ORWQNwM"}
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"fnS6RIpcl","matchId":"fnS6RIpcl","tick":2,"playerId":0,"sessionId":"davY4IyDS"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects a new join after START and keeps the running match intact
+@web-rts/game-server:test:integration: {"level":"info","event":"room_disposed","roomId":"fnS6RIpcl","matchId":"fnS6RIpcl","tick":2}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects a new join after START and keeps the running match intact
+@web-rts/game-server:test:integration: {"level":"info","event":"room_created","roomId":"bebnl0CQr","matchId":"bebnl0CQr","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects a new join after START and keeps the running match intact
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"bebnl0CQr","matchId":"bebnl0CQr","tick":0,"playerId":0,"sessionId":"bV-6qdsN6"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects a new join after START and keeps the running match intact
+@web-rts/game-server:test:integration: {"level":"info","event":"match_started","roomId":"bebnl0CQr","matchId":"bebnl0CQr","tick":0,"entityCount":9}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > rejects a new join after START and keeps the running match intact
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects a seat reserved in LOBBY that completes its join after START
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"bebnl0CQr","matchId":"bebnl0CQr","tick":0,"playerId":0,"sessionId":"bV-6qdsN6"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects a seat reserved in LOBBY that completes its join after START
+@web-rts/game-server:test:integration: {"level":"info","event":"room_disposed","roomId":"bebnl0CQr","matchId":"bebnl0CQr","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects a seat reserved in LOBBY that completes its join after START
+@web-rts/game-server:test:integration: {"level":"info","event":"room_created","roomId":"TFxFa_IJg","matchId":"TFxFa_IJg","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects a seat reserved in LOBBY that completes its join after START
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"TFxFa_IJg","matchId":"TFxFa_IJg","tick":0,"playerId":0,"sessionId":"WHhbCPyRH"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > rejects a seat reserved in LOBBY that completes its join after START
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects a seat reserved in LOBBY that completes its join after START
+@web-rts/game-server:test:integration: {"level":"warn","event":"join_rejected","roomId":"TFxFa_IJg","matchId":"TFxFa_IJg","tick":0,"sessionId":"Lqg04bb7X","reason":"match_locked"}
+@web-rts/game-server:test:integration: {"level":"info","event":"player_dropped","roomId":"TFxFa_IJg","matchId":"TFxFa_IJg","tick":0,"sessionId":"Lqg04bb7X"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects a seat reserved in LOBBY that completes its join after START
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"TFxFa_IJg","matchId":"TFxFa_IJg","tick":0,"sessionId":"Lqg04bb7X"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects oversized commandId/entityIds and non-finite targets without crashing
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"TFxFa_IJg","matchId":"TFxFa_IJg","tick":0,"playerId":0,"sessionId":"WHhbCPyRH"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects oversized commandId/entityIds and non-finite targets without crashing
+@web-rts/game-server:test:integration: {"level":"info","event":"room_disposed","roomId":"TFxFa_IJg","matchId":"TFxFa_IJg","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects oversized commandId/entityIds and non-finite targets without crashing
+@web-rts/game-server:test:integration: {"level":"info","event":"room_created","roomId":"YMmMB87yU","matchId":"YMmMB87yU","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > rejects oversized commandId/entityIds and non-finite targets without crashing
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > rejects oversized commandId/entityIds and non-finite targets without crashing
+@web-rts/game-server:test:integration: Room connection was closed unexpectedly (4002): 
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects oversized commandId/entityIds and non-finite targets without crashing
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"YMmMB87yU","matchId":"YMmMB87yU","tick":0,"playerId":0,"sessionId":"SwQlVMxFk"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects oversized commandId/entityIds and non-finite targets without crashing
+@web-rts/game-server:test:integration: {"level":"info","event":"match_started","roomId":"YMmMB87yU","matchId":"YMmMB87yU","tick":0,"entityCount":9}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects oversized commandId/entityIds and non-finite targets without crashing
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"YMmMB87yU","matchId":"YMmMB87yU","tick":0,"playerId":0,"sessionId":"SwQlVMxFk","reason":"invalid_schema","commandId":"unknown"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects oversized commandId/entityIds and non-finite targets without crashing
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"YMmMB87yU","matchId":"YMmMB87yU","tick":0,"playerId":0,"sessionId":"SwQlVMxFk","reason":"invalid_schema","commandId":"too-many"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > rejects oversized commandId/entityIds and non-finite targets without crashing
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects oversized commandId/entityIds and non-finite targets without crashing
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"YMmMB87yU","matchId":"YMmMB87yU","tick":0,"playerId":0,"sessionId":"SwQlVMxFk","reason":"invalid_schema","commandId":"huge-id"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects oversized commandId/entityIds and non-finite targets without crashing
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"YMmMB87yU","matchId":"YMmMB87yU","tick":0,"playerId":0,"sessionId":"SwQlVMxFk","reason":"invalid_schema","commandId":"nan"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > rejects oversized commandId/entityIds and non-finite targets without crashing
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"YMmMB87yU","matchId":"YMmMB87yU","tick":0,"playerId":0,"sessionId":"SwQlVMxFk","reason":"invalid_schema","commandId":"inf"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > drops a client whose frame exceeds the transport payload cap, not the room
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"YMmMB87yU","matchId":"YMmMB87yU","tick":0,"playerId":0,"sessionId":"SwQlVMxFk"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > drops a client whose frame exceeds the transport payload cap, not the room
+@web-rts/game-server:test:integration: {"level":"info","event":"room_disposed","roomId":"YMmMB87yU","matchId":"YMmMB87yU","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > drops a client whose frame exceeds the transport payload cap, not the room
+@web-rts/game-server:test:integration: {"level":"info","event":"room_created","roomId":"CsYRRxj3n","matchId":"CsYRRxj3n","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > drops a client whose frame exceeds the transport payload cap, not the room
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"CsYRRxj3n","matchId":"CsYRRxj3n","tick":0,"playerId":0,"sessionId":"mmKXg95ZE"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > drops a client whose frame exceeds the transport payload cap, not the room
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > drops a client whose frame exceeds the transport payload cap, not the room
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"CsYRRxj3n","matchId":"CsYRRxj3n","tick":0,"playerId":1,"sessionId":"zwl_dTU3W"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > drops a client whose frame exceeds the transport payload cap, not the room
+@web-rts/game-server:test:integration: {"level":"info","event":"match_started","roomId":"CsYRRxj3n","matchId":"CsYRRxj3n","tick":0,"entityCount":13}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > drops a client whose frame exceeds the transport payload cap, not the room
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > drops a client whose frame exceeds the transport payload cap, not the room
+@web-rts/game-server:test:integration: Max payload size exceeded
+@web-rts/game-server:test:integration: RangeError: Max payload size exceeded
+@web-rts/game-server:test:integration:     at Receiver.haveLength (/Users/alex/Documents/Develop/web-usov/web-rts_98/node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/receiver.js:442:28)
+@web-rts/game-server:test:integration:     at Receiver.getPayloadLength64 (/Users/alex/Documents/Develop/web-usov/web-rts_98/node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/receiver.js:429:10)
+@web-rts/game-server:test:integration:     at Receiver.startLoop (/Users/alex/Documents/Develop/web-usov/web-rts_98/node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/receiver.js:184:16)
+@web-rts/game-server:test:integration:     at Receiver._write (/Users/alex/Documents/Develop/web-usov/web-rts_98/node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/receiver.js:117:10)
+@web-rts/game-server:test:integration:     at writeOrBuffer (node:internal/streams/writable:570:12)
+@web-rts/game-server:test:integration:     at _write (node:internal/streams/writable:499:10)
+@web-rts/game-server:test:integration:     at Receiver.Writable.write (node:internal/streams/writable:508:10)
+@web-rts/game-server:test:integration:     at Socket.socketOnData (/Users/alex/Documents/Develop/web-usov/web-rts_98/node_modules/.pnpm/ws@8.21.3/node_modules/ws/lib/websocket.js:1374:35)
+@web-rts/game-server:test:integration:     at Socket.emit (node:events:509:20)
+@web-rts/game-server:test:integration:     at addChunk (node:internal/streams/readable:564:12)
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > drops a client whose frame exceeds the transport payload cap, not the room
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > drops a client whose frame exceeds the transport payload cap, not the room
+@web-rts/game-server:test:integration: {"level":"info","event":"player_dropped","roomId":"CsYRRxj3n","matchId":"CsYRRxj3n","tick":0,"playerId":0,"sessionId":"mmKXg95ZE"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > drops a client whose frame exceeds the transport payload cap, not the room
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > bounds the Remote pending queue and answers overflow with queue_full
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"CsYRRxj3n","matchId":"CsYRRxj3n","tick":0,"playerId":1,"sessionId":"zwl_dTU3W"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > bounds the Remote pending queue and answers overflow with queue_full
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"CsYRRxj3n","matchId":"CsYRRxj3n","tick":0,"playerId":0,"sessionId":"mmKXg95ZE"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > bounds the Remote pending queue and answers overflow with queue_full
+@web-rts/game-server:test:integration: {"level":"info","event":"room_disposed","roomId":"CsYRRxj3n","matchId":"CsYRRxj3n","tick":10}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > bounds the Remote pending queue and answers overflow with queue_full
+@web-rts/game-server:test:integration: {"level":"info","event":"room_created","roomId":"lQ4Oz8ZIs","matchId":"lQ4Oz8ZIs","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > bounds the Remote pending queue and answers overflow with queue_full
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"lQ4Oz8ZIs","matchId":"lQ4Oz8ZIs","tick":0,"playerId":0,"sessionId":"H5YoNmE5z"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > bounds the Remote pending queue and answers overflow with queue_full
+@web-rts/game-server:test:integration: {"level":"info","event":"match_started","roomId":"lQ4Oz8ZIs","matchId":"lQ4Oz8ZIs","tick":0,"entityCount":9}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > bounds the Remote pending queue and answers overflow with queue_full
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > bounds the Remote pending queue and answers overflow with queue_full
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"lQ4Oz8ZIs","matchId":"lQ4Oz8ZIs","tick":0,"playerId":0,"sessionId":"H5YoNmE5z","reason":"queue_full","commandId":"q3"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > bounds the Remote pending queue and answers overflow with queue_full
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > configures a finite message rate and disconnects a flooding client only
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"lQ4Oz8ZIs","matchId":"lQ4Oz8ZIs","tick":1,"playerId":0,"sessionId":"H5YoNmE5z"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > configures a finite message rate and disconnects a flooding client only
+@web-rts/game-server:test:integration: {"level":"info","event":"room_disposed","roomId":"lQ4Oz8ZIs","matchId":"lQ4Oz8ZIs","tick":1}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > configures a finite message rate and disconnects a flooding client only
+@web-rts/game-server:test:integration: {"level":"info","event":"room_created","roomId":"CfvDoh51_","matchId":"CfvDoh51_","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > configures a finite message rate and disconnects a flooding client only
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"CfvDoh51_","matchId":"CfvDoh51_","tick":0,"playerId":0,"sessionId":"7FbSg7fex"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > configures a finite message rate and disconnects a flooding client only
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > configures a finite message rate and disconnects a flooding client only
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"CfvDoh51_","matchId":"CfvDoh51_","tick":0,"playerId":1,"sessionId":"9McOlIjBv"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > configures a finite message rate and disconnects a flooding client only
+@web-rts/game-server:test:integration: {"level":"info","event":"match_started","roomId":"CfvDoh51_","matchId":"CfvDoh51_","tick":0,"entityCount":13}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > configures a finite message rate and disconnects a flooding client only
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > configures a finite message rate and disconnects a flooding client only
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"CfvDoh51_","matchId":"CfvDoh51_","tick":0,"playerId":0,"sessionId":"7FbSg7fex","reason":"invalid_schema","commandId":"unknown"}
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"CfvDoh51_","matchId":"CfvDoh51_","tick":0,"playerId":0,"sessionId":"7FbSg7fex","reason":"invalid_schema","commandId":"unknown"}
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"CfvDoh51_","matchId":"CfvDoh51_","tick":0,"playerId":0,"sessionId":"7FbSg7fex","reason":"invalid_schema","commandId":"unknown"}
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"CfvDoh51_","matchId":"CfvDoh51_","tick":0,"playerId":0,"sessionId":"7FbSg7fex","reason":"invalid_schema","commandId":"unknown"}
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"CfvDoh51_","matchId":"CfvDoh51_","tick":0,"playerId":0,"sessionId":"7FbSg7fex","reason":"invalid_schema","commandId":"unknown"}
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"CfvDoh51_","matchId":"CfvDoh51_","tick":0,"playerId":0,"sessionId":"7FbSg7fex","reason":"invalid_schema","commandId":"unknown"}
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"CfvDoh51_","matchId":"CfvDoh51_","tick":0,"playerId":0,"sessionId":"7FbSg7fex","reason":"invalid_schema","commandId":"unknown"}
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"CfvDoh51_","matchId":"CfvDoh51_","tick":0,"playerId":0,"sessionId":"7FbSg7fex","reason":"invalid_schema","commandId":"unknown"}
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"CfvDoh51_","matchId":"CfvDoh51_","tick":0,"playerId":0,"sessionId":"7FbSg7fex","reason":"invalid_schema","commandId":"unknown"}
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"CfvDoh51_","matchId":"CfvDoh51_","tick":0,"playerId":0,"sessionId":"7FbSg7fex","reason":"invalid_schema","commandId":"unknown"}
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"CfvDoh51_","matchId":"CfvDoh51_","tick":0,"playerId":0,"sessionId":"7FbSg7fex","reason":"invalid_schema","commandId":"unknown"}
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"CfvDoh51_","matchId":"CfvDoh51_","tick":0,"playerId":0,"sessionId":"7FbSg7fex","reason":"invalid_schema","commandId":"unknown"}
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"CfvDoh51_","matchId":"CfvDoh51_","tick":0,"playerId":0,"sessionId":"7FbSg7fex","reason":"invalid_schema","commandId":"unknown"}
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"CfvDoh51_","matchId":"CfvDoh51_","tick":0,"playerId":0,"sessionId":"7FbSg7fex","reason":"invalid_schema","commandId":"unknown"}
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"CfvDoh51_","matchId":"CfvDoh51_","tick":0,"playerId":0,"sessionId":"7FbSg7fex","reason":"invalid_schema","commandId":"unknown"}
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"CfvDoh51_","matchId":"CfvDoh51_","tick":0,"playerId":0,"sessionId":"7FbSg7fex","reason":"invalid_schema","commandId":"unknown"}
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"CfvDoh51_","matchId":"CfvDoh51_","tick":0,"playerId":0,"sessionId":"7FbSg7fex","reason":"invalid_schema","commandId":"unknown"}
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"CfvDoh51_","matchId":"CfvDoh51_","tick":0,"playerId":0,"sessionId":"7FbSg7fex","reason":"invalid_schema","commandId":"unknown"}
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"CfvDoh51_","matchId":"CfvDoh51_","tick":0,"playerId":0,"sessionId":"7FbSg7fex","reason":"invalid_schema","commandId":"unknown"}
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"CfvDoh51_","matchId":"CfvDoh51_","tick":0,"playerId":0,"sessionId":"7FbSg7fex","reason":"invalid_schema","commandId":"unknown"}
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"CfvDoh51_","matchId":"CfvDoh51_","tick":0,"playerId":0,"sessionId":"7FbSg7fex","reason":"invalid_schema","commandId":"unknown"}
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"CfvDoh51_","matchId":"CfvDoh51_","tick":0,"playerId":0,"sessionId":"7FbSg7fex","reason":"invalid_schema","commandId":"unknown"}
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"CfvDoh51_","matchId":"CfvDoh51_","tick":0,"playerId":0,"sessionId":"7FbSg7fex","reason":"invalid_schema","commandId":"unknown"}
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"CfvDoh51_","matchId":"CfvDoh51_","tick":0,"playerId":0,"sessionId":"7FbSg7fex","reason":"invalid_schema","commandId":"unknown"}
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"CfvDoh51_","matchId":"CfvDoh51_","tick":0,"playerId":0,"sessionId":"7FbSg7fex","reason":"invalid_schema","commandId":"unknown"}
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"CfvDoh51_","matchId":"CfvDoh51_","tick":0,"playerId":0,"sessionId":"7FbSg7fex","reason":"invalid_schema","commandId":"unknown"}
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"CfvDoh51_","matchId":"CfvDoh51_","tick":0,"playerId":0,"sessionId":"7FbSg7fex","reason":"invalid_schema","commandId":"unknown"}
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"CfvDoh51_","matchId":"CfvDoh51_","tick":0,"playerId":0,"sessionId":"7FbSg7fex","reason":"invalid_schema","commandId":"unknown"}
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"CfvDoh51_","matchId":"CfvDoh51_","tick":0,"playerId":0,"sessionId":"7FbSg7fex","reason":"invalid_schema","commandId":"unknown"}
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"CfvDoh51_","matchId":"CfvDoh51_","tick":0,"playerId":0,"sessionId":"7FbSg7fex","reason":"invalid_schema","commandId":"unknown"}
+@web-rts/game-server:test:integration: {"level":"info","event":"player_dropped","roomId":"CfvDoh51_","matchId":"CfvDoh51_","tick":0,"playerId":0,"sessionId":"7FbSg7fex"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > configures a finite message rate and disconnects a flooding client only
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > configures a finite message rate and disconnects a flooding client only
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'event'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'event'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'event'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'event'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'event'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'event'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'event'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'event'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'event'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'event'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'event'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'event'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'event'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'event'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'event'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'event'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'event'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'event'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'event'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'event'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'event'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'event'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'event'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'event'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'event'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'event'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'event'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'event'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'event'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'event'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > configures a finite message rate and disconnects a flooding client only
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"CfvDoh51_","matchId":"CfvDoh51_","tick":1,"playerId":1,"sessionId":"9McOlIjBv","reason":"not_your_unit","commandId":"peer-ok"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > configures a finite message rate and disconnects a flooding client only
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > discards pending commands on consented leave and keeps Owner
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"CfvDoh51_","matchId":"CfvDoh51_","tick":1,"playerId":1,"sessionId":"9McOlIjBv"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > discards pending commands on consented leave and keeps Owner
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"CfvDoh51_","matchId":"CfvDoh51_","tick":1,"playerId":0,"sessionId":"7FbSg7fex"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > discards pending commands on consented leave and keeps Owner
+@web-rts/game-server:test:integration: {"level":"info","event":"room_disposed","roomId":"CfvDoh51_","matchId":"CfvDoh51_","tick":1}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > discards pending commands on consented leave and keeps Owner
+@web-rts/game-server:test:integration: {"level":"info","event":"room_created","roomId":"DxNA49Crb","matchId":"DxNA49Crb","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > discards pending commands on consented leave and keeps Owner
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"DxNA49Crb","matchId":"DxNA49Crb","tick":0,"playerId":0,"sessionId":"fwi7yHCQI"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > discards pending commands on consented leave and keeps Owner
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > discards pending commands on consented leave and keeps Owner
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"DxNA49Crb","matchId":"DxNA49Crb","tick":0,"playerId":1,"sessionId":"yXLFLXhAO"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > discards pending commands on consented leave and keeps Owner
+@web-rts/game-server:test:integration: {"level":"info","event":"match_started","roomId":"DxNA49Crb","matchId":"DxNA49Crb","tick":0,"entityCount":13}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > discards pending commands on consented leave and keeps Owner
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > discards pending commands on consented leave and keeps Owner
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration > discards pending commands on consented leave and keeps Owner
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"DxNA49Crb","matchId":"DxNA49Crb","tick":0,"playerId":0,"sessionId":"fwi7yHCQI"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > discards pending commands on consented leave and keeps Owner
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > discards pending commands on consented leave and keeps Owner
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/server.integration.test.ts > game-server integration > discards pending commands on consented leave and keeps Owner
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration
+@web-rts/game-server:test:integration: {"level":"info","event":"player_dropped","roomId":"DxNA49Crb","matchId":"DxNA49Crb","tick":2,"playerId":1,"sessionId":"yXLFLXhAO"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"DxNA49Crb","matchId":"DxNA49Crb","tick":2,"playerId":1,"sessionId":"yXLFLXhAO"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/server.integration.test.ts > game-server integration
+@web-rts/game-server:test:integration: {"level":"info","event":"room_disposed","roomId":"DxNA49Crb","matchId":"DxNA49Crb","tick":2}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration:  ✓ |game-server-integration| src/integration/server.integration.test.ts (29 tests) 4332ms
+@web-rts/game-server:test:integration:    ✓ game-server integration (29)
+@web-rts/game-server:test:integration:      ✓ replicates authoritative MOVE movement to both clients 423ms
+@web-rts/game-server:test:integration:      ✓ bounds the Remote pending queue and answers overflow with queue_full 1113ms
+@web-rts/game-server:test:integration:      ✓ discards pending commands on consented leave and keeps Owner 1223ms
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts
+@web-rts/game-server:test:integration: ℹ️  optional .env file not found: .env.test, .env
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration:    ___      _                                   ___   _  ___  
+@web-rts/game-server:test:integration:   / __\___ | |_   _ ___  ___ _   _ ___  __   __/ _ \ / |( _ ) 
+@web-rts/game-server:test:integration:  / /  / _ \| | | | / __|/ _ \ | | / __| \ \ / / | | || |/ _ \ 
+@web-rts/game-server:test:integration: / /__| (_) | | |_| \__ \  __/ |_| \__ \  \ V /| |_| || | (_) |
+@web-rts/game-server:test:integration: \____/\___/|_|\__, |___/\___|\__,_|___/   \_/  \___(_)_|\___/ 
+@web-rts/game-server:test:integration:               |___/                                           
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration:              · Multiplayer Framework for Node.js ·
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: 💖 Consider becoming a Sponsor on GitHub → https://github.com/sponsors/endel
+@web-rts/game-server:test:integration: 🌟 Give us a star on GitHub → https://github.com/colyseus/colyseus
+@web-rts/game-server:test:integration: ☁️  Deploy and scale your project on Colyseus Cloud → https://cloud.colyseus.io
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > ignores a client-supplied reconnect grace
+@web-rts/game-server:test:integration: {"level":"info","event":"room_created","roomId":"jOIhYRPV5","matchId":"jOIhYRPV5","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > ignores a client-supplied reconnect grace
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"jOIhYRPV5","matchId":"jOIhYRPV5","tick":0,"playerId":0,"sessionId":"gWQEiAWSj"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > reserves the slot, unit, owner, and controller on unexpected disconnect
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"jOIhYRPV5","matchId":"jOIhYRPV5","tick":0,"playerId":0,"sessionId":"gWQEiAWSj"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > reserves the slot, unit, owner, and controller on unexpected disconnect
+@web-rts/game-server:test:integration: {"level":"info","event":"room_disposed","roomId":"jOIhYRPV5","matchId":"jOIhYRPV5","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > reserves the slot, unit, owner, and controller on unexpected disconnect
+@web-rts/game-server:test:integration: {"level":"info","event":"room_created","roomId":"5Jjh7wQoW","matchId":"5Jjh7wQoW","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > reserves the slot, unit, owner, and controller on unexpected disconnect
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"5Jjh7wQoW","matchId":"5Jjh7wQoW","tick":0,"playerId":0,"sessionId":"xVd1dqLuj"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > reserves the slot, unit, owner, and controller on unexpected disconnect
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > reserves the slot, unit, owner, and controller on unexpected disconnect
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"5Jjh7wQoW","matchId":"5Jjh7wQoW","tick":0,"playerId":1,"sessionId":"bD7wABYFu"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > reserves the slot, unit, owner, and controller on unexpected disconnect
+@web-rts/game-server:test:integration: {"level":"info","event":"match_started","roomId":"5Jjh7wQoW","matchId":"5Jjh7wQoW","tick":0,"entityCount":13}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > reserves the slot, unit, owner, and controller on unexpected disconnect
+@web-rts/game-server:test:integration: {"level":"info","event":"player_dropped","roomId":"5Jjh7wQoW","matchId":"5Jjh7wQoW","tick":0,"playerId":0,"sessionId":"xVd1dqLuj"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > keeps the fixed timestep running and replicating while a player is disconnected
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"5Jjh7wQoW","matchId":"5Jjh7wQoW","tick":0,"playerId":1,"sessionId":"bD7wABYFu"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > keeps the fixed timestep running and replicating while a player is disconnected
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"5Jjh7wQoW","matchId":"5Jjh7wQoW","tick":0,"playerId":0,"sessionId":"xVd1dqLuj"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > keeps the fixed timestep running and replicating while a player is disconnected
+@web-rts/game-server:test:integration: {"level":"info","event":"room_disposed","roomId":"5Jjh7wQoW","matchId":"5Jjh7wQoW","tick":10}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > keeps the fixed timestep running and replicating while a player is disconnected
+@web-rts/game-server:test:integration: {"level":"info","event":"room_created","roomId":"MM6mbUVgB","matchId":"MM6mbUVgB","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > keeps the fixed timestep running and replicating while a player is disconnected
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"MM6mbUVgB","matchId":"MM6mbUVgB","tick":0,"playerId":0,"sessionId":"5rKSBjOYG"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > keeps the fixed timestep running and replicating while a player is disconnected
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > keeps the fixed timestep running and replicating while a player is disconnected
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"MM6mbUVgB","matchId":"MM6mbUVgB","tick":0,"playerId":1,"sessionId":"YmC1WZ_Oz"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > keeps the fixed timestep running and replicating while a player is disconnected
+@web-rts/game-server:test:integration: {"level":"info","event":"match_started","roomId":"MM6mbUVgB","matchId":"MM6mbUVgB","tick":0,"entityCount":13}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > keeps the fixed timestep running and replicating while a player is disconnected
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > keeps the fixed timestep running and replicating while a player is disconnected
+@web-rts/game-server:test:integration: {"level":"info","event":"player_dropped","roomId":"MM6mbUVgB","matchId":"MM6mbUVgB","tick":0,"playerId":0,"sessionId":"5rKSBjOYG"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > keeps the fixed timestep running and replicating while a player is disconnected
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > reconnects the same session and accepts MOVE that the peer observes
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"MM6mbUVgB","matchId":"MM6mbUVgB","tick":1,"playerId":1,"sessionId":"YmC1WZ_Oz"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > reconnects the same session and accepts MOVE that the peer observes
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"MM6mbUVgB","matchId":"MM6mbUVgB","tick":1,"playerId":0,"sessionId":"5rKSBjOYG"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > reconnects the same session and accepts MOVE that the peer observes
+@web-rts/game-server:test:integration: {"level":"info","event":"room_disposed","roomId":"MM6mbUVgB","matchId":"MM6mbUVgB","tick":10}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > reconnects the same session and accepts MOVE that the peer observes
+@web-rts/game-server:test:integration: {"level":"info","event":"room_created","roomId":"rzDc7TsKw","matchId":"rzDc7TsKw","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > reconnects the same session and accepts MOVE that the peer observes
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"rzDc7TsKw","matchId":"rzDc7TsKw","tick":0,"playerId":0,"sessionId":"yBsI8EWgu"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > reconnects the same session and accepts MOVE that the peer observes
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > reconnects the same session and accepts MOVE that the peer observes
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"rzDc7TsKw","matchId":"rzDc7TsKw","tick":0,"playerId":1,"sessionId":"3K8GESPd7"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > reconnects the same session and accepts MOVE that the peer observes
+@web-rts/game-server:test:integration: {"level":"info","event":"match_started","roomId":"rzDc7TsKw","matchId":"rzDc7TsKw","tick":0,"entityCount":13}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > reconnects the same session and accepts MOVE that the peer observes
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > reconnects the same session and accepts MOVE that the peer observes
+@web-rts/game-server:test:integration: {"level":"info","event":"player_dropped","roomId":"rzDc7TsKw","matchId":"rzDc7TsKw","tick":0,"playerId":0,"sessionId":"yBsI8EWgu"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > reconnects the same session and accepts MOVE that the peer observes
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > reconnects the same session and accepts MOVE that the peer observes
+@web-rts/game-server:test:integration: {"level":"info","event":"player_reconnected","roomId":"rzDc7TsKw","matchId":"rzDc7TsKw","tick":0,"playerId":0,"sessionId":"yBsI8EWgu"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > reconnects the same session and accepts MOVE that the peer observes
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > locks new joins after START while a reserved reconnect in grace still works
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"rzDc7TsKw","matchId":"rzDc7TsKw","tick":4,"playerId":0,"sessionId":"yBsI8EWgu"}
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"rzDc7TsKw","matchId":"rzDc7TsKw","tick":4,"playerId":1,"sessionId":"3K8GESPd7"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > locks new joins after START while a reserved reconnect in grace still works
+@web-rts/game-server:test:integration: {"level":"info","event":"room_disposed","roomId":"rzDc7TsKw","matchId":"rzDc7TsKw","tick":4}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > locks new joins after START while a reserved reconnect in grace still works
+@web-rts/game-server:test:integration: {"level":"info","event":"room_created","roomId":"GoQfCmRfz","matchId":"GoQfCmRfz","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > locks new joins after START while a reserved reconnect in grace still works
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"GoQfCmRfz","matchId":"GoQfCmRfz","tick":0,"playerId":0,"sessionId":"r0UJVHy9j"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > locks new joins after START while a reserved reconnect in grace still works
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > locks new joins after START while a reserved reconnect in grace still works
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"GoQfCmRfz","matchId":"GoQfCmRfz","tick":0,"playerId":1,"sessionId":"fVYB0zRYM"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > locks new joins after START while a reserved reconnect in grace still works
+@web-rts/game-server:test:integration: {"level":"info","event":"match_started","roomId":"GoQfCmRfz","matchId":"GoQfCmRfz","tick":0,"entityCount":13}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > locks new joins after START while a reserved reconnect in grace still works
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > locks new joins after START while a reserved reconnect in grace still works
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > locks new joins after START while a reserved reconnect in grace still works
+@web-rts/game-server:test:integration: {"level":"info","event":"player_dropped","roomId":"GoQfCmRfz","matchId":"GoQfCmRfz","tick":0,"playerId":0,"sessionId":"r0UJVHy9j"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > locks new joins after START while a reserved reconnect in grace still works
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > locks new joins after START while a reserved reconnect in grace still works
+@web-rts/game-server:test:integration: {"level":"info","event":"player_reconnected","roomId":"GoQfCmRfz","matchId":"GoQfCmRfz","tick":0,"playerId":0,"sessionId":"r0UJVHy9j"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > locks new joins after START while a reserved reconnect in grace still works
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > locks new joins after START while a reserved reconnect in grace still works
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"GoQfCmRfz","matchId":"GoQfCmRfz","tick":0,"playerId":1,"sessionId":"fVYB0zRYM"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > locks new joins after START while a reserved reconnect in grace still works
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > releases the slot and Controller after the grace timeout without deleting the unit
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"GoQfCmRfz","matchId":"GoQfCmRfz","tick":0,"playerId":0,"sessionId":"r0UJVHy9j"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > releases the slot and Controller after the grace timeout without deleting the unit
+@web-rts/game-server:test:integration: {"level":"info","event":"room_disposed","roomId":"GoQfCmRfz","matchId":"GoQfCmRfz","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > releases the slot and Controller after the grace timeout without deleting the unit
+@web-rts/game-server:test:integration: {"level":"info","event":"room_created","roomId":"3vLDYRLtq","matchId":"3vLDYRLtq","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > releases the slot and Controller after the grace timeout without deleting the unit
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"3vLDYRLtq","matchId":"3vLDYRLtq","tick":0,"playerId":0,"sessionId":"9PH4YSklc"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > releases the slot and Controller after the grace timeout without deleting the unit
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > releases the slot and Controller after the grace timeout without deleting the unit
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"3vLDYRLtq","matchId":"3vLDYRLtq","tick":0,"playerId":1,"sessionId":"pFGdQmJXM"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > releases the slot and Controller after the grace timeout without deleting the unit
+@web-rts/game-server:test:integration: {"level":"info","event":"match_started","roomId":"3vLDYRLtq","matchId":"3vLDYRLtq","tick":0,"entityCount":13}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > releases the slot and Controller after the grace timeout without deleting the unit
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > releases the slot and Controller after the grace timeout without deleting the unit
+@web-rts/game-server:test:integration: {"level":"info","event":"player_dropped","roomId":"3vLDYRLtq","matchId":"3vLDYRLtq","tick":0,"playerId":0,"sessionId":"9PH4YSklc"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > releases the slot and Controller after the grace timeout without deleting the unit
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > releases the slot and Controller after the grace timeout without deleting the unit
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > releases the slot and Controller after the grace timeout without deleting the unit
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > releases the slot and Controller after the grace timeout without deleting the unit
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > releases the slot and Controller after the grace timeout without deleting the unit
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > releases the slot and Controller after the grace timeout without deleting the unit
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > releases the slot and Controller after the grace timeout without deleting the unit
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > releases the slot and Controller after the grace timeout without deleting the unit
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > releases the slot and Controller after the grace timeout without deleting the unit
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > releases the slot and Controller after the grace timeout without deleting the unit
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > releases the slot and Controller after the grace timeout without deleting the unit
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > releases the slot and Controller after the grace timeout without deleting the unit
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > releases the slot and Controller after the grace timeout without deleting the unit
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > releases the slot and Controller after the grace timeout without deleting the unit
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > releases the slot and Controller after the grace timeout without deleting the unit
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > releases the slot and Controller after the grace timeout without deleting the unit
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > releases the slot and Controller after the grace timeout without deleting the unit
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > releases the slot and Controller after the grace timeout without deleting the unit
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > releases the slot and Controller after the grace timeout without deleting the unit
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > releases the slot and Controller after the grace timeout without deleting the unit
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > releases the slot and Controller after the grace timeout without deleting the unit
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"3vLDYRLtq","matchId":"3vLDYRLtq","tick":19,"playerId":0,"sessionId":"9PH4YSklc"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > releases the slot and Controller after the grace timeout without deleting the unit
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > keeps pending commands during reconnect grace and applies them on the next step
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"3vLDYRLtq","matchId":"3vLDYRLtq","tick":20,"playerId":1,"sessionId":"pFGdQmJXM"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > keeps pending commands during reconnect grace and applies them on the next step
+@web-rts/game-server:test:integration: {"level":"info","event":"room_disposed","roomId":"3vLDYRLtq","matchId":"3vLDYRLtq","tick":29}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > keeps pending commands during reconnect grace and applies them on the next step
+@web-rts/game-server:test:integration: {"level":"info","event":"room_created","roomId":"rdkPvVlOS","matchId":"rdkPvVlOS","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > keeps pending commands during reconnect grace and applies them on the next step
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"rdkPvVlOS","matchId":"rdkPvVlOS","tick":0,"playerId":0,"sessionId":"FLuw_BBlK"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > keeps pending commands during reconnect grace and applies them on the next step
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > keeps pending commands during reconnect grace and applies them on the next step
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"rdkPvVlOS","matchId":"rdkPvVlOS","tick":0,"playerId":1,"sessionId":"PXxHbRiRI"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > keeps pending commands during reconnect grace and applies them on the next step
+@web-rts/game-server:test:integration: {"level":"info","event":"match_started","roomId":"rdkPvVlOS","matchId":"rdkPvVlOS","tick":0,"entityCount":13}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > keeps pending commands during reconnect grace and applies them on the next step
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > keeps pending commands during reconnect grace and applies them on the next step
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > keeps pending commands during reconnect grace and applies them on the next step
+@web-rts/game-server:test:integration: {"level":"info","event":"player_dropped","roomId":"rdkPvVlOS","matchId":"rdkPvVlOS","tick":0,"playerId":0,"sessionId":"FLuw_BBlK"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > keeps pending commands during reconnect grace and applies them on the next step
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > keeps pending commands during reconnect grace and applies them on the next step
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > discards pending commands when the grace period times out
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"rdkPvVlOS","matchId":"rdkPvVlOS","tick":1,"playerId":1,"sessionId":"PXxHbRiRI"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > discards pending commands when the grace period times out
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"rdkPvVlOS","matchId":"rdkPvVlOS","tick":1,"playerId":0,"sessionId":"FLuw_BBlK"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > discards pending commands when the grace period times out
+@web-rts/game-server:test:integration: {"level":"info","event":"room_disposed","roomId":"rdkPvVlOS","matchId":"rdkPvVlOS","tick":1}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > discards pending commands when the grace period times out
+@web-rts/game-server:test:integration: {"level":"info","event":"room_created","roomId":"YYDXqHcGb","matchId":"YYDXqHcGb","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > discards pending commands when the grace period times out
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"YYDXqHcGb","matchId":"YYDXqHcGb","tick":0,"playerId":0,"sessionId":"kA0U7307O"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > discards pending commands when the grace period times out
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > discards pending commands when the grace period times out
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"YYDXqHcGb","matchId":"YYDXqHcGb","tick":0,"playerId":1,"sessionId":"GcTmiuueY"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > discards pending commands when the grace period times out
+@web-rts/game-server:test:integration: {"level":"info","event":"match_started","roomId":"YYDXqHcGb","matchId":"YYDXqHcGb","tick":0,"entityCount":13}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > discards pending commands when the grace period times out
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > discards pending commands when the grace period times out
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > discards pending commands when the grace period times out
+@web-rts/game-server:test:integration: {"level":"info","event":"player_dropped","roomId":"YYDXqHcGb","matchId":"YYDXqHcGb","tick":0,"playerId":0,"sessionId":"kA0U7307O"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > discards pending commands when the grace period times out
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > discards pending commands when the grace period times out
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > discards pending commands when the grace period times out
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > discards pending commands when the grace period times out
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > discards pending commands when the grace period times out
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > discards pending commands when the grace period times out
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > discards pending commands when the grace period times out
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > discards pending commands when the grace period times out
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > discards pending commands when the grace period times out
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > discards pending commands when the grace period times out
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > discards pending commands when the grace period times out
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"YYDXqHcGb","matchId":"YYDXqHcGb","tick":0,"playerId":0,"sessionId":"kA0U7307O"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > discards pending commands when the grace period times out
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > discards pending commands when the grace period times out
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > discards pending commands when the grace period times out
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > discards pending commands when the grace period times out
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > treats consented Disconnect as an immediate permanent leave
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"YYDXqHcGb","matchId":"YYDXqHcGb","tick":2,"playerId":1,"sessionId":"GcTmiuueY"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > treats consented Disconnect as an immediate permanent leave
+@web-rts/game-server:test:integration: {"level":"info","event":"room_disposed","roomId":"YYDXqHcGb","matchId":"YYDXqHcGb","tick":2}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > treats consented Disconnect as an immediate permanent leave
+@web-rts/game-server:test:integration: {"level":"info","event":"room_created","roomId":"9-cYkycKT","matchId":"9-cYkycKT","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > treats consented Disconnect as an immediate permanent leave
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"9-cYkycKT","matchId":"9-cYkycKT","tick":0,"playerId":0,"sessionId":"8XVppmmjG"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > treats consented Disconnect as an immediate permanent leave
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > treats consented Disconnect as an immediate permanent leave
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"9-cYkycKT","matchId":"9-cYkycKT","tick":0,"playerId":1,"sessionId":"UGr2WwYGf"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > treats consented Disconnect as an immediate permanent leave
+@web-rts/game-server:test:integration: {"level":"info","event":"match_started","roomId":"9-cYkycKT","matchId":"9-cYkycKT","tick":0,"entityCount":13}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > treats consented Disconnect as an immediate permanent leave
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > treats consented Disconnect as an immediate permanent leave
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"9-cYkycKT","matchId":"9-cYkycKT","tick":0,"playerId":0,"sessionId":"8XVppmmjG"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > treats consented Disconnect as an immediate permanent leave
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > rejects an expired resume token without allocating a new player
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"9-cYkycKT","matchId":"9-cYkycKT","tick":0,"playerId":1,"sessionId":"UGr2WwYGf"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > rejects an expired resume token without allocating a new player
+@web-rts/game-server:test:integration: {"level":"info","event":"room_disposed","roomId":"9-cYkycKT","matchId":"9-cYkycKT","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > rejects an expired resume token without allocating a new player
+@web-rts/game-server:test:integration: {"level":"info","event":"room_created","roomId":"8HoTU_han","matchId":"8HoTU_han","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > rejects an expired resume token without allocating a new player
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"8HoTU_han","matchId":"8HoTU_han","tick":0,"playerId":0,"sessionId":"4SsPlpwAl"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > rejects an expired resume token without allocating a new player
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > rejects an expired resume token without allocating a new player
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"8HoTU_han","matchId":"8HoTU_han","tick":0,"playerId":1,"sessionId":"epkaRsGhu"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > rejects an expired resume token without allocating a new player
+@web-rts/game-server:test:integration: {"level":"info","event":"match_started","roomId":"8HoTU_han","matchId":"8HoTU_han","tick":0,"entityCount":13}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > rejects an expired resume token without allocating a new player
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > rejects an expired resume token without allocating a new player
+@web-rts/game-server:test:integration: {"level":"info","event":"player_dropped","roomId":"8HoTU_han","matchId":"8HoTU_han","tick":0,"playerId":0,"sessionId":"4SsPlpwAl"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > rejects an expired resume token without allocating a new player
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > rejects an expired resume token without allocating a new player
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > rejects an expired resume token without allocating a new player
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > rejects an expired resume token without allocating a new player
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > rejects an expired resume token without allocating a new player
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > rejects an expired resume token without allocating a new player
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > rejects an expired resume token without allocating a new player
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > rejects an expired resume token without allocating a new player
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > rejects an expired resume token without allocating a new player
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > rejects an expired resume token without allocating a new player
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > rejects an expired resume token without allocating a new player
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"8HoTU_han","matchId":"8HoTU_han","tick":9,"playerId":0,"sessionId":"4SsPlpwAl"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > rejects an expired resume token without allocating a new player
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stderr | src/integration/reconnect.integration.test.ts > reconnect integration > rejects an expired resume token without allocating a new player
+@web-rts/game-server:test:integration: @colyseus/sdk: onMessage() not registered for type 'state'.
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration > rejects an expired resume token without allocating a new player
+@web-rts/game-server:test:integration: ❌ reconnection token invalid or expired. Did you miss .allowReconnection()?
+@web-rts/game-server:test:integration: 👉 https://docs.colyseus.io/room#allow-reconnection
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration
+@web-rts/game-server:test:integration: {"level":"info","event":"player_dropped","roomId":"8HoTU_han","matchId":"8HoTU_han","tick":10,"playerId":1,"sessionId":"epkaRsGhu"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"8HoTU_han","matchId":"8HoTU_han","tick":10,"playerId":1,"sessionId":"epkaRsGhu"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/reconnect.integration.test.ts > reconnect integration
+@web-rts/game-server:test:integration: {"level":"info","event":"room_disposed","roomId":"8HoTU_han","matchId":"8HoTU_han","tick":19}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration:  ✓ |game-server-integration| src/integration/reconnect.integration.test.ts (10 tests) 11015ms
+@web-rts/game-server:test:integration:    ✓ reconnect integration (10)
+@web-rts/game-server:test:integration:      ✓ keeps the fixed timestep running and replicating while a player is disconnected 1113ms
+@web-rts/game-server:test:integration:      ✓ reconnects the same session and accepts MOVE that the peer observes 1426ms
+@web-rts/game-server:test:integration:      ✓ releases the slot and Controller after the grace timeout without deleting the unit 2037ms
+@web-rts/game-server:test:integration:      ✓ keeps pending commands during reconnect grace and applies them on the next step 1124ms
+@web-rts/game-server:test:integration:      ✓ discards pending commands when the grace period times out 2242ms
+@web-rts/game-server:test:integration:      ✓ treats consented Disconnect as an immediate permanent leave 812ms
+@web-rts/game-server:test:integration:      ✓ rejects an expired resume token without allocating a new player 1033ms
+@web-rts/game-server:test:integration: stdout | src/integration/parity.integration.test.ts
+@web-rts/game-server:test:integration: ℹ️  optional .env file not found: .env.test, .env
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/parity.integration.test.ts > Local/Remote parity (Remote shell)
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration:    ___      _                                   ___   _  ___  
+@web-rts/game-server:test:integration:   / __\___ | |_   _ ___  ___ _   _ ___  __   __/ _ \ / |( _ ) 
+@web-rts/game-server:test:integration:  / /  / _ \| | | | / __|/ _ \ | | / __| \ \ / / | | || |/ _ \ 
+@web-rts/game-server:test:integration: / /__| (_) | | |_| \__ \  __/ |_| \__ \  \ V /| |_| || | (_) |
+@web-rts/game-server:test:integration: \____/\___/|_|\__, |___/\___|\__,_|___/   \_/  \___(_)_|\___/ 
+@web-rts/game-server:test:integration:               |___/                                           
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration:              · Multiplayer Framework for Node.js ·
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: 💖 Consider becoming a Sponsor on GitHub → https://github.com/sponsors/endel
+@web-rts/game-server:test:integration: 🌟 Give us a star on GitHub → https://github.com/colyseus/colyseus
+@web-rts/game-server:test:integration: ☁️  Deploy and scale your project on Colyseus Cloud → https://cloud.colyseus.io
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/parity.integration.test.ts > Local/Remote parity (Remote shell) > matches the shared parity reference for fixture 0
+@web-rts/game-server:test:integration: {"level":"info","event":"room_created","roomId":"WtC8Tl1ve","matchId":"WtC8Tl1ve","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/parity.integration.test.ts > Local/Remote parity (Remote shell) > matches the shared parity reference for fixture 0
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"WtC8Tl1ve","matchId":"WtC8Tl1ve","tick":0,"playerId":0,"sessionId":"oEtACS285"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/parity.integration.test.ts > Local/Remote parity (Remote shell) > matches the shared parity reference for fixture 0
+@web-rts/game-server:test:integration: {"level":"info","event":"match_started","roomId":"WtC8Tl1ve","matchId":"WtC8Tl1ve","tick":0,"entityCount":9}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/parity.integration.test.ts > Local/Remote parity (Remote shell) > matches the shared parity reference for fixture 0
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"WtC8Tl1ve","matchId":"WtC8Tl1ve","tick":1,"playerId":0,"sessionId":"oEtACS285","reason":"not_your_unit","commandId":"budget-0"}
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"WtC8Tl1ve","matchId":"WtC8Tl1ve","tick":1,"playerId":0,"sessionId":"oEtACS285","reason":"not_your_unit","commandId":"budget-1"}
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"WtC8Tl1ve","matchId":"WtC8Tl1ve","tick":1,"playerId":0,"sessionId":"oEtACS285","reason":"not_your_unit","commandId":"budget-2"}
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"WtC8Tl1ve","matchId":"WtC8Tl1ve","tick":1,"playerId":0,"sessionId":"oEtACS285","reason":"not_your_unit","commandId":"budget-3"}
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"WtC8Tl1ve","matchId":"WtC8Tl1ve","tick":1,"playerId":0,"sessionId":"oEtACS285","reason":"not_your_unit","commandId":"budget-4"}
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"WtC8Tl1ve","matchId":"WtC8Tl1ve","tick":1,"playerId":0,"sessionId":"oEtACS285","reason":"not_your_unit","commandId":"budget-5"}
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"WtC8Tl1ve","matchId":"WtC8Tl1ve","tick":1,"playerId":0,"sessionId":"oEtACS285","reason":"not_your_unit","commandId":"budget-6"}
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"WtC8Tl1ve","matchId":"WtC8Tl1ve","tick":1,"playerId":0,"sessionId":"oEtACS285","reason":"not_your_unit","commandId":"budget-7"}
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"WtC8Tl1ve","matchId":"WtC8Tl1ve","tick":1,"playerId":0,"sessionId":"oEtACS285","reason":"not_your_unit","commandId":"budget-8"}
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"WtC8Tl1ve","matchId":"WtC8Tl1ve","tick":1,"playerId":0,"sessionId":"oEtACS285","reason":"not_your_unit","commandId":"budget-9"}
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"WtC8Tl1ve","matchId":"WtC8Tl1ve","tick":1,"playerId":0,"sessionId":"oEtACS285","reason":"not_your_unit","commandId":"budget-10"}
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"WtC8Tl1ve","matchId":"WtC8Tl1ve","tick":1,"playerId":0,"sessionId":"oEtACS285","reason":"not_your_unit","commandId":"budget-11"}
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"WtC8Tl1ve","matchId":"WtC8Tl1ve","tick":1,"playerId":0,"sessionId":"oEtACS285","reason":"not_your_unit","commandId":"budget-12"}
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"WtC8Tl1ve","matchId":"WtC8Tl1ve","tick":1,"playerId":0,"sessionId":"oEtACS285","reason":"not_your_unit","commandId":"budget-13"}
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"WtC8Tl1ve","matchId":"WtC8Tl1ve","tick":1,"playerId":0,"sessionId":"oEtACS285","reason":"not_your_unit","commandId":"budget-14"}
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"WtC8Tl1ve","matchId":"WtC8Tl1ve","tick":1,"playerId":0,"sessionId":"oEtACS285","reason":"not_your_unit","commandId":"budget-15"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/parity.integration.test.ts > Local/Remote parity (Remote shell) > matches the shared parity reference for fixture 1
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"WtC8Tl1ve","matchId":"WtC8Tl1ve","tick":1,"playerId":0,"sessionId":"oEtACS285"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/parity.integration.test.ts > Local/Remote parity (Remote shell) > matches the shared parity reference for fixture 1
+@web-rts/game-server:test:integration: {"level":"info","event":"room_disposed","roomId":"WtC8Tl1ve","matchId":"WtC8Tl1ve","tick":1}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/parity.integration.test.ts > Local/Remote parity (Remote shell) > matches the shared parity reference for fixture 1
+@web-rts/game-server:test:integration: {"level":"info","event":"room_created","roomId":"lTXtawvvT","matchId":"lTXtawvvT","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/parity.integration.test.ts > Local/Remote parity (Remote shell) > matches the shared parity reference for fixture 1
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"lTXtawvvT","matchId":"lTXtawvvT","tick":0,"playerId":0,"sessionId":"gOMh97UZE"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/parity.integration.test.ts > Local/Remote parity (Remote shell) > matches the shared parity reference for fixture 1
+@web-rts/game-server:test:integration: {"level":"info","event":"match_started","roomId":"lTXtawvvT","matchId":"lTXtawvvT","tick":0,"entityCount":9}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/parity.integration.test.ts > Local/Remote parity (Remote shell) > matches the shared parity reference for fixture 1
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"lTXtawvvT","matchId":"lTXtawvvT","tick":3,"playerId":0,"sessionId":"gOMh97UZE","reason":"out_of_bounds","commandId":"oob"}
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"lTXtawvvT","matchId":"lTXtawvvT","tick":3,"playerId":0,"sessionId":"gOMh97UZE","reason":"not_your_unit","commandId":"objective"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/parity.integration.test.ts > Local/Remote parity (Remote shell) > matches the shared parity reference for fixture 1
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"lTXtawvvT","matchId":"lTXtawvvT","tick":3,"playerId":0,"sessionId":"gOMh97UZE","reason":"invalid_schema","commandId":"malformed"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/parity.integration.test.ts > Local/Remote parity (Remote shell) > matches the shared parity reference for fixture 1
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"lTXtawvvT","matchId":"lTXtawvvT","tick":3,"playerId":0,"sessionId":"gOMh97UZE","reason":"invalid_schema","commandId":"unknown"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/parity.integration.test.ts > Local/Remote parity (Remote shell) > matches the shared parity reference for fixture 1
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"lTXtawvvT","matchId":"lTXtawvvT","tick":3,"playerId":0,"sessionId":"gOMh97UZE","reason":"invalid_schema","commandId":"too-many-ids"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/parity.integration.test.ts > Local/Remote parity (Remote shell) > matches the shared parity reference for fixture 1
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"lTXtawvvT","matchId":"lTXtawvvT","tick":4,"playerId":0,"sessionId":"gOMh97UZE","reason":"not_your_unit","commandId":"foreign"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/parity.integration.test.ts > Local/Remote parity (Remote shell) > matches the shared parity reference for fixture 2
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"lTXtawvvT","matchId":"lTXtawvvT","tick":12,"playerId":0,"sessionId":"gOMh97UZE"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/parity.integration.test.ts > Local/Remote parity (Remote shell) > matches the shared parity reference for fixture 2
+@web-rts/game-server:test:integration: {"level":"info","event":"room_disposed","roomId":"lTXtawvvT","matchId":"lTXtawvvT","tick":12}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/parity.integration.test.ts > Local/Remote parity (Remote shell) > matches the shared parity reference for fixture 2
+@web-rts/game-server:test:integration: {"level":"info","event":"room_created","roomId":"zdMQ1vAme","matchId":"zdMQ1vAme","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/parity.integration.test.ts > Local/Remote parity (Remote shell) > matches the shared parity reference for fixture 2
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"zdMQ1vAme","matchId":"zdMQ1vAme","tick":0,"playerId":0,"sessionId":"iWQWaxuAy"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/parity.integration.test.ts > Local/Remote parity (Remote shell) > matches the shared parity reference for fixture 2
+@web-rts/game-server:test:integration: {"level":"info","event":"match_started","roomId":"zdMQ1vAme","matchId":"zdMQ1vAme","tick":0,"entityCount":9}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/parity.integration.test.ts > Local/Remote parity (Remote shell) > reflects START → RUNNING → FINISHED and rejects commands after FINISHED
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"zdMQ1vAme","matchId":"zdMQ1vAme","tick":30,"playerId":0,"sessionId":"iWQWaxuAy"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/parity.integration.test.ts > Local/Remote parity (Remote shell) > reflects START → RUNNING → FINISHED and rejects commands after FINISHED
+@web-rts/game-server:test:integration: {"level":"info","event":"room_disposed","roomId":"zdMQ1vAme","matchId":"zdMQ1vAme","tick":30}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/parity.integration.test.ts > Local/Remote parity (Remote shell) > reflects START → RUNNING → FINISHED and rejects commands after FINISHED
+@web-rts/game-server:test:integration: {"level":"info","event":"room_created","roomId":"P_YcbtlG8","matchId":"P_YcbtlG8","tick":0}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/parity.integration.test.ts > Local/Remote parity (Remote shell) > reflects START → RUNNING → FINISHED and rejects commands after FINISHED
+@web-rts/game-server:test:integration: {"level":"info","event":"player_joined","roomId":"P_YcbtlG8","matchId":"P_YcbtlG8","tick":0,"playerId":0,"sessionId":"JWsiHELn-"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/parity.integration.test.ts > Local/Remote parity (Remote shell) > reflects START → RUNNING → FINISHED and rejects commands after FINISHED
+@web-rts/game-server:test:integration: {"level":"info","event":"match_started","roomId":"P_YcbtlG8","matchId":"P_YcbtlG8","tick":0,"entityCount":9}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/parity.integration.test.ts > Local/Remote parity (Remote shell) > reflects START → RUNNING → FINISHED and rejects commands after FINISHED
+@web-rts/game-server:test:integration: {"level":"info","event":"match_finished","roomId":"P_YcbtlG8","matchId":"P_YcbtlG8","tick":3}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/parity.integration.test.ts > Local/Remote parity (Remote shell) > reflects START → RUNNING → FINISHED and rejects commands after FINISHED
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"P_YcbtlG8","matchId":"P_YcbtlG8","tick":3,"playerId":0,"sessionId":"JWsiHELn-","reason":"not_running","commandId":"after-finish"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/parity.integration.test.ts > Local/Remote parity (Remote shell) > reflects START → RUNNING → FINISHED and rejects commands after FINISHED
+@web-rts/game-server:test:integration: {"level":"warn","event":"command_rejected","roomId":"P_YcbtlG8","matchId":"P_YcbtlG8","tick":3,"playerId":0,"sessionId":"JWsiHELn-","reason":"invalid_phase","commandId":"start"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/parity.integration.test.ts > Local/Remote parity (Remote shell)
+@web-rts/game-server:test:integration: {"level":"info","event":"player_dropped","roomId":"P_YcbtlG8","matchId":"P_YcbtlG8","tick":3,"playerId":0,"sessionId":"JWsiHELn-"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/parity.integration.test.ts > Local/Remote parity (Remote shell)
+@web-rts/game-server:test:integration: {"level":"info","event":"player_left","roomId":"P_YcbtlG8","matchId":"P_YcbtlG8","tick":3,"playerId":0,"sessionId":"JWsiHELn-"}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration: stdout | src/integration/parity.integration.test.ts > Local/Remote parity (Remote shell)
+@web-rts/game-server:test:integration: {"level":"info","event":"room_disposed","roomId":"P_YcbtlG8","matchId":"P_YcbtlG8","tick":3}
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration:  ✓ |game-server-integration| src/integration/parity.integration.test.ts (4 tests) 5059ms
+@web-rts/game-server:test:integration:    ✓ Local/Remote parity (Remote shell) (4)
+@web-rts/game-server:test:integration:      ✓ matches the shared parity reference for fixture 1 1272ms
+@web-rts/game-server:test:integration:      ✓ matches the shared parity reference for fixture 2 3069ms
+@web-rts/game-server:test:integration:      ✓ reflects START → RUNNING → FINISHED and rejects commands after FINISHED 415ms
+@web-rts/game-server:test:integration: 
+@web-rts/game-server:test:integration:  Test Files  3 passed (3)
+@web-rts/game-server:test:integration:       Tests  43 passed (43)
+@web-rts/game-server:test:integration:    Start at  15:08:53
+@web-rts/game-server:test:integration:    Duration  23.73s (tests 89%, import 8%, transform 3%)
+@web-rts/game-server:test:integration: 
+
+ Tasks:    6 successful, 6 total
+Cached:    5 cached, 6 total
+  Time:    25.738s 
+

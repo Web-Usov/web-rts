@@ -1,0 +1,113 @@
+
+> web-rts@ build /Users/alex/Documents/Develop/web-usov/web-rts_98
+> turbo run build
+
+• turbo 2.11.3
+
+   • Packages in scope: @web-rts/bot-client, @web-rts/game-data, @web-rts/game-server, @web-rts/match-adapter, @web-rts/protocol, @web-rts/scenario-runner, @web-rts/simulation, @web-rts/testkit, @web-rts/web
+   • Running build in 9 packages
+   • Remote caching disabled, using shared worktree cache
+
+@web-rts/bot-client:build: cache hit, replaying logs c4835cd58d1841b3
+@web-rts/bot-client:build: 
+@web-rts/bot-client:build: > @web-rts/bot-client@0.0.0 build /Users/alex/Documents/Develop/web-usov/web-rts-g1/tools/bot-client
+@web-rts/bot-client:build: > tsc -p tsconfig.json
+@web-rts/bot-client:build: 
+@web-rts/game-data:build: cache hit, replaying logs 8e6461032519d4e9
+@web-rts/game-data:build: 
+@web-rts/game-data:build: > @web-rts/game-data@0.0.0 build /Users/alex/Documents/Develop/web-usov/web-rts_g7-60/packages/game-data
+@web-rts/game-data:build: > tsc -p tsconfig.json
+@web-rts/game-data:build: 
+@web-rts/protocol:build: cache hit, replaying logs 4120d1784eab4b3b
+@web-rts/protocol:build: 
+@web-rts/protocol:build: > @web-rts/protocol@0.0.0 build /Users/alex/Documents/Develop/web-usov/web-rts_g7-60/packages/protocol
+@web-rts/protocol:build: > tsc -p tsconfig.json
+@web-rts/protocol:build: 
+@web-rts/simulation:build: cache hit, replaying logs e7c27638ce0f56d6
+@web-rts/simulation:build: 
+@web-rts/simulation:build: > @web-rts/simulation@0.0.0 build /Users/alex/Documents/Develop/web-usov/web-rts_g7-60/packages/simulation
+@web-rts/simulation:build: > tsc -p tsconfig.json
+@web-rts/simulation:build: 
+@web-rts/match-adapter:build: cache hit, replaying logs baa1f895aa85ae5a
+@web-rts/match-adapter:build: 
+@web-rts/match-adapter:build: > @web-rts/match-adapter@0.0.0 build /Users/alex/Documents/Develop/web-usov/web-rts_g7-60/packages/match-adapter
+@web-rts/match-adapter:build: > tsc -p tsconfig.json
+@web-rts/match-adapter:build: 
+@web-rts/testkit:build: cache miss, executing afe03e82d5682550
+@web-rts/testkit:build: 
+@web-rts/testkit:build: > @web-rts/testkit@0.0.0 build /Users/alex/Documents/Develop/web-usov/web-rts_98/packages/testkit
+@web-rts/testkit:build: > tsc -p tsconfig.json
+@web-rts/testkit:build: 
+@web-rts/scenario-runner:build: cache miss, executing f783dc6b70e206c1
+@web-rts/web:build: cache miss, executing e4694ebdba39a4a9
+@web-rts/game-server:build: cache miss, executing fff54ed5130b060d
+@web-rts/web:build: 
+@web-rts/web:build: > @web-rts/web@0.0.0 build /Users/alex/Documents/Develop/web-usov/web-rts_98/apps/web
+@web-rts/web:build: > vite build
+@web-rts/web:build: 
+@web-rts/scenario-runner:build: 
+@web-rts/scenario-runner:build: > @web-rts/scenario-runner@0.0.0 build /Users/alex/Documents/Develop/web-usov/web-rts_98/tools/scenario-runner
+@web-rts/scenario-runner:build: > tsc -p tsconfig.json
+@web-rts/scenario-runner:build: 
+@web-rts/game-server:build: 
+@web-rts/game-server:build: > @web-rts/game-server@0.0.0 build /Users/alex/Documents/Develop/web-usov/web-rts_98/apps/game-server
+@web-rts/game-server:build: > tsc -p tsconfig.json
+@web-rts/game-server:build: 
+@web-rts/web:build: vite v8.3.1 building client environment for production...
+@web-rts/web:build: transforming...
+@web-rts/web:build: ✓ 693 modules transformed.
+@web-rts/web:build: rendering chunks...
+@web-rts/web:build: computing gzip size...
+@web-rts/web:build: dist/index.html                                           0.88 kB │ gzip:   0.39 kB
+@web-rts/web:build: dist/assets/local-simulation.worker-BvKBg2xP.js         140.31 kB
+@web-rts/web:build: dist/assets/index-BqWovcd2.css                            2.09 kB │ gzip:   0.84 kB
+@web-rts/web:build: dist/assets/postprocess.vertex-BxUkFiw7.js                0.45 kB │ gzip:   0.30 kB
+@web-rts/web:build: dist/assets/rgbdDecode.fragment-Jvk1qIRE.js               0.51 kB │ gzip:   0.34 kB
+@web-rts/web:build: dist/assets/postprocess.vertex-DcxI2oJC.js                0.57 kB │ gzip:   0.35 kB
+@web-rts/web:build: dist/assets/rgbdDecode.fragment-BC6vOE_e.js               0.65 kB │ gzip:   0.38 kB
+@web-rts/web:build: dist/assets/math.scalar.functions-lnL7TJ7T.js             0.76 kB │ gzip:   0.41 kB
+@web-rts/web:build: dist/assets/color.fragment-BB9r-IRv.js                    0.86 kB │ gzip:   0.41 kB
+@web-rts/web:build: dist/assets/mesh.vertexData.functions-CD4JOR2q.js         0.93 kB │ gzip:   0.48 kB
+@web-rts/web:build: dist/assets/color.fragment-yC13hxSY.js                    0.97 kB │ gzip:   0.45 kB
+@web-rts/web:build: dist/assets/ddsTextureLoader-Bis_SA1C.js                  1.25 kB │ gzip:   0.62 kB
+@web-rts/web:build: dist/assets/color.vertex-BOf_h_b3.js                      1.34 kB │ gzip:   0.60 kB
+@web-rts/web:build: dist/assets/color.vertex-Cplb7oFD.js                      1.40 kB │ gzip:   0.61 kB
+@web-rts/web:build: dist/assets/logger-CuBYPcDK.js                            1.88 kB │ gzip:   0.82 kB
+@web-rts/web:build: dist/assets/logDepthDeclaration-aNeyAxJf.js               2.15 kB │ gzip:   0.85 kB
+@web-rts/web:build: dist/assets/fogFragment-coiG5luo.js                       2.19 kB │ gzip:   0.70 kB
+@web-rts/web:build: dist/assets/hdrTextureLoader-BQVwkxK1.js                  2.31 kB │ gzip:   1.13 kB
+@web-rts/web:build: dist/assets/fogFragment-Ct7GGhxX.js                       2.42 kB │ gzip:   0.75 kB
+@web-rts/web:build: dist/assets/iesTextureLoader-3O5bSkSd.js                  2.47 kB │ gzip:   1.07 kB
+@web-rts/web:build: dist/assets/logDepthDeclaration-CPGH_xGm.js               2.53 kB │ gzip:   0.84 kB
+@web-rts/web:build: dist/assets/tgaTextureLoader-CqhhocF6.js                  3.40 kB │ gzip:   1.35 kB
+@web-rts/web:build: dist/assets/cubemapToSphericalPolynomial-DLqv3NnS.js      3.66 kB │ gzip:   1.61 kB
+@web-rts/web:build: dist/assets/halfFloat-CXxwV7oo.js                         4.87 kB │ gzip:   1.80 kB
+@web-rts/web:build: dist/assets/helperFunctions-DdXX_AdR.js                   6.48 kB │ gzip:   2.18 kB
+@web-rts/web:build: dist/assets/helperFunctions-B6huijxK.js                   6.80 kB │ gzip:   2.30 kB
+@web-rts/web:build: dist/assets/dds.pure-DYQmvb8k.js                          6.93 kB │ gzip:   2.54 kB
+@web-rts/web:build: dist/assets/vertexColorMixing-C-l-K2W6.js                10.39 kB │ gzip:   2.14 kB
+@web-rts/web:build: dist/assets/vertexColorMixing-B6SITcJr.js                11.72 kB │ gzip:   2.17 kB
+@web-rts/web:build: dist/assets/exrTextureLoader-BTq_WeEq.js                 13.14 kB │ gzip:   4.81 kB
+@web-rts/web:build: dist/assets/ktxTextureLoader-BSGijf-Q.js                 16.40 kB │ gzip:   4.78 kB
+@web-rts/web:build: dist/assets/guid-DE5Yftu3.js                             17.70 kB │ gzip:   6.13 kB
+@web-rts/web:build: dist/assets/default.vertex-Doz_FKv_.js                   19.61 kB │ gzip:   4.38 kB
+@web-rts/web:build: dist/assets/basisTextureLoader-CibddtNi.js               27.26 kB │ gzip:   8.16 kB
+@web-rts/web:build: dist/assets/baseTexture.pure-CCMIrJT9.js                 31.60 kB │ gzip:   8.59 kB
+@web-rts/web:build: dist/assets/envTextureLoader-BU_BQTKs.js                 31.80 kB │ gzip:   8.91 kB
+@web-rts/web:build: dist/assets/default.vertex-BCx4cHlx.js                   38.03 kB │ gzip:   6.28 kB
+@web-rts/web:build: dist/assets/math.color.pure-CuYjkAM5.js                  77.34 kB │ gzip:  18.33 kB
+@web-rts/web:build: dist/assets/default.fragment-DhzxKjES.js                109.78 kB │ gzip:  22.49 kB
+@web-rts/web:build: dist/assets/default.fragment-CrDaLnq2.js                114.55 kB │ gzip:  22.32 kB
+@web-rts/web:build: dist/assets/index-BXR5G2ZO.js                         1,570.57 kB │ gzip: 412.88 kB
+@web-rts/web:build: 
+@web-rts/web:build: ✓ built in 3.53s
+@web-rts/web:build: [plugin builtin:vite-reporter] 
+@web-rts/web:build: (!) Some chunks are larger than 500 kB after minification. Consider:
+@web-rts/web:build: - Using dynamic import() to code-split the application
+@web-rts/web:build: - Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+@web-rts/web:build: - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+
+ Tasks:    9 successful, 9 total
+Cached:    5 cached, 9 total
+  Time:    14.267s 
+
