@@ -1,6 +1,6 @@
 # Spec #003 — Agent tooling and verification
 
-Статус: **Proposed / AT0**. Implementation tracker: [Epic #100](https://github.com/Web-Usov/web-rts/issues/100), [AT0 #101](https://github.com/Web-Usov/web-rts/issues/101). Принятие спецификации — после независимого review и manual merge. AT0 содержит только документацию; AT2–AT9 ниже — будущие интерфейсы и эксперименты, а не реализованные инструменты.
+Статус: **ACCEPTED — implementation track planned**. Implementation tracker: [Epic #100](https://github.com/Web-Usov/web-rts/issues/100), [AT0 #101](https://github.com/Web-Usov/web-rts/issues/101). AT0 содержит только документацию; AT2–AT9 ниже — будущие интерфейсы и эксперименты, а не реализованные инструменты.
 
 ## 1. Цель и навигация
 
