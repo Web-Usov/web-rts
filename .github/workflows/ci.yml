@@ -97,6 +97,30 @@ jobs:
           echo "docs_only=$docs_only" >> "$GITHUB_OUTPUT"
           echo "docs_only=$docs_only"
 
+  knowledge-base:
+    name: knowledge-base
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: KB regression tests
+        run: node --test scripts/knowledge-base.test.mjs
+
+      - name: Validate current KB sources
+        run: node scripts/knowledge-base.mjs check
+
+      - name: Build deterministic index
+        run: node scripts/knowledge-base.mjs index
+
   asset-validation:
     name: asset-validation
     runs-on: ubuntu-latest
@@ -437,6 +461,7 @@ jobs:
       - branch-name
       - changes
       - asset-validation
+      - knowledge-base
       - lint
       - typecheck
       - unit-tests
@@ -451,6 +476,7 @@ jobs:
           BRANCH_NAME_RESULT: ${{ needs.branch-name.result }}
           DOCS_ONLY: ${{ needs.changes.outputs.docs_only }}
           CHANGES_RESULT: ${{ needs.changes.result }}
+          KNOWLEDGE_BASE_RESULT: ${{ needs.knowledge-base.result }}
           ASSET_VALIDATION_RESULT: ${{ needs.asset-validation.result }}
           LINT_RESULT: ${{ needs.lint.result }}
           TYPECHECK_RESULT: ${{ needs.typecheck.result }}
@@ -478,6 +504,11 @@ jobs:
             exit 1
           fi
 
+          if [[ "$KNOWLEDGE_BASE_RESULT" != "success" ]]; then
+            echo "Knowledge base validation failed: $KNOWLEDGE_BASE_RESULT"
+            exit 1
+          fi
+
           results=(
             "$LINT_RESULT"
             "$TYPECHECK_RESULT"
@@ -496,7 +527,7 @@ jobs:
                 exit 1
               fi
             done
-            echo "Docs-only PR: asset validation passed; heavy CI jobs were safely skipped."
+            echo "Docs-only PR: asset/KB validation passed; heavy CI jobs were safely skipped."
             exit 0
           fi
 
