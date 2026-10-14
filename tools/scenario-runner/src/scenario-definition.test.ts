@@ -207,3 +207,24 @@ it("rejects oversized evidence and invalid legacy checkpoint bounds", () => {
   });
   expect(() => verifyGameplay(s)).toThrow("checkpoint tick");
 });
+
+it.each([
+  ["soldier", "players"],
+  ["enemy", "pve"],
+])("projects the real Combat team for %s", (entity, teamId) => {
+  const definition = loadScenario("combat");
+  definition.ticks = 0;
+  definition.operations = [
+    {
+      tick: 0,
+      type: "check",
+      id: "team-projected",
+      query: { type: "entity", entity, fields: ["teamId"] },
+      expected: { teamId },
+      initial: false,
+    },
+  ];
+  const report = verifyGameplay(scenarioFromDefinition(definition));
+  expect(report.status).toBe("PASS");
+  expect(report.checks[0]).toMatchObject({ tick: 0, actual: { teamId } });
+});

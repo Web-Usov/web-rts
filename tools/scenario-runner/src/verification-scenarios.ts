@@ -42,6 +42,9 @@ function combatFixture(d: ScenarioDefinition): FixtureDriver {
           controllerPlayerId: world.controllers.get(entityId)?.controllerPlayerId ?? null,
           objectiveType: null,
           objectiveState: null,
+          ...(world.teams.get(entityId) === undefined
+            ? {}
+            : { teamId: world.teams.get(entityId)!.teamId }),
           ...(world.soldiers.has(entityId)
             ? { soldierState: world.soldiers.get(entityId)!.state }
             : {}),

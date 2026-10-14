@@ -165,13 +165,14 @@ Audit #53 остаётся review/verification record. Его исходный �
 Самостоятельное направление **AT — Agent Tooling / AI Development Infrastructure**: [Epic #100](https://github.com/Web-Usov/web-rts/issues/100), [Spec #003](specs/003-agent-tooling-and-verification.md). Оно не расширяет gameplay G* или art scope.
 
 - AT1 / [#98](https://github.com/Web-Usov/web-rts/issues/98) завершён: headless MOVE/combat verification и JSON evidence; ограничения и reproduction — в [экспериментальном отчёте](verification/98-gameplay-harness/README.md).
-- AT0 / [#101](https://github.com/Web-Usov/web-rts/issues/101) — architecture/spec и ADR gate; отдельный ADR пока не нужен при сохранении принятых boundaries.
-- AT2 / [#102](https://github.com/Web-Usov/web-rts/issues/102) добавляет verified engineering notes и offline `kb index/search/show/check`, selective retrieval и лёгкую CI validation. Маршрут: [Knowledge Base](knowledge/README.md); measured pilot и ограничения: [AT2 verification](verification/102-agent-knowledge-base/README.md). Notes не заменяют текущий GitHub/код и Vision/ADR/spec; вся база в контекст не загружается.
-- Ближайший AT3 / [#103](https://github.com/Web-Usov/web-rts/issues/103) — scenario files и intermediate checkpoints поверх AT1; AT3–AT9 остаются самостоятельными задачами.
+- AT0 / [#101](https://github.com/Web-Usov/web-rts/issues/101) завершён: architecture/spec и ADR gate; отдельный ADR пока не нужен при сохранении принятых boundaries.
+- AT2 / [#102](https://github.com/Web-Usov/web-rts/issues/102) завершён: verified engineering notes и offline `kb index/search/show/check`, selective retrieval и лёгкую CI validation. Маршрут: [Knowledge Base](knowledge/README.md); measured pilot и ограничения: [AT2 verification](verification/102-agent-knowledge-base/README.md). Notes не заменяют текущий GitHub/код и Vision/ADR/spec; вся база в контекст не загружается.
+- AT3 / [#103](https://github.com/Web-Usov/web-rts/issues/103) завершает Gameplay Verification v2: checked-in JSON scenarios, reviewed fixture registry, intermediate checkpoints, bounded trace и строгая input validation поверх AT1. CLI: `pnpm verify:gameplay --list`, `move`, `combat`, `permanent-leave`, `--json JSON`; report schemaVersion 1 и exit 0/1/2 сохранены. Reproduction, schema, measured repeats/negative proofs и ограничения — в [AT3 verification report](verification/103-gameplay-verification-v2/README.md).
+- Следующие verification stages — AT4 / #104 (targeted mutation checks) и AT7 / #107 (browser observations/replay), использующие AT3 contract; это отдельные implementation-задачи.
 - AT4 / [#104](https://github.com/Web-Usov/web-rts/issues/104) — targeted mutation checks после AT3.
 - AT5 / [#105](https://github.com/Web-Usov/web-rts/issues/105) — 2D/reference/texture provenance и QA; AT6 / [#106](https://github.com/Web-Usov/web-rts/issues/106) — GLB validation/Mesh Studio handoff после AT5 и готовности нужного API.
 - AT7 / [#107](https://github.com/Web-Usov/web-rts/issues/107) — browser Local/Remote observations/replay после AT3; expanded public UI зависит от G11/G12.
 - AT8 / [#108](https://github.com/Web-Usov/web-rts/issues/108) — measured Coding Agent feedback loop после AT2/3/4/7.
 - AT9 / [#109](https://github.com/Web-Usov/web-rts/issues/109) — conditional public-protocol bot/soak после AT7, только при доказанном gap existing tests.
 
-Stage gates и stop/go описаны в Spec #003; текущие scope/acceptance criteria и готовность зависимостей проверяются по Issues/main. AT2–AT9 не считаются реализованными по наличию этого checkpoint.
+Stage gates и stop/go описаны в Spec #003; текущие scope/acceptance criteria и готовность зависимостей проверяются по Issues/main. AT4–AT9 не считаются реализованными по наличию этого checkpoint.
