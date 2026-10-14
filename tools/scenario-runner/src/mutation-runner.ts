@@ -29,18 +29,8 @@ function git(cwd: string, args: string[]): string {
 }
 // Includes untracked files and their contents, not only git diff. Ignored artifacts are excluded.
 export function sourceFingerprint(root: string): string {
-  const files = git(root, ["ls-files", "-z", "--cached", "--others", "--exclude-standard"])
-    .split("\0")
-    .filter(Boolean)
-    .sort();
-  return hash(
-    files
-      .map(
-        (f) =>
-          `${f}\0${existsSync(join(root, f)) ? hash(readFileSync(join(root, f), "utf8")) : "MISSING"}`,
-      )
-      .join("\0"),
-  );
+  const files = git(root, ["ls-files", "-z", "--others", "--exclude-standard"]).split("\0").filter(Boolean).sort();
+  return hash(git(root, ["diff", "--binary", "HEAD"]) + files.map(f => `${f}\0${hash(readFileSync(join(root, f), "utf8"))}`).join("\0"));
 }
 interface CommandResult {
   command: string[];
@@ -100,6 +90,11 @@ export async function runMutationMatrix(options: RunnerOptions) {
   const output = join(root, ".artifacts/verification/at4", randomUUID());
   mkdirSync(output, { recursive: true });
   const results: Experiment[] = [];
+  const matrixTemp = realpathSync(mkdtempSync(join(tmpdir(), "web-rts-at4-store-")));
+  const matrixOwner = randomUUID();
+  writeFileSync(join(matrixTemp, "owner"), matrixOwner);
+  let matrixCleanup = false;
+  try {
   for (let repeat = 1; repeat <= options.repeats; repeat++) {
     for (const mutation of options.mutations) {
       if (options.signal?.aborted) break;
@@ -218,7 +213,7 @@ export async function runMutationMatrix(options: RunnerOptions) {
           "--frozen-lockfile",
           "--ignore-scripts",
           "--store-dir",
-          join(temp, "store"),
+          join(matrixTemp, "store"),
         ]);
         await build();
         e.baseline = await detect();
@@ -304,19 +299,30 @@ export async function runMutationMatrix(options: RunnerOptions) {
           e.status = "SETUP_ERROR";
           e.reason = `${e.reason ?? ""}; cleanup: ${error}`;
         }
+        };
+        cleanup();
         e.elapsedMs = performance.now() - began;
         results.push(e);
         writeFileSync(join(output, `${mutation.id}-${repeat}.json`), JSON.stringify(e, null, 2));
       }
     }
   }
-  const complete = results.length === options.repeats * options.mutations.length;
+  } finally {
+    const cleanupMatrix = () => {
+      if (readFileSync(join(matrixTemp, "owner"), "utf8") !== matrixOwner || realpathSync(matrixTemp) !== matrixTemp) return;
+      rmSync(matrixTemp, { recursive: true });
+      matrixCleanup = !existsSync(matrixTemp);
+    };
+    cleanupMatrix();
+  }
+  const complete = matrixCleanup && results.length === options.repeats * options.mutations.length;
   const report = {
     schemaVersion: 1,
     commit,
     node: process.version,
     output,
     elapsedMs: performance.now() - start,
+    matrixCleanup,
     strict: options.strict,
     complete,
     diagnosticMatched:
