@@ -1,6 +1,6 @@
 # AT3 / #103 — Gameplay Verification v2
 
-[Issue #103](https://github.com/Web-Usov/web-rts/issues/103), [Spec #003](../../specs/003-agent-tooling-and-verification.md). Эксперимент 14 октября 2026; base `bda1373`, Node 25.9.0 / pnpm 10.8.1, CI Node 22. AT1 #98 / PR #99 и AT0 #101 завершены. Проверена только KB note `permanent-leave-queue` и её первичные источники: MatchRuntime/removePlayer, runtime regression tests, FoundationRoom/onDrop/onLeave, ADR-009; #54 / merged PR #73. Gameplay/production API не изменены.
+[Issue #103](https://github.com/Web-Usov/web-rts/issues/103), [Spec #003](../../specs/003-agent-tooling-and-verification.md). Эксперимент 14 октября 2026; base `bda1373`, Node 25.9.0 / pnpm 10.8.1, CI Node 22. AT1 #98 / PR #99 и AT0 #101 завершены. Проверена только KB note `permanent-leave-queue` и её первичные источники: MatchRuntime/removePlayer, runtime regression tests, FoundationRoom/onDrop/onLeave, ADR-009; #54 / merged PR #73. После добавления report в CI отдельно перепроверена note `branch-naming-gate`: naming jobs неизменны, 30 validator tests PASS, обновлён только source fingerprint/context. Вся KB не загружалась. Gameplay/production API не изменены.
 
 ## Воспроизведение
 
