@@ -141,3 +141,7 @@ User manual merge
 История чата, memory/summary, старые SHA и отчёты coding agents — только вспомогательный контекст.
 
 Для текущего состояния проекта источником истины являются актуальный repository, GitHub Issues, PR и GitHub Actions. Архитектурный приоритет документов остаётся определён в `AGENTS.md`.
+
+## Selective engineering retrieval (AT2)
+
+После обязательного bootstrap Coding Agent при релевантном симптоме/компоненте использует [Knowledge Base](knowledge/README.md): `pnpm kb search "<symptom>" --component <component> --limit 3` → `pnpm kb show <id>` для нескольких top notes → первичные Issues/PR/commits и текущий код → implementation plan. Не загружать всю KB по умолчанию. No-result ведёт к обычному code/docs/GitHub search; stale note исключается из поиска и требует reverification через `kb check`; фатальные ошибки schema/secrets/security/provenance блокируют retrieval. Notes — вспомогательная память и не меняют source-of-truth hierarchy.

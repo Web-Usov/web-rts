@@ -166,7 +166,8 @@ Audit #53 остаётся review/verification record. Его исходный �
 
 - AT1 / [#98](https://github.com/Web-Usov/web-rts/issues/98) завершён: headless MOVE/combat verification и JSON evidence; ограничения и reproduction — в [экспериментальном отчёте](verification/98-gameplay-harness/README.md).
 - AT0 / [#101](https://github.com/Web-Usov/web-rts/issues/101) — architecture/spec и ADR gate; отдельный ADR пока не нужен при сохранении принятых boundaries.
-- Ближайшие этапы после принятия AT0: **AT2 / [#102](https://github.com/Web-Usov/web-rts/issues/102)** — compact searchable KB и measured retrieval; **AT3 / [#103](https://github.com/Web-Usov/web-rts/issues/103)** — scenario files и intermediate checkpoints поверх AT1.
+- AT2 / [#102](https://github.com/Web-Usov/web-rts/issues/102) добавляет verified engineering notes и offline `kb index/search/show/check`, selective retrieval и лёгкую CI validation. Маршрут: [Knowledge Base](knowledge/README.md); measured pilot и ограничения: [AT2 verification](verification/102-agent-knowledge-base/README.md). Notes не заменяют текущий GitHub/код и Vision/ADR/spec; вся база в контекст не загружается.
+- Ближайший AT3 / [#103](https://github.com/Web-Usov/web-rts/issues/103) — scenario files и intermediate checkpoints поверх AT1; AT3–AT9 остаются самостоятельными задачами.
 - AT4 / [#104](https://github.com/Web-Usov/web-rts/issues/104) — targeted mutation checks после AT3.
 - AT5 / [#105](https://github.com/Web-Usov/web-rts/issues/105) — 2D/reference/texture provenance и QA; AT6 / [#106](https://github.com/Web-Usov/web-rts/issues/106) — GLB validation/Mesh Studio handoff после AT5 и готовности нужного API.
 - AT7 / [#107](https://github.com/Web-Usov/web-rts/issues/107) — browser Local/Remote observations/replay после AT3; expanded public UI зависит от G11/G12.

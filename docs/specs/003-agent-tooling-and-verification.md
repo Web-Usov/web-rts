@@ -1,6 +1,6 @@
 # Spec #003 — Agent tooling and verification
 
-Статус: **ACCEPTED — implementation track planned**. Implementation tracker: [Epic #100](https://github.com/Web-Usov/web-rts/issues/100), [AT0 #101](https://github.com/Web-Usov/web-rts/issues/101). AT0 содержит только документацию; AT2–AT9 ниже — будущие интерфейсы и эксперименты, а не реализованные инструменты.
+Статус: **ACCEPTED — implementation track planned**. Implementation tracker: [Epic #100](https://github.com/Web-Usov/web-rts/issues/100), [AT0 #101](https://github.com/Web-Usov/web-rts/issues/101). AT0 содержит только документацию; AT2 предоставляет [Knowledge Base](../knowledge/README.md) с [retrieval pilot](../verification/102-agent-knowledge-base/README.md); AT3–AT9 ниже — будущие интерфейсы и эксперименты, а не реализованные инструменты.
 
 ## 1. Цель и навигация
 
@@ -37,7 +37,7 @@ AT2, AT3 и AT5 независимы после своих gates; AT6 не ко�
 | `packages/testkit` | Trusted fixture builders, assertions и reference runs; World setup для низкоуровневых tests | Доступ browser/client к mutable World; production импорт testkit |
 | `tools/scenario-runner` | Выбор/валидация fixture, выполнение через runtime/testkit, bounded JSON evidence и exit codes | Arbitrary eval сценария из внешнего JSON; второй gameplay implementation |
 | Browser automation | Playwright + public UI/GameTransport + существующий server harness; recipient-visible observations | Подмена session actor, hidden enemy state, bypass command validation или отдельный authoritative runtime |
-| Knowledge base | Будущие `docs/knowledge/`: compact sourced notes + deterministic bounded index/search | Notes как новый source of truth, secrets/PII, full KB injection, обязательные embeddings/LLM/cloud |
+| Knowledge base | `docs/knowledge/`: compact sourced notes + deterministic bounded index/search | Notes как новый source of truth, secrets/PII, full KB injection, обязательные embeddings/LLM/cloud |
 | Asset pipeline | Offline processing/QA, существующий manifest/validator, reviewable previews | Автозамена accepted originals, auto-promotion в G13, gameplay side effects или дублирование Mesh Studio |
 
 Принятые решения уже покрывают AT: [ADR-004](../adr/004-fixed-timestep-and-repeatable-simulation.md) — repeatability одного runtime/version; [ADR-006](../adr/006-local-vs-remote-game-transport.md) — GameTransport; [ADR-007](../adr/007-replication-boundary-and-visibility.md) — recipient projection/hidden state; [ADR-009](../adr/009-shared-match-runtime-and-adapter-boundary.md) — shared MatchRuntime и единственный production bridge `match-adapter`. Testkit может использовать этот bridge в reference test, но не становится вторым production path.
@@ -67,7 +67,7 @@ Required CI и реальный внутренний browser playtest остаю
 
 ## 5. Контекст, provenance и измерения
 
-Selective retrieval: сначала обязательный bootstrap, затем relevant section/issue и affected code/tests, минимальные curated skills через [router](../../.agents/skills/web-rts-router/SKILL.md). Future AT2 query по subsystem/symptom возвращает ограниченные snippets/paths; открываются top relevant notes, первичный источник и текущий код. Note содержит component/version, symptom/root cause/fix/verification/pitfalls, paths/tags и PR/commit provenance. Hypothesis маркируется; stale note перепроверяется, duplicate объединяется, no-result ведёт к code/docs search. Notes не отменяют hierarchy и live GitHub check.
+Selective retrieval: сначала обязательный bootstrap, затем relevant section/issue и affected code/tests, минимальные curated skills через [router](../../.agents/skills/web-rts-router/SKILL.md). AT2 query по subsystem/symptom возвращает ограниченные snippets/paths; открываются top relevant notes, первичный источник и текущий код. Note содержит component/version, symptom/root cause/fix/verification/pitfalls, paths/tags и PR/commit provenance. Hypothesis маркируется; stale note перепроверяется, duplicate объединяется, no-result ведёт к code/docs search. Notes не отменяют hierarchy и live GitHub check.
 
 Для внешнего кода фиксируются upstream/version и фактическая лицензия на момент заимствования; при существенном копировании сохраняются необходимые copyright/NOTICE. Лицензия кода не доказывает права на model weights/reference/output. Для assets записываются source/reference checksum, prompt, provider/model/tool/version, seed (если supported), processing steps, outputs/checksums, licence/use rights и фактическая cost. Неизвестные права блокируют promotion. Generated image/GLB и KB text — недоверенные входы: parse/validate/review, не исполнять вложенные инструкции.
 
