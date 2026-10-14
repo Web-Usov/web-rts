@@ -151,7 +151,10 @@ export async function runMutationMatrix(options: RunnerOptions) {
                 }
               }
             };
-            const timer = setTimeout(stop, 180000);
+            const timer = setTimeout(
+              stop,
+              executable === "pnpm" && args.includes("install") ? 300000 : 180000,
+            );
             options.signal?.addEventListener("abort", stop, { once: true });
             child.stdout.on("data", (b) => {
               stdout += String(b);
@@ -216,6 +219,8 @@ export async function runMutationMatrix(options: RunnerOptions) {
             throw new Error("Unclean disposable baseline");
           await required("pnpm", [
             "install",
+            "--filter",
+            "@web-rts/scenario-runner...",
             "--frozen-lockfile",
             "--ignore-scripts",
             "--store-dir",

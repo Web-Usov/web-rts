@@ -20,7 +20,7 @@ describe.skipIf(process.env.AT4_INTEGRATION !== "1")("real mutation isolation", 
       expect(r.results[0]!.reason).toContain("exactly once");
       expect(r.results[0]!.cleanup.passed).toBe(true);
       expect(r.detectionGatePassed).toBe(false);
-    }, 240000);
+    }, 420000);
   }
   it("cleans source after an exception following the applied diff", async () => {
     const r = await runMutationMatrix({
@@ -34,7 +34,7 @@ describe.skipIf(process.env.AT4_INTEGRATION !== "1")("real mutation isolation", 
     expect(r.results[0]!.status).toBe("SETUP_ERROR");
     expect(r.results[0]!.cleanup.passed).toBe(true);
     expect(r.results[0]!.reason).toContain("Injected failure");
-  }, 240000);
+  }, 420000);
   it("aborts an owned child process and removes its disposable worktree", async () => {
     const c = new AbortController();
     const timer = setTimeout(() => c.abort(), 500);
@@ -52,5 +52,5 @@ describe.skipIf(process.env.AT4_INTEGRATION !== "1")("real mutation isolation", 
     } finally {
       clearTimeout(timer);
     }
-  }, 240000);
+  }, 420000);
 });
