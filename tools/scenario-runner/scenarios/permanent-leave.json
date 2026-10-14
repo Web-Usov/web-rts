@@ -1,0 +1,263 @@
+{
+  "version": 1,
+  "id": "permanent-leave",
+  "seed": 54,
+  "ticks": 120,
+  "setup": {
+    "fixture": "match",
+    "players": [0, 1]
+  },
+  "selectors": {
+    "unit": {
+      "definitionId": "foundation_unit",
+      "ownerPlayerId": 0,
+      "index": 0
+    },
+    "other": {
+      "definitionId": "foundation_unit",
+      "ownerPlayerId": 1,
+      "index": 0
+    }
+  },
+  "operations": [
+    {
+      "tick": 0,
+      "type": "move",
+      "playerId": 0,
+      "commandId": "pending-valid",
+      "entity": "unit",
+      "target": {
+        "x": 4,
+        "y": -3
+      }
+    },
+    {
+      "tick": 0,
+      "type": "move",
+      "playerId": 0,
+      "commandId": "pending-invalid",
+      "entity": "other",
+      "target": {
+        "x": 4,
+        "y": -3
+      }
+    },
+    {
+      "tick": 0,
+      "type": "check",
+      "id": "valid-admitted",
+      "query": {
+        "type": "admission",
+        "commandId": "pending-valid"
+      },
+      "expected": {
+        "accepted": true
+      },
+      "initial": false
+    },
+    {
+      "tick": 0,
+      "type": "check",
+      "id": "invalid-admitted-before-validation",
+      "query": {
+        "type": "admission",
+        "commandId": "pending-invalid"
+      },
+      "expected": {
+        "accepted": true
+      },
+      "initial": false
+    },
+    {
+      "tick": 0,
+      "type": "check",
+      "id": "pending-before-removal",
+      "query": {
+        "type": "metric",
+        "field": "pendingCommandCount"
+      },
+      "expected": 2,
+      "initial": false
+    },
+    {
+      "tick": 0,
+      "type": "removePlayer",
+      "playerId": 0
+    },
+    {
+      "tick": 0,
+      "type": "check",
+      "id": "pending-after-removal",
+      "query": {
+        "type": "metric",
+        "field": "pendingCommandCount"
+      },
+      "expected": 0,
+      "initial": false
+    },
+    {
+      "tick": 0,
+      "type": "check",
+      "id": "control-released",
+      "query": {
+        "type": "entity",
+        "entity": "unit",
+        "fields": ["controllerPlayerId"]
+      },
+      "expected": {
+        "controllerPlayerId": null
+      },
+      "initial": false
+    },
+    {
+      "tick": 1,
+      "type": "check",
+      "id": "no-movement-after-leave",
+      "query": {
+        "type": "entity",
+        "entity": "unit",
+        "fields": ["x", "y"]
+      },
+      "expected": null,
+      "initial": true
+    },
+    {
+      "tick": 1,
+      "type": "check",
+      "id": "owner-preserved",
+      "query": {
+        "type": "entity",
+        "entity": "unit",
+        "fields": ["ownerPlayerId"]
+      },
+      "expected": {
+        "ownerPlayerId": 0
+      },
+      "initial": false
+    },
+    {
+      "tick": 1,
+      "type": "check",
+      "id": "other-control-preserved",
+      "query": {
+        "type": "entity",
+        "entity": "other",
+        "fields": ["controllerPlayerId"]
+      },
+      "expected": {
+        "controllerPlayerId": 1
+      },
+      "initial": false
+    },
+    {
+      "tick": 1,
+      "type": "check",
+      "id": "no-stale-events",
+      "query": {
+        "type": "events",
+        "filter": {}
+      },
+      "expected": [],
+      "initial": false
+    },
+    {
+      "tick": 1,
+      "type": "move",
+      "playerId": 0,
+      "commandId": "after-leave",
+      "entity": "unit",
+      "target": {
+        "x": 4,
+        "y": -3
+      }
+    },
+    {
+      "tick": 1,
+      "type": "check",
+      "id": "removed-player-rejected",
+      "query": {
+        "type": "admission",
+        "commandId": "after-leave"
+      },
+      "expected": {
+        "accepted": false,
+        "reason": "not_participant"
+      },
+      "initial": false
+    },
+    {
+      "tick": 1,
+      "type": "move",
+      "playerId": 1,
+      "commandId": "during-grace",
+      "entity": "other",
+      "target": {
+        "x": 4,
+        "y": -3
+      }
+    },
+    {
+      "tick": 1,
+      "type": "check",
+      "id": "grace-pending-retained",
+      "query": {
+        "type": "metric",
+        "field": "pendingCommandCount"
+      },
+      "expected": 1,
+      "initial": false
+    },
+    {
+      "tick": 2,
+      "type": "check",
+      "id": "grace-pending-processed",
+      "query": {
+        "type": "metric",
+        "field": "pendingCommandCount"
+      },
+      "expected": 0,
+      "initial": false
+    },
+    {
+      "tick": 120,
+      "type": "check",
+      "id": "grace-move-executed",
+      "query": {
+        "type": "entity",
+        "entity": "other",
+        "fields": ["x", "y"]
+      },
+      "expected": {
+        "x": 4,
+        "y": -3
+      },
+      "initial": false
+    },
+    {
+      "tick": 120,
+      "type": "check",
+      "id": "grace-control-retained",
+      "query": {
+        "type": "entity",
+        "entity": "other",
+        "fields": ["ownerPlayerId", "controllerPlayerId"]
+      },
+      "expected": {
+        "ownerPlayerId": 1,
+        "controllerPlayerId": 1
+      },
+      "initial": false
+    },
+    {
+      "tick": 120,
+      "type": "check",
+      "id": "no-events",
+      "query": {
+        "type": "events",
+        "filter": {}
+      },
+      "expected": [],
+      "initial": false
+    }
+  ]
+}

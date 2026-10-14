@@ -256,6 +256,7 @@ jobs:
 
           pnpm --silent verify:gameplay move > "$output/move.json" 2> "$output/move.log"
           pnpm --silent verify:gameplay combat > "$output/combat.json" 2> "$output/combat.log"
+          pnpm --silent verify:gameplay permanent-leave > "$output/permanent-leave.json" 2> "$output/permanent-leave.log"
 
           # Reuse the same verification oracle as the existing negative Vitest gate.
           # This is a deliberately wrong expectation, not a gameplay code mutation.
@@ -302,7 +303,7 @@ jobs:
           import assert from "node:assert/strict";
           import { readFileSync } from "node:fs";
           for (const [name, expected] of [
-            ["move", "PASS"], ["combat", "PASS"], ["wrong-expectation", "FAIL"],
+            ["move", "PASS"], ["combat", "PASS"], ["permanent-leave", "PASS"], ["wrong-expectation", "FAIL"],
             ["unknown", "FAIL"], ["malformed", "FAIL"],
           ]) {
             const report = JSON.parse(readFileSync(`.artifacts/verification/gameplay/${name}.json`, "utf8"));

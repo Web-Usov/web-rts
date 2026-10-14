@@ -39,7 +39,24 @@ function canonical(value: EvidenceValue): string {
 
 /** Runs real gameplay once and checks concrete outcomes, never repeatability alone. */
 export function verifyGameplay(scenario: GameplayScenario) {
+  canonical(scenario.inputs);
+  if (
+    !Number.isSafeInteger(scenario.ticks) ||
+    scenario.ticks < 0 ||
+    scenario.ticks > 1000 ||
+    !Number.isSafeInteger(scenario.seed)
+  )
+    throw new Error("Invalid scenario tick/seed bounds");
   const { checks, observations } = scenario.execute();
+  canonical(observations);
+  if (checks.length > 128) throw new Error("Check cap exceeded");
+  const ids = new Set<string>();
+  for (const check of checks) {
+    if (!check.id || ids.has(check.id)) throw new Error("Duplicate/empty assertion id");
+    ids.add(check.id);
+    if (!Number.isSafeInteger(check.tick) || check.tick < 0 || check.tick > scenario.ticks)
+      throw new Error("Invalid checkpoint tick");
+  }
   if (checks.length === 0) throw new Error("Scenario must supply at least one gameplay check");
   const results = checks.map((check) => {
     const status = canonical(check.expected) === canonical(check.actual) ? "PASS" : "FAIL";
@@ -51,7 +68,7 @@ export function verifyGameplay(scenario: GameplayScenario) {
         : {}),
     };
   });
-  return {
+  const report = {
     schemaVersion: 1,
     scenarioId: scenario.scenarioId,
     seed: scenario.seed,
@@ -64,4 +81,7 @@ export function verifyGameplay(scenario: GameplayScenario) {
     checks: results,
     observations,
   };
+  if (new TextEncoder().encode(JSON.stringify(report, null, 2)).length > 262144)
+    throw new Error("Evidence output cap exceeded");
+  return report;
 }

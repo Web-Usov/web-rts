@@ -1,0 +1,117 @@
+{
+  "version": 1,
+  "id": "move",
+  "seed": 98,
+  "ticks": 120,
+  "setup": {
+    "fixture": "match",
+    "players": [0]
+  },
+  "selectors": {
+    "unit": {
+      "definitionId": "foundation_unit",
+      "ownerPlayerId": 0,
+      "index": 0
+    }
+  },
+  "operations": [
+    {
+      "tick": 0,
+      "type": "move",
+      "playerId": 0,
+      "commandId": "verify-move",
+      "entity": "unit",
+      "target": {
+        "x": 4,
+        "y": -3
+      }
+    },
+    {
+      "tick": 0,
+      "type": "check",
+      "id": "command-admitted",
+      "query": {
+        "type": "admission",
+        "commandId": "verify-move"
+      },
+      "expected": {
+        "accepted": true
+      },
+      "initial": false
+    },
+    {
+      "tick": 0,
+      "type": "check",
+      "id": "pending-before-step",
+      "query": {
+        "type": "metric",
+        "field": "pendingCommandCount"
+      },
+      "expected": 1,
+      "initial": false
+    },
+    {
+      "tick": 1,
+      "type": "check",
+      "id": "pending-after-step",
+      "query": {
+        "type": "metric",
+        "field": "pendingCommandCount"
+      },
+      "expected": 0,
+      "initial": false
+    },
+    {
+      "tick": 1,
+      "type": "check",
+      "id": "control-preserved",
+      "query": {
+        "type": "entity",
+        "entity": "unit",
+        "fields": ["ownerPlayerId", "controllerPlayerId"]
+      },
+      "expected": {
+        "ownerPlayerId": 0,
+        "controllerPlayerId": 0
+      },
+      "initial": false
+    },
+    {
+      "tick": 120,
+      "type": "check",
+      "id": "arrived-at-target",
+      "query": {
+        "type": "entity",
+        "entity": "unit",
+        "fields": ["x", "y"]
+      },
+      "expected": {
+        "x": 4,
+        "y": -3
+      },
+      "initial": false
+    },
+    {
+      "tick": 120,
+      "type": "check",
+      "id": "no-rejections",
+      "query": {
+        "type": "events",
+        "filter": {}
+      },
+      "expected": [],
+      "initial": false
+    },
+    {
+      "tick": 120,
+      "type": "check",
+      "id": "ticks-executed",
+      "query": {
+        "type": "metric",
+        "field": "tick"
+      },
+      "expected": 120,
+      "initial": false
+    }
+  ]
+}
