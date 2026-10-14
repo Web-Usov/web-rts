@@ -1,6 +1,6 @@
 # Spec #003 — Agent tooling and verification
 
-Статус: **ACCEPTED — implementation track planned**. Implementation tracker: [Epic #100](https://github.com/Web-Usov/web-rts/issues/100), [AT0 #101](https://github.com/Web-Usov/web-rts/issues/101). AT0 содержит только документацию; AT2 предоставляет [Knowledge Base](../knowledge/README.md) с [retrieval pilot](../verification/102-agent-knowledge-base/README.md); AT3–AT9 ниже — будущие интерфейсы и эксперименты, а не реализованные инструменты.
+Статус: **ACCEPTED — implementation track planned**. Implementation tracker: [Epic #100](https://github.com/Web-Usov/web-rts/issues/100), [AT0 #101](https://github.com/Web-Usov/web-rts/issues/101). AT0 содержит только документацию; AT2 предоставляет [Knowledge Base](../knowledge/README.md) с [retrieval pilot](../verification/102-agent-knowledge-base/README.md); AT3 предоставляет [scenario files, checkpoints и измеренный эксперимент](../verification/103-gameplay-verification-v2/README.md); AT4–AT9 ниже — будущие интерфейсы и эксперименты, а не реализованные инструменты.
 
 ## 1. Цель и навигация
 

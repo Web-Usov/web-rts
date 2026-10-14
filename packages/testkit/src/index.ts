@@ -25,3 +25,11 @@ export {
   type GameplayCheck,
   type GameplayScenario,
 } from "./verification.js";
+export {
+  SCENARIO_LIMITS,
+  parseScenarioDefinition,
+  definedScenario,
+  matchFixture,
+  type ScenarioDefinition,
+  type FixtureDriver,
+} from "./scenario-definition.js";

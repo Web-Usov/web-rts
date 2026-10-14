@@ -1,0 +1,156 @@
+{
+  "version": 1,
+  "id": "combat",
+  "seed": 59,
+  "ticks": 130,
+  "setup": {
+    "fixture": "combat",
+    "players": [0]
+  },
+  "selectors": {
+    "soldier": {
+      "definitionId": "soldier",
+      "ownerPlayerId": null,
+      "index": 0
+    },
+    "enemy": {
+      "definitionId": "combat_fixture",
+      "ownerPlayerId": null,
+      "index": 0
+    }
+  },
+  "operations": [
+    {
+      "tick": 0,
+      "type": "check",
+      "id": "enemy-start-health",
+      "query": {
+        "type": "entity",
+        "entity": "enemy",
+        "fields": ["health"]
+      },
+      "expected": {
+        "health": {
+          "current": 40,
+          "max": 40
+        }
+      },
+      "initial": false
+    },
+    {
+      "tick": 1,
+      "type": "check",
+      "id": "enemy-before-move",
+      "query": {
+        "type": "entity",
+        "entity": "enemy",
+        "fields": ["health"]
+      },
+      "expected": {
+        "health": {
+          "current": 40,
+          "max": 40
+        }
+      },
+      "initial": false
+    },
+    {
+      "tick": 1,
+      "type": "move",
+      "playerId": 0,
+      "commandId": "override",
+      "entity": "soldier",
+      "target": {
+        "x": -6.5,
+        "y": -8.5
+      }
+    },
+    {
+      "tick": 1,
+      "type": "check",
+      "id": "command-admitted",
+      "query": {
+        "type": "admission",
+        "commandId": "override"
+      },
+      "expected": {
+        "accepted": true
+      },
+      "initial": false
+    },
+    {
+      "tick": 2,
+      "type": "check",
+      "id": "move-applied-event",
+      "query": {
+        "type": "events",
+        "filter": {
+          "type": "COMMAND_APPLIED",
+          "commandId": "override"
+        }
+      },
+      "expected": [
+        {
+          "type": "COMMAND_APPLIED",
+          "commandId": "override",
+          "playerId": 0,
+          "tick": 1
+        }
+      ],
+      "initial": false
+    },
+    {
+      "tick": 130,
+      "type": "check",
+      "id": "enemy-killed",
+      "query": {
+        "type": "entity",
+        "entity": "enemy",
+        "fields": ["entityId"]
+      },
+      "expected": null,
+      "initial": false
+    },
+    {
+      "tick": 130,
+      "type": "check",
+      "id": "soldier-survived",
+      "query": {
+        "type": "entity",
+        "entity": "soldier",
+        "fields": ["controllerPlayerId"]
+      },
+      "expected": {
+        "controllerPlayerId": 0
+      },
+      "initial": false
+    },
+    {
+      "tick": 130,
+      "type": "check",
+      "id": "soldier-idle-after-combat",
+      "query": {
+        "type": "entity",
+        "entity": "soldier",
+        "fields": ["soldierState"]
+      },
+      "expected": {
+        "soldierState": "IDLE"
+      },
+      "initial": false
+    },
+    {
+      "tick": 130,
+      "type": "check",
+      "id": "no-command-rejections",
+      "query": {
+        "type": "events",
+        "filter": {
+          "type": "COMMAND_REJECTED"
+        }
+      },
+      "expected": [],
+      "initial": false
+    }
+  ]
+}
