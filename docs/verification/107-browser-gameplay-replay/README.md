@@ -82,7 +82,8 @@ Controlled browser expectation `FINISHED` вместо реально видим
 
 Диагностика относительно existing smoke: те же public UI/pixel observations, но теперь reviewer получает действия, строгие checks, ограничения parity и отдельный JSON даже для неверного expectation, recordings обоих contexts и негативное доказательство. Existing smoke сам по себе не предоставляет этот общий report. Browser workload существенно дороже warm AT3 CLI; это разные уровни проверки, не benchmark simulation и не доказанная экономия Coding Agent time/tokens.
 
-Подготовительные runs: первый harness вызвал повторный tracing.start поверх automatic Playwright trace и упал (ошибка setup, не gameplay). После исправления один запуск на фоне repository checks получил Vite reconnect/повторный Babylon init во время screenshot и затем test timeout; root cause изменения Vite runtime **не установлен окончательно**. Запуск был остановлен, Remote не выполнялся; он не засчитан как PASS. Исходные log и before screenshot сохранены locally, полный transient trace был перезаписан следующим Playwright run — это ограничение диагностики pilot. Финальный harness хранит recordings вместе с JSON, ограничивает diagnostic screenshot timeout и обрабатывает context-close errors; последовательные runs без фоновых checks проходят. Camera centroid failure в AT7 не наблюдался. Нельзя скрывать этот setup failure или считать его доказанным camera defect.
+Подготовительные runs: первый harness вызвал повторный tracing.start поверх automatic Playwright trace и упал (ошибка setup, не gameplay). После исправления один запуск на фоне repository checks получил Vite reconnect/повторный Babylon init во время screenshot и затем test timeout; root cause изменения Vite runtime **не установлен окончательно**. Запуск был остановлен, Remote не выполнялся; он не засчитан как PASS. Исходные log и before screenshot сохранены locally, полный transient trace был перезаписан следующим Playwright run — это ограничение диагностики pilot. Финальный harness хранит recordings вместе с JSON, ограничивает diagnostic screenshot timeout и обрабатывает context-close errors; последовательные runs без фоновых checks проходят. CI asset validator обнаружил, что IAB screenshot bytes имеют JPEG format при ошибочном расширении PNG. Файлы переименованы в .jpg и ссылки исправлены; SHA-256 до/после совпадает, исходные байты не преобразовывались. Existing validator regression/self-test дополнительно выполнен локально.
+Camera centroid failure в AT7 не наблюдался. Нельзя скрывать этот setup failure или считать его доказанным camera defect.
 
 ## Camera regression и внутренний browser playtest
 
@@ -92,14 +93,14 @@ Controlled browser expectation `FINISHED` вместо реально видим
 
 Инструмент реального внутреннего playtest: **Codex In-app Browser / cua_repl**, web 4173/server2568 из task worktree. Local Create → Start → selection → RMB MOVE; Remote две отдельные tabs/sessions (HUD players0/1, players=2), A Create/B Join → Start, successful select A → foreign select/RMB B (Selected/Destination none, unit неподвижен) → valid MOVE A, перемещение видно у B, objective=1. Console warn/error lists пусты. World/MatchRuntime/hidden data не читались; UI и canvas не подменялись.
 
-![Local до MOVE, внутренний browser](./iab-local-before.png)
-![Local после MOVE, внутренний browser](./iab-local-after.png)
+![Local до MOVE, внутренний browser](./iab-local-before.jpg)
+![Local после MOVE, внутренний browser](./iab-local-after.jpg)
 ![Remote A до MOVE](./remote-before-A.png)
 ![Remote A после MOVE](./remote-after-A.png)
 ![Remote B до MOVE](./remote-before-B.png)
 ![Remote B после MOVE](./remote-after-B.png)
 ![Remote UI negative B](./remote-negative-B.png)
-![Remote внутренний browser после MOVE B](./iab-remote-after-B.png)
+![Remote внутренний browser после MOVE B](./iab-remote-after-B.jpg)
 
 ## Проверки и решение
 
