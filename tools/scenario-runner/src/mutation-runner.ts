@@ -48,6 +48,8 @@ interface CommandResult {
 }
 interface Experiment {
   id: string;
+  disposableWorktree: string;
+  ownedTemp: string;
   expected: MutationStatus;
   status: MutationStatus;
   reason?: string;
@@ -111,6 +113,8 @@ export async function runMutationMatrix(options: RunnerOptions) {
         const disposable = join(temp, "checkout");
         const e: Experiment = {
           id: mutation.id,
+          disposableWorktree: disposable,
+          ownedTemp: temp,
           expected: mutation.expected,
           status: "SETUP_ERROR",
           commands: [],
@@ -263,7 +267,10 @@ export async function runMutationMatrix(options: RunnerOptions) {
           );
           const compiled = readFileSync(compiledPath, "utf8");
           // These explicit catalog replacements survive TS compilation verbatim.
-          if (!compiled.includes(mutation.replacement) || compiled.includes(mutation.anchor))
+          if (
+            !compiled.includes(mutation.replacement.replace(/!(?=\.)/g, "")) ||
+            compiled.includes(mutation.anchor.replace(/!(?=\.)/g, ""))
+          )
             throw new Error("Mutation absent from executable JS");
           e.compiledFingerprint = hash(compiled);
           if (mutation.id === "targetability") {
@@ -346,6 +353,9 @@ export async function runMutationMatrix(options: RunnerOptions) {
     output,
     elapsedMs: performance.now() - start,
     matrixCleanup,
+    matrixTemp,
+    sourceFingerprintBefore: initial,
+    sourceFingerprintAfter: sourceFingerprint(root),
     strict: options.strict,
     complete,
     diagnosticMatched:
