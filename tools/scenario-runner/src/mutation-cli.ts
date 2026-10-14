@@ -50,7 +50,9 @@ try {
     process.exitCode = (strict ? report.detectionGatePassed : report.diagnosticMatched) ? 0 : 1;
   }
 } catch (error) {
-  console.error(String(error));
+  const reason = String(error);
+  console.log(JSON.stringify({ schemaVersion: 1, status: "SETUP_ERROR", reason }));
+  console.error(reason);
   process.exitCode = 2;
 } finally {
   process.removeListener("SIGINT", interrupt);

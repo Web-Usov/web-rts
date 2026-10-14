@@ -89,6 +89,8 @@ w.health.set(t,{current:40,max:40}); w.attacks.set(s,{...w.attacks.get(s),allowe
 console.log(JSON.stringify({forbiddenTargetAccepted:isValidCombatTarget(w,s,t)}));`;
 
 export async function runMutationMatrix(options: RunnerOptions) {
+  if (process.platform !== "darwin" && process.platform !== "linux")
+    throw new Error("Mutation isolation requires POSIX process groups (macOS/Linux)");
   const root = realpathSync(options.root);
   const commit = git(root, ["rev-parse", "HEAD"]);
   if (git(root, ["status", "--porcelain"]))
