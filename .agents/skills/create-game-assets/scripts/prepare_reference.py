@@ -407,12 +407,19 @@ def derive(args: argparse.Namespace) -> dict[str, Any]:
             if replacing else manifest["assets"] + [entry]
         )
         write_json_atomic(manifest_path, manifest)
-    except BaseException:
+    except BaseException as failure:
         # Restore the exact previous state: renamed-back original derivative, or no file at all.
-        if backup_name is not None and backup_name.exists():
-            os.replace(backup_name, out_path)
-        elif placed:
-            out_path.unlink(missing_ok=True)
+        try:
+            if backup_name is not None and backup_name.exists():
+                os.replace(backup_name, out_path)
+            elif placed:
+                out_path.unlink(missing_ok=True)
+        except OSError as restore_error:
+            # Never destroy the only intact copy: keep the backup for manual recovery.
+            kept, backup_name = backup_name, None
+            raise PipelineError(
+                f"rollback failed ({restore_error}); previous derivative preserved at {kept}"
+            ) from failure
         raise
     finally:
         for leftover in (tmp_name, backup_name):

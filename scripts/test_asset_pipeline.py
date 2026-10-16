@@ -340,6 +340,33 @@ class NegativeTests(Workspace):
             os.replace = real_replace
         self.assert_only_output(before, before_bytes)
 
+    def test_failed_rollback_keeps_the_only_intact_backup(self):
+        self.assertEqual(self.derive()[0], 0)
+        old_bytes = (self.root / "out/a-96.png").read_bytes()
+        real_replace, orig_write = os.replace, pr.write_json_atomic
+
+        def failing_replace(src, dst, *a, **k):
+            if str(src).endswith(".bak"):  # restoring the backup fails as well
+                raise OSError("I/O error")
+            return real_replace(src, dst, *a, **k)
+
+        def boom(*args, **kwargs):
+            raise OSError("disk full")
+
+        os.replace, pr.write_json_atomic = failing_replace, boom
+        try:
+            code, err = self.run_cli("derive", "--manifest", MANIFEST, "--source", "refs/a.png", "--out", "out/a-96.png",
+                                     "--id", "deriv-a", "--role", "r", "--max-size", "50x50", "--overwrite")
+        finally:
+            os.replace, pr.write_json_atomic = real_replace, orig_write
+        self.assertEqual(code, 2)
+        self.assertIn("rollback failed", err)
+        backups = [p for p in (self.root / "out").iterdir() if p.name.endswith(".bak")]
+        self.assertEqual(len(backups), 1)
+        self.assertIn(backups[0].as_posix(), err)
+        self.assertEqual(hashlib.sha256(backups[0].read_bytes()).hexdigest(), hashlib.sha256(old_bytes).hexdigest())
+        self.assertEqual([p.name for p in (self.root / "out").iterdir() if p.name.endswith(".tmp")], [])
+
     def test_unreadable_existing_output_leaves_no_temp_files(self):
         self.assertEqual(self.derive()[0], 0)
         before, before_bytes = self.manifest(), (self.root / "out/a-96.png").read_bytes()
