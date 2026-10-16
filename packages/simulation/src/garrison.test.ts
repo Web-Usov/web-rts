@@ -418,6 +418,18 @@ describe("exits and host destruction", () => {
     expect(world.positions.get(soldier)).toEqual({ x: 8.5, y: 4.5 });
     expect(world.containedIn.has(soldier)).toBe(false);
   });
+  it("forced ejection with no walkable cell destroys occupants deterministically without throwing or dangling relations", () => {
+    const { world, tower, soldier } = setup();
+    enter(world, soldier, tower);
+    world.removeSolidFootprint(tower);
+    for (let y = 0; y < map.heightCells; y++)
+      for (let x = 0; x < map.widthCells; x++) block(world, x, y);
+    expect(() => world.destroyEntity(tower)).not.toThrow();
+    expect(world.hasEntity(tower)).toBe(false);
+    expect(world.hasEntity(soldier)).toBe(false);
+    expect([...world.containedIn.entries()]).toEqual([]);
+    invariants(world);
+  });
   it("destroying an occupant frees its derived slot without damaging the host", () => {
     const { world, tower, soldier } = setup();
     enter(world, soldier, tower);

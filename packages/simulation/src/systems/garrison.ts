@@ -178,6 +178,18 @@ export function ungarrison(
   return null;
 }
 
+/**
+ * Last-resort deterministic recovery when the map has no walkable cell: an occupant
+ * cannot be given a valid Position, so it is destroyed with its host. Destruction must
+ * never throw mid-tick or leave a dangling relation.
+ */
+function destroyUnplaceable(world: World, occupants: ReturnType<World["occupantsOf"]>): void {
+  for (const [unit] of occupants) {
+    world.containedIn.remove(unit);
+    world.destroyEntity(unit);
+  }
+}
+
 /** Destruction removes blocking topology before resolving any occupant's exit. */
 export function forceEjectOccupants(world: World, host: EntityId): void {
   const occupants = world.occupantsOf(host);
@@ -186,8 +198,10 @@ export function forceEjectOccupants(world: World, host: EntityId): void {
   const position = world.positions.get(host);
   world.removeSolidFootprint(host);
   if (occupants.length === 0) return;
-  if (grid === null || position === undefined)
-    throw new Error("garrison host has no spatial grid location");
+  if (grid === null || position === undefined) {
+    destroyUnplaceable(world, occupants);
+    return;
+  }
   const anchor = footprint?.anchorCell ?? grid.worldToCell(position);
   let exit = grid.isWalkable(anchor) ? anchor : undefined;
   if (exit === undefined) {
@@ -206,7 +220,10 @@ export function forceEjectOccupants(world: World, host: EntityId): void {
     );
     exit = candidates[0];
   }
-  if (exit === undefined) throw new Error("forced ejection requires a walkable map cell");
+  if (exit === undefined) {
+    destroyUnplaceable(world, occupants);
+    return;
+  }
   for (const [unit] of occupants) {
     world.containedIn.remove(unit);
     world.positions.set(unit, grid.cellToWorldCenter(exit));
