@@ -14,13 +14,14 @@
     "test:server": "turbo run test:integration --filter=@web-rts/game-server",
     "test:e2e": "playwright test",
     "test:docker-smoke": "node scripts/docker-lan-smoke.mjs",
-    "typecheck": "turbo run typecheck",
-    "lint": "turbo run lint && prettier --check .",
+    "typecheck": "turbo run typecheck && tsc -p tests/e2e/tsconfig.json",
+    "lint": "turbo run lint && eslint tests/e2e/browser-*.ts tests/e2e/helpers/browser-*.ts && prettier --check .",
     "format": "prettier --write .",
     "verify:gameplay": "pnpm --silent exec turbo run build --filter=@web-rts/scenario-runner > /dev/null && node tools/scenario-runner/dist/cli.js",
     "kb": "node scripts/knowledge-base.mjs",
     "test:kb": "node --test scripts/knowledge-base.test.mjs",
-    "verify:mutation": "pnpm --silent exec turbo run build --filter=@web-rts/scenario-runner > /dev/null && node tools/scenario-runner/dist/mutation-cli.js"
+    "verify:mutation": "pnpm --silent exec turbo run build --filter=@web-rts/scenario-runner > /dev/null && node tools/scenario-runner/dist/mutation-cli.js",
+    "verify:browser": "playwright test tests/e2e/browser-replay.spec.ts tests/e2e/browser-evidence.spec.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

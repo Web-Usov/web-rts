@@ -415,6 +415,7 @@ jobs:
             playwright-report/
             test-results/
             .artifacts/verification/browser/
+            .artifacts/verification/at7/
           if-no-files-found: warn
           retention-days: 14
 
