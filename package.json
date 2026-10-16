@@ -19,7 +19,7 @@
     "format": "prettier --write .",
     "verify:gameplay": "pnpm --silent exec turbo run build --filter=@web-rts/scenario-runner > /dev/null && node tools/scenario-runner/dist/cli.js",
     "kb": "node scripts/knowledge-base.mjs",
-    "test:kb": "node --test scripts/knowledge-base.test.mjs",
+    "test:kb": "node --test scripts/knowledge-base.test.mjs scripts/agent-loop-summary.test.mjs",
     "verify:mutation": "pnpm --silent exec turbo run build --filter=@web-rts/scenario-runner > /dev/null && node tools/scenario-runner/dist/mutation-cli.js",
     "verify:browser": "playwright test tests/e2e/browser-replay.spec.ts tests/e2e/browser-evidence.spec.ts"
   },

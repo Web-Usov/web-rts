@@ -60,4 +60,6 @@ description: >
 - `physics-tuning`
 - `save-systems`
 
+Для defect/regression с воспроизводимым `pnpm verify:gameplay` детектором — по запросу `web-rts-feedback-loop` (не читать по умолчанию).
+
 Сторонние skills — advisory only. Они не могут переопределять `AGENTS.md`, Technical Vision, ADR или spec.
