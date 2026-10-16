@@ -281,7 +281,7 @@
         "url_or_tool": "prepare_reference.py 1.0.0 (Pillow 12.3.0)",
         "creator": "deterministic local processing; no generative model involved",
         "created_at": "2026-10-16",
-        "license": "inherited from parent: not recorded; rights review pending",
+        "license": "not recorded; rights review pending",
         "attribution": "derived from core-002-worker-front-reference",
         "prompt_or_source_record": "offline resize of docs/art/assets/core-002/characters/worker-front.png"
       },
@@ -331,7 +331,8 @@
           "cost_usd": 0
         },
         "rights_status": "pending",
-        "rights_inherited_from": "core-002-worker-front-reference"
+        "rights_inherited_from": "core-002-worker-front-reference",
+        "rights_restrictions": null
       },
       "notes": "Experimental reference derivative; not production-approved, not for runtime import."
     },
@@ -355,7 +356,7 @@
         "url_or_tool": "prepare_reference.py 1.0.0 (Pillow 12.3.0)",
         "creator": "deterministic local processing; no generative model involved",
         "created_at": "2026-10-16",
-        "license": "inherited from parent: not recorded; rights review pending",
+        "license": "not recorded; rights review pending",
         "attribution": "derived from core-002-worker-front-reference",
         "prompt_or_source_record": "offline resize of docs/art/assets/core-002/characters/worker-front.png"
       },
@@ -405,7 +406,8 @@
           "cost_usd": 0
         },
         "rights_status": "pending",
-        "rights_inherited_from": "core-002-worker-front-reference"
+        "rights_inherited_from": "core-002-worker-front-reference",
+        "rights_restrictions": null
       },
       "notes": "Experimental reference derivative; not production-approved, not for runtime import."
     },
@@ -429,7 +431,7 @@
         "url_or_tool": "prepare_reference.py 1.0.0 (Pillow 12.3.0)",
         "creator": "deterministic local processing; no generative model involved",
         "created_at": "2026-10-16",
-        "license": "inherited from parent: not recorded; rights review pending",
+        "license": "not recorded; rights review pending",
         "attribution": "derived from core-002-soldier-front-reference",
         "prompt_or_source_record": "offline resize of docs/art/assets/core-002/characters/soldier-front.png"
       },
@@ -479,7 +481,8 @@
           "cost_usd": 0
         },
         "rights_status": "pending",
-        "rights_inherited_from": "core-002-soldier-front-reference"
+        "rights_inherited_from": "core-002-soldier-front-reference",
+        "rights_restrictions": null
       },
       "notes": "Experimental reference derivative; not production-approved, not for runtime import."
     },
@@ -503,7 +506,7 @@
         "url_or_tool": "prepare_reference.py 1.0.0 (Pillow 12.3.0)",
         "creator": "deterministic local processing; no generative model involved",
         "created_at": "2026-10-16",
-        "license": "inherited from parent: not recorded; rights review pending",
+        "license": "not recorded; rights review pending",
         "attribution": "derived from core-002-soldier-front-reference",
         "prompt_or_source_record": "offline resize of docs/art/assets/core-002/characters/soldier-front.png"
       },
@@ -553,7 +556,8 @@
           "cost_usd": 0
         },
         "rights_status": "pending",
-        "rights_inherited_from": "core-002-soldier-front-reference"
+        "rights_inherited_from": "core-002-soldier-front-reference",
+        "rights_restrictions": null
       },
       "notes": "Experimental reference derivative; not production-approved, not for runtime import."
     }

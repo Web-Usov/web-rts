@@ -154,8 +154,14 @@ def validate_manifest(manifest_path: Path, repo_root: Path = Path(".")) -> list[
             errors.append(f"{label}: derivative must have production_approved=false")
         if not derivation.get("pipeline") or not derivation.get("tool"):
             errors.append(f"{label}: transform pipeline/tool record missing")
-        if "pending" in (parent.get("source") or {}).get("license", "") and derivation.get("rights_status") != "pending":
-            errors.append(f"{label}: pending parent rights not inherited")
+        parent_license = (parent.get("source") or {}).get("license", "")
+        if (asset.get("source") or {}).get("license") != parent_license:
+            errors.append(f"{label}: license differs from parent")
+        expected_rights = "pending" if "pending" in parent_license.lower() else "inherited"
+        if derivation.get("rights_status") != expected_rights:
+            errors.append(f"{label}: rights_status must be {expected_rights!r} (inherited from parent)")
+        if derivation.get("rights_restrictions") != (parent.get("source") or {}).get("restrictions"):
+            errors.append(f"{label}: rights restrictions differ from parent")
         generation = derivation.get("generation") or {}
         if generation.get("used") is not True and any(
             generation.get(k) for k in ("provider", "model", "seed")
@@ -236,6 +242,7 @@ def run_self_test() -> int:
                  "source": {"license": "rights review pending"}},
                 {"id": "b", "path": "good/b.png", "status": "experimental-derivative",
                  "technical": {"sha256": hashlib.sha256(b"deriv").hexdigest(), "bytes": 5},
+                 "source": {"license": "rights review pending"},
                  "verification": {"production_approved": False},
                  "derivation": {"parent_id": "a", "parent_sha256": hashlib.sha256(b"orig").hexdigest(),
                                 "pipeline": [{"op": "resize"}], "tool": {"name": "t"},

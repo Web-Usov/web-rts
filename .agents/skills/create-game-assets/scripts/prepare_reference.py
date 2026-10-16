@@ -172,8 +172,6 @@ def parse_size(value: str) -> tuple[int, int]:
 
 
 def target_dimensions(src: tuple[int, int], box: tuple[int, int], fit: str) -> tuple[int, int]:
-    if fit == "exact":
-        return box
     if fit == "inside":
         scale = min(box[0] / src[0], box[1] / src[1])
         scale = min(scale, 1.0)  # never upscale a reference
@@ -185,9 +183,6 @@ def process(image: Image.Image, params: dict[str, Any]) -> tuple[bytes, Image.Im
     """Pure, deterministic transform. Returns encoded PNG bytes and the decoded result."""
     method = METHODS[params["method"]]
     out_size = target_dimensions(image.size, tuple(params["box"]), params["fit"])
-    if params["fit"] == "exact" and not params.get("allow_aspect_change"):
-        if abs(image.width * out_size[1] - image.height * out_size[0]) > max(image.size):
-            raise PipelineError("fit=exact would change aspect ratio; pass --allow-aspect-change explicitly")
     work = image.convert("RGBA") if image.mode not in ("RGB", "RGBA") else image
     resized = work.resize(out_size, method, reducing_gap=None)
     if params["alpha"] == "drop-if-opaque" and resized.mode == "RGBA":
@@ -264,6 +259,11 @@ def is_derivative(asset: dict[str, Any]) -> bool:
     return asset.get("status") == DERIVATIVE_STATUS
 
 
+def rights_status(parent: dict[str, Any]) -> str:
+    """Derivatives never gain rights: pending stays pending, anything else is copied from the parent."""
+    return "pending" if "pending" in parent["source"].get("license", "").lower() else "inherited"
+
+
 def build_entry(
     *, asset_id: str, role: str, rel_out: str, parent: dict[str, Any], tech: dict[str, Any],
     params: dict[str, Any], created: str, view: str | None,
@@ -290,7 +290,7 @@ def build_entry(
             "url_or_tool": f"{TOOL_NAME} {TOOL_VERSION} (Pillow {PIL.__version__})",
             "creator": "deterministic local processing; no generative model involved",
             "created_at": created,
-            "license": "inherited from parent: not recorded; rights review pending",
+            "license": parent["source"]["license"],
             "attribution": "derived from " + parent["id"],
             "prompt_or_source_record": f"offline resize of {parent['path']}",
         },
@@ -308,8 +308,9 @@ def build_entry(
             "pipeline": pipeline,
             "tool": {"name": TOOL_NAME, "version": TOOL_VERSION, "pillow": PIL.__version__, "python": platform.python_version()},
             "generation": {"used": False, "provider": None, "model": None, "seed": None, "cost_usd": 0},
-            "rights_status": "pending",
+            "rights_status": rights_status(parent),
             "rights_inherited_from": parent["id"],
+            "rights_restrictions": parent["source"].get("restrictions"),
         },
         "notes": "Experimental reference derivative; not production-approved, not for runtime import.",
     }
@@ -346,12 +347,17 @@ def derive(args: argparse.Namespace) -> dict[str, Any]:
     protected = {a["path"] for a in manifest["assets"] if not is_derivative(a)}
     if rel_out in protected:
         raise PipelineError(f"refusing to overwrite registered original reference: {rel_out}")
-    existing = find_asset(manifest, path=rel_out)
-    if out_path.exists() and not (args.overwrite and existing is not None and is_derivative(existing)):
-        raise PipelineError(f"output exists and is not a registered derivative to overwrite: {rel_out}")
-    clash = find_asset(manifest, asset_id=args.id)
-    if clash is not None and not (args.overwrite and is_derivative(clash) and clash["path"] == rel_out):
-        raise PipelineError(f"asset id already in use: {args.id}")
+    same_path = [a for a in manifest["assets"] if a.get("path") == rel_out]
+    same_id = find_asset(manifest, asset_id=args.id)
+    replacing = bool(args.overwrite and same_id is not None and is_derivative(same_id) and same_id["path"] == rel_out)
+    if replacing:
+        if len(same_path) != 1:
+            raise PipelineError(f"manifest has several entries for {rel_out}; refusing to overwrite")
+    else:
+        if same_id is not None:
+            raise PipelineError(f"asset id already in use (--overwrite needs the same id and path): {args.id}")
+        if same_path or out_path.exists():
+            raise PipelineError(f"output exists or is registered; --overwrite only replaces the same derivative id/path: {rel_out}")
 
     started = time.perf_counter()
     source_bytes = read_source(source_path, limits)
@@ -362,8 +368,7 @@ def derive(args: argparse.Namespace) -> dict[str, Any]:
         raise PipelineError("source byte count differs from manifest")
     source_image = decode(source_bytes, source_path.suffix, limits)
 
-    params = {"fit": args.fit, "box": list(args.max_size), "method": args.method, "alpha": args.alpha,
-              "allow_aspect_change": args.allow_aspect_change}
+    params = {"fit": args.fit, "box": list(args.max_size), "method": args.method, "alpha": args.alpha}
     data, result = process(source_image, params)
     problems = qa_checks(source_image, data, params, len(source_bytes))
     if problems:
@@ -382,7 +387,7 @@ def derive(args: argparse.Namespace) -> dict[str, Any]:
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp_name = tempfile.mkstemp(dir=out_path.parent, prefix=".derive-", suffix=".tmp")
-    created_new = not out_path.exists()
+    backup = out_path.read_bytes() if out_path.exists() else None
     try:
         with os.fdopen(fd, "wb") as handle:
             handle.write(data)
@@ -390,11 +395,17 @@ def derive(args: argparse.Namespace) -> dict[str, Any]:
             raise PipelineFail("written output hash differs from computed hash")
         os.chmod(tmp_name, 0o644)
         os.replace(tmp_name, out_path)
-        manifest["assets"] = [a for a in manifest["assets"] if a.get("id") != args.id] + [entry]
+        manifest["assets"] = (
+            [entry if a.get("id") == args.id else a for a in manifest["assets"]]
+            if replacing else manifest["assets"] + [entry]
+        )
         write_json_atomic(manifest_path, manifest)
     except BaseException:
-        if created_new and out_path.exists():
-            out_path.unlink()
+        # Restore the exact previous state: original derivative bytes or no file at all.
+        if backup is None:
+            out_path.unlink(missing_ok=True)
+        else:
+            out_path.write_bytes(backup)
         raise
     finally:
         if os.path.exists(tmp_name):
@@ -435,8 +446,12 @@ def verify(args: argparse.Namespace) -> list[str]:
                 errors.append(f"{label}: parent_sha256 does not match parent entry")
             if asset["verification"].get("production_approved") is not False:
                 errors.append(f"{label}: derivative must not be production-approved")
-            if "pending" in parent["source"].get("license", "") and deriv.get("rights_status") != "pending":
-                errors.append(f"{label}: pending rights not inherited")
+            if asset["source"].get("license") != parent["source"].get("license"):
+                errors.append(f"{label}: license differs from parent")
+            if deriv.get("rights_status") != rights_status(parent):
+                errors.append(f"{label}: rights_status does not match parent rights")
+            if deriv.get("rights_restrictions") != parent["source"].get("restrictions"):
+                errors.append(f"{label}: rights restrictions differ from parent")
             if args.reproduce:
                 parent_bytes = read_source(safe_path(root, parent["path"], label), limits)
                 if sha256_hex(parent_bytes) != deriv["parent_sha256"]:
@@ -545,10 +560,9 @@ def build_parser() -> argparse.ArgumentParser:
     d.add_argument("--id", required=True)
     d.add_argument("--role", required=True)
     d.add_argument("--max-size", type=parse_size, required=True, metavar="WxH")
-    d.add_argument("--fit", choices=["inside", "exact"], default="inside")
+    d.add_argument("--fit", choices=["inside"], default="inside", help="fit inside the box; never upscales, keeps aspect")
     d.add_argument("--method", choices=sorted(METHODS), default="lanczos")
     d.add_argument("--alpha", choices=["preserve", "drop-if-opaque"], default="drop-if-opaque")
-    d.add_argument("--allow-aspect-change", action="store_true")
     d.add_argument("--overwrite", action="store_true", help="replace an existing registered derivative only")
     d.add_argument("--created", help="override created_at date (YYYY-MM-DD)")
     d.add_argument("--max-bytes", type=int, default=DEFAULT_LIMITS["max_bytes"])

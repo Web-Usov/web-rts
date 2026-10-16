@@ -255,10 +255,82 @@ class NegativeTests(Workspace):
                                  "--id", "x", "--role", "r", "--max-size", "10x10", "--max-bytes", "10"),
                     2, "limit is 10")
 
-    def test_exact_fit_refuses_aspect_change(self):
-        self.expect(self.run_cli("derive", "--manifest", MANIFEST, "--source", "refs/a.png", "--out", "out/x.png",
-                                 "--id", "x", "--role", "r", "--max-size", "50x50", "--fit", "exact"),
-                    2, "aspect ratio")
+    def test_exact_fit_and_aspect_change_are_not_supported(self):
+        for extra in (["--fit", "exact"], ["--allow-aspect-change"]):
+            with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as caught:
+                self.run_cli("derive", "--manifest", MANIFEST, "--source", "refs/a.png", "--out", "out/x.png",
+                             "--id", "x", "--role", "r", "--max-size", "500x500", *extra)
+            self.assertEqual(caught.exception.code, 2)
+            self.assert_clean(self.before)
+
+    def test_overwrite_requires_same_id_and_path(self):
+        self.assertEqual(self.derive()[0], 0)
+        self.before = self.manifest()
+        before_bytes = (self.root / "out/a-96.png").read_bytes()
+        # different id onto an already registered path: refused, nothing changes
+        result = self.run_cli(
+            "derive", "--manifest", MANIFEST, "--source", "refs/a.png", "--out", "out/a-96.png",
+            "--id", "other-id", "--role", "r", "--max-size", "50x50", "--overwrite")
+        self.assertEqual(result[0], 2)
+        self.assertEqual(self.manifest(), self.before)
+        self.assertEqual((self.root / "out/a-96.png").read_bytes(), before_bytes)
+        # same id, different path: refused as well
+        result = self.run_cli("derive", "--manifest", MANIFEST, "--source", "refs/a.png", "--out", "out/elsewhere.png",
+                              "--id", "deriv-a", "--role", "r", "--max-size", "50x50", "--overwrite")
+        self.assertEqual(result[0], 2)
+        self.assertEqual(self.manifest(), self.before)
+        self.assertFalse((self.root / "out/elsewhere.png").exists())
+
+    def test_overwrite_same_derivative_replaces_in_place(self):
+        self.assertEqual(self.derive()[0], 0)
+        count = len(self.manifest()["assets"])
+        result = self.run_cli("derive", "--manifest", MANIFEST, "--source", "refs/a.png", "--out", "out/a-96.png",
+                              "--id", "deriv-a", "--role", "r", "--max-size", "50x50", "--overwrite")
+        self.assertEqual(result[0], 0, result[1])
+        assets = self.manifest()["assets"]
+        self.assertEqual(len(assets), count)
+        self.assertEqual([a["path"] for a in assets].count("out/a-96.png"), 1)
+
+    def test_failed_manifest_write_restores_previous_derivative(self):
+        self.assertEqual(self.derive()[0], 0)
+        before, before_bytes = self.manifest(), (self.root / "out/a-96.png").read_bytes()
+        original = pr.write_json_atomic
+        pr.write_json_atomic = lambda *a, **k: (_ for _ in ()).throw(OSError("disk full"))
+        self.addCleanup(setattr, pr, "write_json_atomic", original)
+        with self.assertRaises(OSError):
+            self.run_cli("derive", "--manifest", MANIFEST, "--source", "refs/a.png", "--out", "out/a-96.png",
+                         "--id", "deriv-a", "--role", "r", "--max-size", "50x50", "--overwrite")
+        self.assertEqual((self.root / "out/a-96.png").read_bytes(), before_bytes)
+        self.assertEqual(self.manifest(), before)
+
+    def test_failed_manifest_write_removes_new_output(self):
+        original = pr.write_json_atomic
+        pr.write_json_atomic = lambda *a, **k: (_ for _ in ()).throw(OSError("disk full"))
+        self.addCleanup(setattr, pr, "write_json_atomic", original)
+        with self.assertRaises(OSError):
+            self.derive()
+        self.assert_clean(self.before)
+
+    def test_known_parent_license_and_restrictions_are_copied(self):
+        self.add_original("orig-lic", "refs/lic.png", gradient(), **{"license": "CC-BY-4.0", "restrictions": "no AI training"})
+        self.assertEqual(self.derive(source="refs/lic.png", asset_id="d-lic")[0], 0)
+        entry = next(a for a in self.manifest()["assets"] if a["id"] == "d-lic")
+        self.assertEqual(entry["source"]["license"], "CC-BY-4.0")
+        self.assertEqual(entry["derivation"]["rights_status"], "inherited")
+        self.assertEqual(entry["derivation"]["rights_restrictions"], "no AI training")
+        self.assertFalse(entry["verification"]["production_approved"])
+        self.assertEqual(va.validate_manifest(self.root / MANIFEST, self.root), [])
+        self.assertEqual(pr.main(["--root", str(self.root), "verify", "--manifest", MANIFEST, "--reproduce"]), 0)
+
+    def test_validator_rejects_rights_laundering(self):
+        self.assertEqual(self.derive()[0], 0)
+        manifest = self.manifest()
+        entry = manifest["assets"][-1]
+        entry["source"]["license"] = "CC0-1.0"
+        entry["derivation"]["rights_status"] = "inherited"
+        (self.root / MANIFEST).write_text(json.dumps(manifest))
+        errors = va.validate_manifest(self.root / MANIFEST, self.root)
+        self.assertTrue(any("license differs" in e for e in errors) and any("rights_status" in e for e in errors))
 
     def test_duplicate_asset_id(self):
         self.expect(self.derive(asset_id="orig-a"), 2, "already in use")
