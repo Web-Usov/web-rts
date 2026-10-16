@@ -122,7 +122,10 @@ describe("solid footprint lifecycle in the World", () => {
       { kind: "BUILDING", definitionId: "tower" },
       { kind: "RESOURCE", definitionId: "wood_node" },
     ]);
-    expect(entities[1]).toMatchObject({ x: -11, y: -11, objectiveType: null });
+    expect(entities[1]).toMatchObject({
+      location: { type: "WORLD", x: -11, y: -11 },
+      objectiveType: null,
+    });
   });
 });
 
@@ -191,8 +194,7 @@ describe("MatchRuntime bootstrap spatial state", () => {
     const site = before.entities.find((entity) => entity.kind === "OBJECTIVE")!;
     expect(site).toMatchObject({
       definitionId: "sacred_site",
-      x: 0,
-      y: 0,
+      location: { type: "WORLD", x: 0, y: 0 },
       objectiveType: "PROTECT",
     });
 
@@ -206,8 +208,7 @@ describe("MatchRuntime bootstrap spatial state", () => {
     expect(runtime.drainEvents()).toEqual([]);
     const after = runtime.readSnapshot();
     expect(after.entities.find((entity) => entity.entityId === unit.entityId)).toMatchObject({
-      x: 6,
-      y: 6,
+      location: { type: "WORLD", x: 6, y: 6 },
     });
     expect(after.entities.find((entity) => entity.entityId === site.entityId)).toEqual(site);
   });

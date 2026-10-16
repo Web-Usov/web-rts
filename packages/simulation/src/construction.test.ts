@@ -226,7 +226,7 @@ describe("BUILD admission and atomicity", () => {
 
 describe("construction lifecycle", () => {
   it.each(["wall", "tower"])(
-    "%s pauses, resumes and completes without extra spend/topology/G8",
+    "%s pauses, resumes and completes without extra spend/topology; Tower gains combat capability",
     (definition) => {
       const { world, id } = fixture();
       build(world, id, 8, 5, definition);
@@ -249,8 +249,8 @@ describe("construction lifecycle", () => {
       expect(world.topologyRevision).toBe(1);
       expect(wood(world)).toBe(before);
       expect(world.entityIds()).toHaveLength(2);
-      expect(world.attacks.has(site)).toBe(false);
-      expect(world.combats.has(site)).toBe(false);
+      expect(world.attacks.has(site)).toBe(definition === "tower");
+      expect(world.combats.has(site)).toBe(definition === "tower");
       resume(world, id, site);
       world.step();
       expect(world.drainEvents()).toContainEqual(

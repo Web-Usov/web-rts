@@ -16,8 +16,9 @@ export type MatchEntitySnapshot = {
   entityId: EntityId;
   kind: EntityKind;
   definitionId: string;
-  x: number;
-  y: number;
+  location:
+    | { type: "WORLD"; x: number; y: number }
+    | ({ type: "CONTAINED" } & import("./types.js").ContainedIn);
   ownerPlayerId: number | null;
   controllerPlayerId: number | null;
   /** Generic objective role targeting this entity, if any. */
@@ -32,8 +33,8 @@ export type MatchEntitySnapshot = {
 
 /**
  * Fresh plain objects on every call, in ascending entity id order. Kind and
- * definitionId come from the Identity component. Entities without a position
- * are omitted until a discriminated location lands (G11).
+ * definitionId come from Identity. Living contained entities retain their identity
+ * and non-spatial gameplay data without fabricated world coordinates.
  * Component stores are not exposed.
  */
 export function readWorldEntities(world: World): MatchEntitySnapshot[] {
@@ -48,7 +49,8 @@ export function readWorldEntities(world: World): MatchEntitySnapshot[] {
   for (const entityId of world.entityIds()) {
     const identity = world.identities.get(entityId);
     const position = world.positions.get(entityId);
-    if (identity === undefined || position === undefined) {
+    const containment = world.containedIn.get(entityId);
+    if (identity === undefined || (position === undefined && containment === undefined)) {
       continue;
     }
     const objective = objectiveByTarget.get(entityId);
@@ -77,8 +79,10 @@ export function readWorldEntities(world: World): MatchEntitySnapshot[] {
       entityId,
       kind: identity.kind,
       definitionId: identity.definitionId,
-      x: position.x,
-      y: position.y,
+      location:
+        containment === undefined
+          ? { type: "WORLD", x: position!.x, y: position!.y }
+          : { type: "CONTAINED", ...containment },
       ownerPlayerId: owner?.ownerPlayerId ?? null,
       controllerPlayerId: controller?.controllerPlayerId ?? null,
       objectiveType: objective?.type ?? null,

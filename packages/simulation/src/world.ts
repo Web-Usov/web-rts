@@ -1,3 +1,4 @@
+import { getEntityDefinition } from "@web-rts/game-data";
 import {
   CommandQueue,
   type CommandRejectionReason,
@@ -23,8 +24,18 @@ import { RelationshipPolicy } from "./teams.js";
 import { prepareSoldier, resolveEntityCombat } from "./systems/combat.js";
 import { assessGather, economyHooks, installGatherNavigation } from "./systems/economy.js";
 import { assessBuild, commitBuild, constructionHooks } from "./systems/construction.js";
+import {
+  assessGarrison,
+  commitGarrison,
+  ungarrison,
+  garrisonHooks,
+  forceEjectOccupants,
+} from "./systems/garrison.js";
 import { runMovementSystem } from "./systems/movement.js";
 import type {
+  ContainedIn,
+  GarrisonHost,
+  GarrisonTask,
   Construction,
   BuildTask,
   Worker,
@@ -69,6 +80,9 @@ export class World {
   readonly movements = new ComponentStore<Movement>();
   /** Grid route for in-progress movement. Absent from snapshots and replication. */
   private readonly navigations = new ComponentStore<NavigationTask>();
+  readonly containedIn = new ComponentStore<ContainedIn>();
+  readonly garrisonHosts = new ComponentStore<GarrisonHost>();
+  readonly garrisonTasks = new ComponentStore<GarrisonTask>();
   readonly constructions = new ComponentStore<Construction>();
   readonly buildTasks = new ComponentStore<BuildTask>();
   readonly workers = new ComponentStore<Worker>();
@@ -115,6 +129,13 @@ export class World {
     this.nextEntityId += 1;
     this.living.add(entityId);
     this.identities.set(entityId, { kind: identity.kind, definitionId: identity.definitionId });
+    const definition = getEntityDefinition(identity.definitionId);
+    if (definition?.garrisonHost !== undefined)
+      this.garrisonHosts.set(entityId, definition.garrisonHost);
+    if (definition?.automaticAttack === true && definition.attack !== undefined) {
+      this.attacks.set(entityId, definition.attack);
+      this.combats.set(entityId, { targetEntityId: null, nextAttackTick: 0 });
+    }
     this.events.push({
       type: "ENTITY_SPAWNED",
       entityId,
@@ -124,9 +145,17 @@ export class World {
   }
 
   destroyEntity(entityId: EntityId): void {
-    if (!this.living.delete(entityId)) {
+    if (!this.living.has(entityId)) {
       return;
     }
+    forceEjectOccupants(this, entityId);
+    this.living.delete(entityId);
+    for (const [occupant, task] of this.garrisonTasks.entries()) {
+      if (task.containerEntityId === entityId) this.failGarrison(occupant, "target_removed");
+    }
+    this.garrisonTasks.remove(entityId);
+    this.containedIn.remove(entityId);
+    this.garrisonHosts.remove(entityId);
     for (const [builder, task] of this.buildTasks.entries()) {
       if (task.constructionEntityId === entityId) this.failBuild(builder, "target_removed");
     }
@@ -277,6 +306,36 @@ export class World {
     this.stopNavigation(entityId);
   }
 
+  /** Host occupants are always derived, in slot then entity-id order. */
+  occupantsOf(host: EntityId): Array<readonly [EntityId, ContainedIn]> {
+    return [...this.containedIn.entries()]
+      .filter(([, relation]) => relation.containerEntityId === host)
+      .sort((a, b) => a[1].slotIndex - b[1].slotIndex || a[0] - b[0]);
+  }
+
+  failGarrison(entityId: EntityId, reason: import("./events.js").ActionFailureReason): void {
+    const task = this.garrisonTasks.get(entityId);
+    if (task === undefined) return;
+    this.events.push({
+      type: "ACTION_FAILED",
+      commandId: task.commandId,
+      playerId: task.playerId,
+      entityId,
+      action: "GARRISON",
+      reason,
+      tick: this.tick,
+    });
+    this.garrisonTasks.remove(entityId);
+    this.stopNavigation(entityId);
+    this.resetSoldier(entityId);
+  }
+
+  resetSoldier(entityId: EntityId): void {
+    this.cancelCombatForMove(entityId);
+    const task = this.soldiers.get(entityId);
+    if (task !== undefined) task.state = "IDLE";
+  }
+
   private cancelCombatForMove(entityId: EntityId): void {
     const task = this.soldiers.get(entityId);
     if (task !== undefined) {
@@ -348,21 +407,27 @@ export class World {
     this.applyCommands();
     const economy = economyHooks(this, this.navigations, activeTaskLane, this.events);
     const construction = constructionHooks(this, activeTaskLane);
+    const garrison = garrisonHooks(this, activeTaskLane);
     const hooks = {
-      entityIds: [...economy.entityIds, ...construction.entityIds],
+      entityIds: [...economy.entityIds, ...construction.entityIds, ...garrison.entityIds],
       beforeMovement: (id: EntityId) => {
         economy.beforeMovement(id);
         construction.beforeMovement(id);
+        garrison.beforeMovement(id);
       },
       afterMovement: (id: EntityId) => {
         economy.afterMovement(id);
+        garrison.afterMovement(id);
       },
       failedNavigation: (id: EntityId) => {
         economy.failedNavigation(id);
         construction.failedNavigation(id);
+        garrison.failedNavigation(id);
       },
       replanNavigation: (id: EntityId) =>
-        construction.replanNavigation(id) ?? economy.replanNavigation(id),
+        garrison.replanNavigation(id) ??
+        construction.replanNavigation(id) ??
+        economy.replanNavigation(id),
     };
     // A single ascending entity pass shares active-task budget between combat and
     // MOVE replans. Each entity can reserve at most one query in this lane.
@@ -413,7 +478,20 @@ export class World {
   private applyCommand(queued: QueuedCommand): void {
     if (queued.command.type === "MOVE")
       this.applyMoveCommand(queued.actor.playerId, queued.command);
-    else if (queued.command.type === "BUILD") {
+    else if (queued.command.type === "GARRISON") {
+      const result = assessGarrison(this, queued.actor.playerId, queued.command);
+      if ("reason" in result)
+        this.rejectCommand(queued.actor.playerId, queued.command.commandId, result.reason);
+      else {
+        commitGarrison(this, queued.actor.playerId, queued.command, result.navigation);
+        this.acceptCommand(queued.actor.playerId, queued.command.commandId);
+      }
+    } else if (queued.command.type === "UNGARRISON") {
+      const reason = ungarrison(this, queued.actor.playerId, queued.command.unitEntityId);
+      if (reason !== null)
+        this.rejectCommand(queued.actor.playerId, queued.command.commandId, reason);
+      else this.acceptCommand(queued.actor.playerId, queued.command.commandId);
+    } else if (queued.command.type === "BUILD") {
       const result = assessBuild(this, queued.actor.playerId, queued.command);
       if ("reason" in result) {
         this.rejectCommand(queued.actor.playerId, queued.command.commandId, result.reason);
@@ -427,6 +505,7 @@ export class World {
         this.rejectCommand(queued.actor.playerId, queued.command.commandId, result.reason);
         return;
       }
+      this.garrisonTasks.remove(queued.command.workerEntityId);
       this.buildTasks.remove(queued.command.workerEntityId);
       this.gatherTasks.set(queued.command.workerEntityId, result.task);
       installGatherNavigation(
@@ -469,6 +548,7 @@ export class World {
     const speed = this.config.defaultMoveSpeed;
     if (this.grid === null) {
       for (const entityId of applicable) {
+        this.garrisonTasks.remove(entityId);
         this.buildTasks.remove(entityId);
         this.gatherTasks.remove(entityId);
         this.cancelCombatForMove(entityId);
@@ -502,6 +582,7 @@ export class World {
     }
 
     for (const { entityId, task } of planned) {
+      this.garrisonTasks.remove(entityId);
       this.buildTasks.remove(entityId);
       this.gatherTasks.remove(entityId);
       this.movements.remove(entityId);
@@ -538,6 +619,7 @@ export class World {
     if (!canIssueMove(this, playerId, command.entityIds)) {
       return "not_your_unit";
     }
+    if (command.entityIds.some((id) => this.containedIn.has(id))) return "entity_not_spatial";
     return null;
   }
 

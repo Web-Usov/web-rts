@@ -6,6 +6,8 @@ import type { EntityId, PlayerId, Vec2 } from "./types.js";
  * in {@link QueuedCommand}.
  */
 export type SimulationCommand =
+  | { type: "GARRISON"; commandId: string; unitEntityId: EntityId; containerEntityId: EntityId }
+  | { type: "UNGARRISON"; commandId: string; unitEntityId: EntityId }
   | {
       type: "MOVE";
       commandId: string;
@@ -39,6 +41,15 @@ export type QueuedCommand = {
 
 /** Stable machine-readable reasons produced by tick-boundary validation. */
 export type CommandRejectionReason =
+  | "entity_not_found"
+  | "entity_not_spatial"
+  | "not_controller"
+  | "invalid_garrison_host"
+  | "host_not_completed"
+  | "ineligible_occupant"
+  | "no_garrison_slot"
+  | "not_contained"
+  | "no_exit"
   | "empty_entity_ids"
   | "out_of_bounds"
   | "blocked_target"

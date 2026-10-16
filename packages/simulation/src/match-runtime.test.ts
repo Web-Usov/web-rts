@@ -18,7 +18,8 @@ function unitOf(snapshot: MatchSnapshot, playerId: number) {
     (entity) => entity.kind === "UNIT" && entity.ownerPlayerId === playerId,
   );
   expect(unit).toBeDefined();
-  return unit!;
+  if (unit!.location.type !== "WORLD") throw new Error("expected spatial unit");
+  return { ...unit!, ...unit!.location };
 }
 
 function objectiveOf(snapshot: MatchSnapshot) {
@@ -44,14 +45,17 @@ describe("MatchRuntime", () => {
     expect(snapshot.tick).toBe(0);
     expect(snapshot.status).toBe("RUNNING");
     expect(unitOf(snapshot, 0)).toMatchObject({
-      ...FOUNDATION_MAP.playerSpawns[0]!.unitPosition,
+      location: { type: "WORLD", ...FOUNDATION_MAP.playerSpawns[0]!.unitPosition },
       controllerPlayerId: 0,
     });
     expect(unitOf(snapshot, 1)).toMatchObject({
-      ...FOUNDATION_MAP.playerSpawns[1]!.unitPosition,
+      location: { type: "WORLD", ...FOUNDATION_MAP.playerSpawns[1]!.unitPosition },
       controllerPlayerId: 1,
     });
-    expect(objectiveOf(snapshot)).toMatchObject({ x: 0, y: 0, controllerPlayerId: null });
+    expect(objectiveOf(snapshot)).toMatchObject({
+      location: { type: "WORLD", x: 0, y: 0 },
+      controllerPlayerId: null,
+    });
     expect(runtime.readMetrics()).toMatchObject({
       tick: 0,
       entityCount: 13,

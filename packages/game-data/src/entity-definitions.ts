@@ -19,11 +19,38 @@ export const RESOURCE_TYPES = ["WOOD"] as const;
 export type ResourceType = (typeof RESOURCE_TYPES)[number];
 export const RESOURCE_DEFINITIONS = { WOOD: { id: "WOOD" } } as const;
 export type AttackProfile = {
+  readonly mode?: "MELEE" | "RANGED";
   readonly damage: number;
   readonly range: number;
   readonly cooldownTicks: number;
   readonly allowedTargets: readonly EntityKind[];
 };
+
+export type GarrisonHostDefinition = {
+  readonly capacity: number;
+  readonly allowedOccupantTags: readonly string[];
+  readonly attackProfiles: readonly {
+    readonly occupantTag: string;
+    readonly profile: AttackProfile;
+  }[];
+};
+
+export const TOWER_ATTACK_PROFILES = {
+  empty: {
+    damage: 12,
+    range: 7,
+    cooldownTicks: 20,
+    mode: "RANGED",
+    allowedTargets: ["UNIT", "BUILDING", "OBJECTIVE"],
+  },
+  infantry: {
+    damage: 12,
+    range: 5,
+    cooldownTicks: 8,
+    mode: "RANGED",
+    allowedTargets: ["UNIT", "BUILDING", "OBJECTIVE"],
+  },
+} as const satisfies Record<string, AttackProfile>;
 
 export type SoldierProfile = {
   readonly aggroRadius: number;
@@ -32,6 +59,9 @@ export type SoldierProfile = {
 };
 
 export type EntityDefinition = {
+  readonly tags?: readonly string[];
+  readonly garrisonHost?: GarrisonHostDefinition;
+  readonly automaticAttack?: boolean;
   readonly worker?: {
     readonly moveSpeed: number;
     readonly carryCapacity: number;
@@ -71,6 +101,13 @@ export const ENTITY_DEFINITIONS = {
     id: "tower",
     kind: "BUILDING",
     maxHealth: 300,
+    attack: TOWER_ATTACK_PROFILES.empty,
+    automaticAttack: true,
+    garrisonHost: {
+      capacity: 1,
+      allowedOccupantTags: ["infantry"],
+      attackProfiles: [{ occupantTag: "infantry", profile: TOWER_ATTACK_PROFILES.infantry }],
+    },
     footprint: { width: 1, height: 1, blocksMovement: true, blocksBuilding: true },
     construction: { woodCost: 30, durationTicks: 60 },
   },
@@ -89,6 +126,7 @@ export const ENTITY_DEFINITIONS = {
   },
   soldier: {
     id: "soldier",
+    tags: ["infantry"],
     kind: "UNIT",
     footprint: null,
     maxHealth: 100,

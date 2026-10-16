@@ -459,11 +459,10 @@ describe("MOVE navigation", () => {
       "definitionId",
       "entityId",
       "kind",
+      "location",
       "objectiveState",
       "objectiveType",
       "ownerPlayerId",
-      "x",
-      "y",
     ]);
     expect(JSON.stringify(readWorldEntities(world))).not.toMatch(
       /pathCells|waypoint|plannedRevision/,

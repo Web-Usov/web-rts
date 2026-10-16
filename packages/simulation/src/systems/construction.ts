@@ -108,6 +108,7 @@ export function commitBuild(
     world.placeSolidFootprint(site, target.footprint);
   } else site = target.entityId;
   const id = command.builderEntityId;
+  world.garrisonTasks.remove(id);
   world.gatherTasks.remove(id);
   world.stopNavigation(id);
   world.buildTasks.set(id, { commandId: command.commandId, playerId, constructionEntityId: site });
