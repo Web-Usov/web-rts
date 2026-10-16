@@ -46,6 +46,15 @@ for (const mode of ["local", "remote"])
   test(`C1 physical camera controls and commands (${mode})`, async ({ page, context }) => {
     test.setTimeout(180_000);
     const errors = attachPageErrorCapture(page);
+    // Opt-in stress mode for flake diagnosis: E2E_CPU_THROTTLE=6 slows the renderer 6x.
+    const throttleRaw = process.env.E2E_CPU_THROTTLE;
+    const throttle = throttleRaw === undefined || throttleRaw === "" ? 1 : Number(throttleRaw);
+    if (!Number.isFinite(throttle) || throttle < 1)
+      throw new Error(`E2E_CPU_THROTTLE must be a number >= 1, got "${throttleRaw}"`);
+    if (throttle > 1) {
+      const cdp = await context.newCDPSession(page);
+      await cdp.send("Emulation.setCPUThrottlingRate", { rate: throttle });
+    }
     await page.goto(mode === "local" ? "/?transport=local" : "/");
     await page.getByRole("button", { name: "Create room", exact: true }).click();
     await expectHud(page, "Status", "connected");
@@ -230,11 +239,20 @@ for (const mode of ["local", "remote"])
     await page.mouse.down({ button: "right" });
     await page.mouse.move(900, 450, { steps: 8 });
     await page.mouse.move(800, 450, { steps: 8 });
+    // Baseline is taken while the gesture is still active: W is held but keyboard pan
+    // is suspended. Measuring after pointerup races with the resumed pan (a screenshot
+    // under CPU load takes long enough for the camera to run away or hit the map edge).
+    const duringDrag = await expectObjectiveOnCanvas(page);
+    expect(cssDistance(duringDrag, await expectObjectiveOnCanvas(page))).toBeLessThan(2);
     await page.mouse.up({ button: "right" });
-    const resumedPan = await expectObjectiveOnCanvas(page);
-    await page.waitForTimeout(250);
+    // Pan speed is px/s of frame dt (capped per frame), so displacement per wall-clock
+    // interval depends on FPS. Wait for the observable shift instead of a fixed sleep.
+    await expect
+      .poll(async () => (await expectObjectiveOnCanvas(page)).y - duringDrag.y, {
+        timeout: 15_000,
+      })
+      .toBeGreaterThan(10);
     await page.keyboard.up("w");
-    expect((await expectObjectiveOnCanvas(page)).y - resumedPan.y).toBeGreaterThan(10);
     await expectHud(page, "Destination", "none");
     await page.mouse.move(800, 450);
     await page.mouse.down({ button: "middle" });
