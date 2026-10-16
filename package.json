@@ -15,7 +15,7 @@
     "test:e2e": "playwright test",
     "test:docker-smoke": "node scripts/docker-lan-smoke.mjs",
     "typecheck": "turbo run typecheck && tsc -p tests/e2e/tsconfig.json",
-    "lint": "turbo run lint && eslint tests/e2e/browser-*.ts tests/e2e/helpers/browser-evidence.ts && prettier --check .",
+    "lint": "turbo run lint && eslint tests/e2e/browser-*.ts tests/e2e/helpers/browser-*.ts && prettier --check .",
     "format": "prettier --write .",
     "verify:gameplay": "pnpm --silent exec turbo run build --filter=@web-rts/scenario-runner > /dev/null && node tools/scenario-runner/dist/cli.js",
     "kb": "node scripts/knowledge-base.mjs",

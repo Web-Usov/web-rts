@@ -1,5 +1,12 @@
 import { readFile } from "node:fs/promises";
-import { expect, test, type BrowserContext } from "@playwright/test";
+import {
+  expect,
+  test,
+  type Browser,
+  type BrowserContext,
+  type BrowserContextOptions,
+  type TestInfo,
+} from "@playwright/test";
 import {
   artifactBudgetExceeded,
   artifactLimits,
@@ -99,9 +106,9 @@ test("AT7 replay retention and budget depend on outcome", () => {
 
 test.describe("AT7 early setup failure", () => {
   async function run(
-    browser: import("@playwright/test").Browser,
-    info: import("@playwright/test").TestInfo,
-    newContext: (o: import("@playwright/test").BrowserContextOptions) => Promise<BrowserContext>,
+    browser: Browser,
+    info: TestInfo,
+    newContext: (o: BrowserContextOptions) => Promise<BrowserContext>,
   ) {
     const before = browser.contexts().length;
     const directory = info.outputPath("evidence");
