@@ -41,7 +41,7 @@ Aspect ratio 1086:1448 = 3:4 точно, поэтому 192×256 и 96×128 бе
 
 ### Повторяемость и время
 
-5 последовательных запусков на каждый source (чистая копия manifest в `.artifacts/`, другой root): одинаковые байты (`227abe34…` ×5 для Worker, `1d052de6…` ×5 для Soldier) и те же хэши, что у закоммиченных файлов; `verify --reproduce` — PASS. Время `derive` (чтение, hash, decode, resize ×2 для проверки детерминизма, QA, запись) на Apple/macOS, Python 3.13.7, Pillow 12.3.0: Worker 132–140 мс, Soldier 127–129 мс (холодный первый запуск ≈290 мс). Повторяемость гарантирована при тех же версиях Pillow/zlib; версии записаны в manifest. CI использует другую среду — если байты разойдутся, `verify --reproduce` честно упадёт (см. PR).
+5 последовательных запусков на каждый source (чистая копия manifest в `.artifacts/`, другой root): одинаковые байты (`227abe34…` ×5 для Worker, `1d052de6…` ×5 для Soldier) и те же хэши, что у закоммиченных файлов; `verify --reproduce` — PASS. Время `derive` (чтение, hash, decode, resize ×2 для проверки детерминизма, QA, запись) на Apple/macOS, Python 3.13.7, Pillow 12.3.0: Worker 132–140 мс, Soldier 127–129 мс (холодный первый запуск ≈290 мс). Повторяемость гарантирована при тех же версиях Pillow/zlib; версии записаны в manifest. Первый CI-прогон показал, что на Linux-zlib байты PNG могут отличаться от macOS: поэтому `verify --reproduce` требует идентичных **пикселей** и выводит WARN при расхождении только байтов; `--strict-bytes` включает строгое побайтовое сравнение (в той же среде).
 
 ## Визуальная проверка (manual, не gameplay screenshot)
 
@@ -79,7 +79,7 @@ Aspect ratio 1086:1448 = 3:4 точно, поэтому 192×256 и 96×128 бе
 - Только resize; нет background removal, PBR/texture, atlas packing.
 - Визуальная оценка субъективна; independent review обязателен.
 - Rights Worker/Soldier — pending, наследуется.
-- Байтовая повторяемость привязана к версиям Pillow/zlib.
+- Байтовая повторяемость PNG гарантирована только в той же среде (Pillow/zlib); между машинами проверяется идентичность пикселей.
 - Machine artifacts (`.artifacts/verification/at5/`, git-ignored): `asset-report.txt`, логи проверок.
 
 ## Project Status Check

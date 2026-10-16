@@ -28,10 +28,13 @@ MANIFEST = "refs/asset-manifest.json"
 
 
 def gradient(size=(120, 160), mode="RGB") -> Image.Image:
+    """Deterministic, noisy (poorly compressible) image so downscaling always shrinks the file."""
     image = Image.new("RGB", size)
+    state = 12345
     for x in range(size[0]):
         for y in range(size[1]):
-            image.putpixel((x, y), ((x * 7) % 256, (y * 5) % 256, (x + y) % 256))
+            state = (state * 1103515245 + 12345) & 0x7FFFFFFF
+            image.putpixel((x, y), ((x * 7 + state) % 256, (y * 5 + (state >> 8)) % 256, (x + y + (state >> 16)) % 256))
     return image.convert(mode)
 
 

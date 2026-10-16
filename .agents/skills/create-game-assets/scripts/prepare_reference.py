@@ -447,7 +447,16 @@ def verify(args: argparse.Namespace) -> list[str]:
                 params = {"fit": step["fit"], "box": list(box), "method": step["method"], "alpha": deriv["pipeline"][1]["mode"]}
                 again, _ = process(decode(parent_bytes, Path(parent["path"]).suffix, limits), params)
                 if again != data:
-                    errors.append(f"{label}: re-running the pipeline does not reproduce the committed bytes")
+                    # PNG encoders (zlib builds) may differ between machines; pixels must not.
+                    same_pixels = (
+                        Image.open(io.BytesIO(again)).tobytes() == image.tobytes()
+                        and Image.open(io.BytesIO(again)).mode == image.mode
+                    )
+                    if args.strict_bytes or not same_pixels:
+                        errors.append(f"{label}: re-running the pipeline does not reproduce the committed "
+                                      f"{'bytes' if same_pixels else 'pixels'}")
+                    else:
+                        print(f"WARN {label}: pixel-identical, bytes differ (different PNG encoder/zlib build)")
         except (PipelineError, KeyError) as exc:
             errors.append(f"{label}: {exc}")
     originals_ok = all(find_asset(manifest, asset_id=a["derivation"]["parent_id"]) for a in derivatives if "derivation" in a)
@@ -548,7 +557,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     v = sub.add_parser("verify")
     v.add_argument("--manifest", required=True)
-    v.add_argument("--reproduce", action="store_true", help="re-run pipelines and compare bytes")
+    v.add_argument("--reproduce", action="store_true", help="re-run pipelines and compare with committed output")
+    v.add_argument("--strict-bytes", action="store_true", help="with --reproduce: require byte-identical PNGs")
 
     s = sub.add_parser("sheet")
     s.add_argument("--out", required=True)
