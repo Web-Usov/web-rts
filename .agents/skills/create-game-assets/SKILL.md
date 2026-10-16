@@ -31,7 +31,9 @@ one production tool inside a controlled pipeline, never as proof that an asset i
    small coherent batches; avoid unrelated one-off prompts that drift.
 7. **Normalize deterministically.** Crop, size, anchor, slice, name, compress, and check alpha with
    ordinary image/DCC tools. Never trust generated grids, transparency, seams, pivots, topology,
-   or dimensions without inspection. Use the bundled scripts for raster QA and contact sheets.
+   or dimensions without inspection. Use the bundled scripts for raster QA and contact sheets;
+   `scripts/prepare_reference.py` adds offline, manifest-recorded resize/QA for existing references
+   (see `references/raster-pipeline.md`).
 8. **Import with engine-native settings.** Set filtering, mipmaps, pixels-per-unit/world scale,
    color space, compression, sprite slicing, texture types, materials, and collision deliberately.
    Read the relevant engine skill before editing engine files.

@@ -260,6 +260,306 @@
         "approved_by": "user in ChatGPT project conversation"
       },
       "notes": "Reference only; no runtime import; compare views before mesh generation."
+    },
+    {
+      "id": "core-002-worker-front-ref-192x256",
+      "role": "worker front reference preview 192x256 (experimental derivative)",
+      "path": "docs/art/assets/core-002/derivatives/worker-front-192x256.png",
+      "status": "experimental-derivative",
+      "technical": {
+        "dimensions": "192x256",
+        "format": "PNG",
+        "pixel_mode": "RGB",
+        "sha256": "227abe34de4a061dd6874a3c1f7ab92de261968dc391167c4ee7cb9d0990ffd6",
+        "bytes": 48957,
+        "alpha_channel_present": false,
+        "fully_opaque": true,
+        "view": "front"
+      },
+      "source": {
+        "kind": "derived",
+        "url_or_tool": "prepare_reference.py 1.0.0 (Pillow 12.3.0)",
+        "creator": "deterministic local processing; no generative model involved",
+        "created_at": "2026-10-16",
+        "license": "not recorded; rights review pending",
+        "attribution": "derived from core-002-worker-front-reference",
+        "prompt_or_source_record": "offline resize of docs/art/assets/core-002/characters/worker-front.png"
+      },
+      "verification": {
+        "raster_decode_passed": true,
+        "qa_result": "PASS",
+        "production_approved": false,
+        "in_engine_reviewed": false,
+        "visual_review": "pending"
+      },
+      "derivation": {
+        "parent_id": "core-002-worker-front-reference",
+        "parent_path": "docs/art/assets/core-002/characters/worker-front.png",
+        "parent_sha256": "8528a7786377d231a05ddc2b54c7b009c5fd6dcb3d3c2c924828a9bebac290bc",
+        "pipeline": [
+          {
+            "op": "resize",
+            "fit": "inside",
+            "box": "192x256",
+            "method": "lanczos",
+            "never_upscale": true
+          },
+          {
+            "op": "alpha",
+            "mode": "drop-if-opaque",
+            "note": "channel dropped only if source alpha is entirely 255; no mask or background removal is applied"
+          },
+          {
+            "op": "encode",
+            "format": "PNG",
+            "optimize": true,
+            "compress_level": 9,
+            "metadata": "none"
+          }
+        ],
+        "tool": {
+          "name": "prepare_reference.py",
+          "version": "1.0.0",
+          "pillow": "12.3.0",
+          "python": "3.13.7"
+        },
+        "generation": {
+          "used": false,
+          "provider": null,
+          "model": null,
+          "seed": null,
+          "cost_usd": 0
+        },
+        "rights_status": "pending",
+        "rights_inherited_from": "core-002-worker-front-reference",
+        "rights_restrictions": null
+      },
+      "notes": "Experimental reference derivative; not production-approved, not for runtime import."
+    },
+    {
+      "id": "core-002-worker-front-ref-96x128",
+      "role": "worker front minified reference 96x128 (strategic-zoom readability check, experimental derivative)",
+      "path": "docs/art/assets/core-002/derivatives/worker-front-96x128.png",
+      "status": "experimental-derivative",
+      "technical": {
+        "dimensions": "96x128",
+        "format": "PNG",
+        "pixel_mode": "RGB",
+        "sha256": "d5317fd9cf3ff789e60a5d3e6a68e157288ddd7af7b2d50b716d1fbaee537189",
+        "bytes": 14076,
+        "alpha_channel_present": false,
+        "fully_opaque": true,
+        "view": "front"
+      },
+      "source": {
+        "kind": "derived",
+        "url_or_tool": "prepare_reference.py 1.0.0 (Pillow 12.3.0)",
+        "creator": "deterministic local processing; no generative model involved",
+        "created_at": "2026-10-16",
+        "license": "not recorded; rights review pending",
+        "attribution": "derived from core-002-worker-front-reference",
+        "prompt_or_source_record": "offline resize of docs/art/assets/core-002/characters/worker-front.png"
+      },
+      "verification": {
+        "raster_decode_passed": true,
+        "qa_result": "PASS",
+        "production_approved": false,
+        "in_engine_reviewed": false,
+        "visual_review": "pending"
+      },
+      "derivation": {
+        "parent_id": "core-002-worker-front-reference",
+        "parent_path": "docs/art/assets/core-002/characters/worker-front.png",
+        "parent_sha256": "8528a7786377d231a05ddc2b54c7b009c5fd6dcb3d3c2c924828a9bebac290bc",
+        "pipeline": [
+          {
+            "op": "resize",
+            "fit": "inside",
+            "box": "96x128",
+            "method": "lanczos",
+            "never_upscale": true
+          },
+          {
+            "op": "alpha",
+            "mode": "drop-if-opaque",
+            "note": "channel dropped only if source alpha is entirely 255; no mask or background removal is applied"
+          },
+          {
+            "op": "encode",
+            "format": "PNG",
+            "optimize": true,
+            "compress_level": 9,
+            "metadata": "none"
+          }
+        ],
+        "tool": {
+          "name": "prepare_reference.py",
+          "version": "1.0.0",
+          "pillow": "12.3.0",
+          "python": "3.13.7"
+        },
+        "generation": {
+          "used": false,
+          "provider": null,
+          "model": null,
+          "seed": null,
+          "cost_usd": 0
+        },
+        "rights_status": "pending",
+        "rights_inherited_from": "core-002-worker-front-reference",
+        "rights_restrictions": null
+      },
+      "notes": "Experimental reference derivative; not production-approved, not for runtime import."
+    },
+    {
+      "id": "core-002-soldier-front-ref-192x256",
+      "role": "soldier front reference preview 192x256 (experimental derivative)",
+      "path": "docs/art/assets/core-002/derivatives/soldier-front-192x256.png",
+      "status": "experimental-derivative",
+      "technical": {
+        "dimensions": "192x256",
+        "format": "PNG",
+        "pixel_mode": "RGB",
+        "sha256": "1d052de60739dba80ca5324a782c6300861021e5c014603a64ae6b118237dce0",
+        "bytes": 52434,
+        "alpha_channel_present": false,
+        "fully_opaque": true,
+        "view": "front"
+      },
+      "source": {
+        "kind": "derived",
+        "url_or_tool": "prepare_reference.py 1.0.0 (Pillow 12.3.0)",
+        "creator": "deterministic local processing; no generative model involved",
+        "created_at": "2026-10-16",
+        "license": "not recorded; rights review pending",
+        "attribution": "derived from core-002-soldier-front-reference",
+        "prompt_or_source_record": "offline resize of docs/art/assets/core-002/characters/soldier-front.png"
+      },
+      "verification": {
+        "raster_decode_passed": true,
+        "qa_result": "PASS",
+        "production_approved": false,
+        "in_engine_reviewed": false,
+        "visual_review": "pending"
+      },
+      "derivation": {
+        "parent_id": "core-002-soldier-front-reference",
+        "parent_path": "docs/art/assets/core-002/characters/soldier-front.png",
+        "parent_sha256": "4ec5a2bac289dfb3a37af28b3dfb55fde9c5354c7af6df62df6624e281755bde",
+        "pipeline": [
+          {
+            "op": "resize",
+            "fit": "inside",
+            "box": "192x256",
+            "method": "lanczos",
+            "never_upscale": true
+          },
+          {
+            "op": "alpha",
+            "mode": "drop-if-opaque",
+            "note": "channel dropped only if source alpha is entirely 255; no mask or background removal is applied"
+          },
+          {
+            "op": "encode",
+            "format": "PNG",
+            "optimize": true,
+            "compress_level": 9,
+            "metadata": "none"
+          }
+        ],
+        "tool": {
+          "name": "prepare_reference.py",
+          "version": "1.0.0",
+          "pillow": "12.3.0",
+          "python": "3.13.7"
+        },
+        "generation": {
+          "used": false,
+          "provider": null,
+          "model": null,
+          "seed": null,
+          "cost_usd": 0
+        },
+        "rights_status": "pending",
+        "rights_inherited_from": "core-002-soldier-front-reference",
+        "rights_restrictions": null
+      },
+      "notes": "Experimental reference derivative; not production-approved, not for runtime import."
+    },
+    {
+      "id": "core-002-soldier-front-ref-96x128",
+      "role": "soldier front minified reference 96x128 (strategic-zoom readability check, experimental derivative)",
+      "path": "docs/art/assets/core-002/derivatives/soldier-front-96x128.png",
+      "status": "experimental-derivative",
+      "technical": {
+        "dimensions": "96x128",
+        "format": "PNG",
+        "pixel_mode": "RGB",
+        "sha256": "491a4ffe217df1d9e0b12d99cb62884264932b74f4c275067f77e994557e3fe4",
+        "bytes": 15110,
+        "alpha_channel_present": false,
+        "fully_opaque": true,
+        "view": "front"
+      },
+      "source": {
+        "kind": "derived",
+        "url_or_tool": "prepare_reference.py 1.0.0 (Pillow 12.3.0)",
+        "creator": "deterministic local processing; no generative model involved",
+        "created_at": "2026-10-16",
+        "license": "not recorded; rights review pending",
+        "attribution": "derived from core-002-soldier-front-reference",
+        "prompt_or_source_record": "offline resize of docs/art/assets/core-002/characters/soldier-front.png"
+      },
+      "verification": {
+        "raster_decode_passed": true,
+        "qa_result": "PASS",
+        "production_approved": false,
+        "in_engine_reviewed": false,
+        "visual_review": "pending"
+      },
+      "derivation": {
+        "parent_id": "core-002-soldier-front-reference",
+        "parent_path": "docs/art/assets/core-002/characters/soldier-front.png",
+        "parent_sha256": "4ec5a2bac289dfb3a37af28b3dfb55fde9c5354c7af6df62df6624e281755bde",
+        "pipeline": [
+          {
+            "op": "resize",
+            "fit": "inside",
+            "box": "96x128",
+            "method": "lanczos",
+            "never_upscale": true
+          },
+          {
+            "op": "alpha",
+            "mode": "drop-if-opaque",
+            "note": "channel dropped only if source alpha is entirely 255; no mask or background removal is applied"
+          },
+          {
+            "op": "encode",
+            "format": "PNG",
+            "optimize": true,
+            "compress_level": 9,
+            "metadata": "none"
+          }
+        ],
+        "tool": {
+          "name": "prepare_reference.py",
+          "version": "1.0.0",
+          "pillow": "12.3.0",
+          "python": "3.13.7"
+        },
+        "generation": {
+          "used": false,
+          "provider": null,
+          "model": null,
+          "seed": null,
+          "cost_usd": 0
+        },
+        "rights_status": "pending",
+        "rights_inherited_from": "core-002-soldier-front-reference",
+        "rights_restrictions": null
+      },
+      "notes": "Experimental reference derivative; not production-approved, not for runtime import."
     }
   ]
 }

@@ -143,6 +143,9 @@ jobs:
       - name: Validate tracked image assets
         run: python scripts/validate_assets.py
 
+      - name: Asset pipeline positive/negative tests
+        run: python scripts/test_asset_pipeline.py
+
   lint:
     name: lint
     needs: changes

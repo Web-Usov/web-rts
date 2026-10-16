@@ -42,6 +42,28 @@ nearest-neighbor unless a deliberate preprocessing pass says otherwise.
 - Provide normal, hover/focus, pressed, disabled, selected, and warning states when art changes.
 - Design scalable panels as 9-slice/nine-patch assets; verify corners and borders at several sizes.
 
+## Offline reference derivatives (`scripts/prepare_reference.py`)
+
+Local-only, no network. Reads a reference registered in an `asset-manifest.json`
+(`schema_version: 1`), checks its SHA-256 and limits (bytes, dimension, decoded pixels), resizes
+with an explicit method (never upscales, keeps aspect ratio), runs QA, writes atomically and adds
+an `experimental-derivative` entry with `derivation` (parent id/SHA-256, pipeline, tool versions,
+generation record, inherited rights). Originals and unregistered files are never overwritten;
+failures leave no output and no manifest change.
+
+```bash
+python .agents/skills/create-game-assets/scripts/prepare_reference.py derive \
+  --manifest docs/art/assets/core-002/characters/asset-manifest.json \
+  --source docs/art/assets/core-002/characters/worker-front.png \
+  --out docs/art/assets/core-002/derivatives/worker-front-192x256.png \
+  --id core-002-worker-front-ref-192x256 --role "worker front preview" --max-size 192x256
+python .agents/skills/create-game-assets/scripts/prepare_reference.py verify --manifest <manifest> --reproduce
+```
+
+No background removal exists: an opaque source stays opaque (an all-255 alpha channel is dropped
+losslessly, nothing is invented). Add a cutout only as a separate, visually reviewed step.
+`generate` is a fail-closed gate (exit 3 BLOCKED); it never calls a provider.
+
 ## Import checkpoints
 
 **Godot 4.7:** choose nearest filtering for crisp pixel art; use mipmaps when non-pixel textures
