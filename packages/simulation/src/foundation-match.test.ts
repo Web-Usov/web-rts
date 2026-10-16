@@ -94,7 +94,7 @@ describe("match layout from MapDefinition", () => {
       kind: "UNIT",
       definitionId: "foundation_unit",
       teamId: PLAYER_TEAM,
-      ...FOUNDATION_MAP.playerSpawns[0]!.unitPosition,
+      location: { type: "WORLD", ...FOUNDATION_MAP.playerSpawns[0]!.unitPosition },
       ownerPlayerId: 0,
       controllerPlayerId: 0,
       objectiveType: null,
@@ -103,8 +103,7 @@ describe("match layout from MapDefinition", () => {
     expect(entities.find((entity) => entity.kind === "OBJECTIVE")).toMatchObject({
       kind: "OBJECTIVE",
       definitionId: "sacred_site",
-      x: 0,
-      y: 0,
+      location: { type: "WORLD", x: 0, y: 0 },
       ownerPlayerId: null,
       controllerPlayerId: null,
       objectiveType: "PROTECT",

@@ -64,7 +64,7 @@ export type RuntimeEvent =
       readonly recipientPlayerId: PlayerId;
       readonly commandId: string;
       readonly entityId: EntityId;
-      readonly action: "GATHER" | "BUILD";
+      readonly action: "GATHER" | "BUILD" | "GARRISON";
       readonly reason: import("./events.js").ActionFailureReason;
       readonly tick: number;
     };

@@ -56,6 +56,13 @@ export function assessBuild(world: World, playerId: PlayerId, command: BuildComm
       return { reason: "insufficient_resources" };
     const footprint = { ...definition.footprint, anchorCell: { ...command.target.anchorCell } };
     if (!world.canPlaceSolidFootprint(footprint).ok) return { reason: "invalid_placement" };
+    // A garrison host must leave a statically walkable cell behind so that forced
+    // ejection can always restore its occupants to a valid Position (buildable != walkable).
+    if (
+      definition.garrisonHost !== undefined &&
+      !grid.footprintCells(footprint).every((cell) => grid.isStaticWalkable(cell))
+    )
+      return { reason: "invalid_placement" };
     const preview = grid.previewFootprint(footprint);
     const navigation = planApproach(preview, position, approachGoalCells(preview, footprint));
     if (navigation === null) return { reason: "no_path" };
@@ -108,6 +115,7 @@ export function commitBuild(
     world.placeSolidFootprint(site, target.footprint);
   } else site = target.entityId;
   const id = command.builderEntityId;
+  world.garrisonTasks.remove(id);
   world.gatherTasks.remove(id);
   world.stopNavigation(id);
   world.buildTasks.set(id, { commandId: command.commandId, playerId, constructionEntityId: site });

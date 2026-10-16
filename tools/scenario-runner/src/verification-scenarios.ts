@@ -37,7 +37,7 @@ function combatFixture(d: ScenarioDefinition): FixtureDriver {
         return {
           entityId,
           ...identity,
-          ...position,
+          location: { type: "WORLD" as const, x: position.x, y: position.y },
           ownerPlayerId: world.owners.get(entityId)?.ownerPlayerId ?? null,
           controllerPlayerId: world.controllers.get(entityId)?.controllerPlayerId ?? null,
           objectiveType: null,

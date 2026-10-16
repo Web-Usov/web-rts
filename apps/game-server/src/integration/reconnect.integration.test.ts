@@ -1,3 +1,4 @@
+import type { MatchEntitySnapshot } from "@web-rts/simulation";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { boot, type ColyseusTestServer } from "@colyseus/testing";
 import {
@@ -57,8 +58,19 @@ async function waitForState(
   throw new Error("timed out waiting for matching GameStateView");
 }
 
+/** Test projection: foundation tests assert WORLD coordinates as flat x/y. */
+function worldEntities(runtime: { readSnapshot(): { entities: readonly MatchEntitySnapshot[] } }) {
+  return runtime.readSnapshot().entities.map((entity) => ({
+    ...entity,
+    x: entity.location.type === "WORLD" ? entity.location.x : Number.NaN,
+    y: entity.location.type === "WORLD" ? entity.location.y : Number.NaN,
+  }));
+}
+
 function entityOf(room: FoundationRoom, entityId: number) {
-  return room.matchRuntime?.readSnapshot().entities.find((entity) => entity.entityId === entityId);
+  return room.matchRuntime
+    ? worldEntities(room.matchRuntime).find((entity) => entity.entityId === entityId)
+    : undefined;
 }
 
 /** Unexpected close. Disables the SDK retry loop so the test owns the resume. */

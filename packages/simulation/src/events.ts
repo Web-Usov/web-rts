@@ -1,7 +1,17 @@
 import type { CommandRejectionReason } from "./commands.js";
 import type { EntityId, PlayerId } from "./types.js";
 
-export type ActionFailureReason = "no_dropoff" | "target_removed" | "path_blocked";
+export type ActionFailureReason =
+  | "no_dropoff"
+  | "target_removed"
+  | "path_blocked"
+  | "not_controller"
+  | "invalid_owner"
+  | "invalid_garrison_host"
+  | "host_not_completed"
+  | "ineligible_occupant"
+  | "no_garrison_slot"
+  | "entity_not_spatial";
 
 export type SimulationEvent =
   | {
@@ -9,7 +19,7 @@ export type SimulationEvent =
       commandId: string;
       playerId: PlayerId;
       entityId: EntityId;
-      action: "GATHER" | "BUILD";
+      action: "GATHER" | "BUILD" | "GARRISON";
       reason: ActionFailureReason;
       tick: number;
     }

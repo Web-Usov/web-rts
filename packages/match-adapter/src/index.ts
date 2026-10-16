@@ -64,7 +64,10 @@ export function projectGameStateView(
       playerId: player.playerId,
       connected: player.connected,
     })),
-    entities: (snapshot?.entities ?? []).map(toEntityView),
+    // Foundation wire requires x/y. G11 will expose contained living entities.
+    entities: (snapshot?.entities ?? [])
+      .filter((entity) => entity.location.type === "WORLD")
+      .map(toEntityView),
   };
 }
 
@@ -81,7 +84,16 @@ export function toGameEvent(event: RuntimeEvent): CommandRejectedEvent | null {
     event.reason === "invalid_placement" ||
     event.reason === "invalid_construction" ||
     event.reason === "construction_busy" ||
-    event.reason === "already_building"
+    event.reason === "already_building" ||
+    event.reason === "entity_not_found" ||
+    event.reason === "entity_not_spatial" ||
+    event.reason === "not_controller" ||
+    event.reason === "invalid_garrison_host" ||
+    event.reason === "host_not_completed" ||
+    event.reason === "ineligible_occupant" ||
+    event.reason === "no_garrison_slot" ||
+    event.reason === "not_contained" ||
+    event.reason === "no_exit"
   )
     return null;
   return {
@@ -92,12 +104,14 @@ export function toGameEvent(event: RuntimeEvent): CommandRejectedEvent | null {
 }
 
 function toEntityView(entity: MatchEntitySnapshot): EntityView {
+  if (entity.location.type !== "WORLD")
+    throw new Error("Foundation wire requires a WORLD location");
   return {
     entityId: entity.entityId,
     kind: entity.kind,
     definitionId: entity.definitionId,
-    x: entity.x,
-    y: entity.y,
+    x: entity.location.x,
+    y: entity.location.y,
     ownerPlayerId: entity.ownerPlayerId,
     controllerPlayerId: entity.controllerPlayerId,
     objectiveType: entity.objectiveType,

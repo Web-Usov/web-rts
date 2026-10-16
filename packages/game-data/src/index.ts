@@ -2,6 +2,8 @@
 export const packageName = "@web-rts/game-data" as const;
 
 export {
+  TOWER_ATTACK_PROFILES,
+  type GarrisonHostDefinition,
   RESOURCE_TYPES,
   RESOURCE_DEFINITIONS,
   type ResourceType,

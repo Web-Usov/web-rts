@@ -71,6 +71,15 @@ const entityFields = [
   "health",
   "teamId",
 ];
+/** x/y are WORLD-only projections of the discriminated snapshot location. */
+function entityField(entity: unknown, field: string): unknown {
+  const record = entity as Record<string, unknown> & {
+    location?: { type: string; x?: number; y?: number };
+  };
+  if (field === "x" || field === "y")
+    return record.location?.type === "WORLD" ? (record.location[field] ?? null) : null;
+  return record[field] ?? null;
+}
 const metricFields = [
   "tick",
   "entityCount",
@@ -304,12 +313,7 @@ export function definedScenario(
           return json((driver.metrics() as Record<string, unknown>)[q.field]);
         const entity = entities.find((e) => e.entityId === aliases.get(q.entity));
         return entity
-          ? Object.fromEntries(
-              q.fields.map((field) => [
-                field,
-                json((entity as unknown as Record<string, unknown>)[field] ?? null),
-              ]),
-            )
+          ? Object.fromEntries(q.fields.map((field) => [field, json(entityField(entity, field))]))
           : null;
       }
       let cursor = 0;

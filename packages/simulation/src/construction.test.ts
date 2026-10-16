@@ -170,6 +170,21 @@ describe("BUILD admission and atomicity", () => {
       Math.max(...before.ids) + 1,
     );
   });
+  it("rejects a garrison host on a buildable but statically non-walkable cell, while a Wall may use it", () => {
+    const terrain = [{ x: 8, y: 5, width: 1, height: 1, walkable: false, buildable: true }];
+    const tower = fixture(4, { ...map, staticTerrain: terrain });
+    build(tower.world, tower.id, 8, 5, "tower");
+    tower.world.step();
+    expect(tower.world.drainEvents()).toContainEqual(
+      expect.objectContaining({ type: "COMMAND_REJECTED", reason: "invalid_placement" }),
+    );
+    const wall = fixture(4, { ...map, staticTerrain: terrain });
+    build(wall.world, wall.id, 8, 5, "wall");
+    wall.world.step();
+    expect(wall.world.drainEvents()).not.toContainEqual(
+      expect.objectContaining({ reason: "invalid_placement" }),
+    );
+  });
   it("rejects static non-buildable terrain and unreachable approaches", () => {
     for (const terrain of [
       [{ x: 8, y: 5, width: 1, height: 1, walkable: true, buildable: false }],
@@ -226,7 +241,7 @@ describe("BUILD admission and atomicity", () => {
 
 describe("construction lifecycle", () => {
   it.each(["wall", "tower"])(
-    "%s pauses, resumes and completes without extra spend/topology/G8",
+    "%s pauses, resumes and completes without extra spend/topology; Tower gains combat capability",
     (definition) => {
       const { world, id } = fixture();
       build(world, id, 8, 5, definition);
@@ -249,8 +264,8 @@ describe("construction lifecycle", () => {
       expect(world.topologyRevision).toBe(1);
       expect(wood(world)).toBe(before);
       expect(world.entityIds()).toHaveLength(2);
-      expect(world.attacks.has(site)).toBe(false);
-      expect(world.combats.has(site)).toBe(false);
+      expect(world.attacks.has(site)).toBe(definition === "tower");
+      expect(world.combats.has(site)).toBe(definition === "tower");
       resume(world, id, site);
       world.step();
       expect(world.drainEvents()).toContainEqual(

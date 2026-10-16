@@ -91,3 +91,5 @@ export type {
 export { spawnSoldier, spawnStartingEconomy } from "./foundation-match.js";
 
 export type { Construction, BuildTask } from "./types.js";
+
+export type { ContainedIn, GarrisonHost, GarrisonTask } from "./types.js";

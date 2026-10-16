@@ -77,17 +77,20 @@ describe("projectGameStateView", () => {
     });
     // G6 internal combat fields stay behind the projection until G11.
     expect(view.entities).toEqual(
-      snapshot.entities.map((entity) => ({
-        entityId: entity.entityId,
-        kind: entity.kind,
-        definitionId: entity.definitionId,
-        x: entity.x,
-        y: entity.y,
-        ownerPlayerId: entity.ownerPlayerId,
-        controllerPlayerId: entity.controllerPlayerId,
-        objectiveType: entity.objectiveType,
-        objectiveState: entity.objectiveState,
-      })),
+      snapshot.entities.map((entity) => {
+        if (entity.location.type !== "WORLD") throw new Error("expected WORLD");
+        return {
+          entityId: entity.entityId,
+          kind: entity.kind,
+          definitionId: entity.definitionId,
+          x: entity.location.x,
+          y: entity.location.y,
+          ownerPlayerId: entity.ownerPlayerId,
+          controllerPlayerId: entity.controllerPlayerId,
+          objectiveType: entity.objectiveType,
+          objectiveState: entity.objectiveState,
+        };
+      }),
     );
     expect(
       view.entities.every(
@@ -116,8 +119,7 @@ describe("projectGameStateView", () => {
         entityId: index + 1,
         kind,
         definitionId: `def_${kind.toLowerCase()}`,
-        x: index,
-        y: 0,
+        location: { type: "WORLD", x: index, y: 0 },
         ownerPlayerId: null,
         controllerPlayerId: null,
         objectiveType: kind === "BUILDING" ? "PROTECT" : null,
@@ -259,4 +261,46 @@ it("keeps BUILD events/reasons and Construction snapshot fields out of the publi
   const view = projectGameStateView(snapshot, { localPlayerId: 0 }, session);
   expect(view.entities[0]).not.toHaveProperty("construction");
   expect(gameStateViewSchema.safeParse(view).success).toBe(true);
+});
+
+it("keeps contained living entities internally while omitting them from Foundation x/y wire until G11", () => {
+  const snapshot = runningSnapshot();
+  const unit = snapshot.entities.find((entity) => entity.kind === "UNIT")!;
+  unit.location = { type: "CONTAINED", containerEntityId: 99, slotIndex: 0 };
+  const view = projectGameStateView(snapshot, { localPlayerId: 0 }, session);
+  expect(snapshot.entities.some((entity) => entity.entityId === unit.entityId)).toBe(true);
+  expect(view.entities.some((entity) => entity.entityId === unit.entityId)).toBe(false);
+  expect(gameStateViewSchema.safeParse(view).success).toBe(true);
+  for (const reason of [
+    "entity_not_found",
+    "entity_not_spatial",
+    "not_controller",
+    "invalid_garrison_host",
+    "host_not_completed",
+    "ineligible_occupant",
+    "no_garrison_slot",
+    "not_contained",
+    "no_exit",
+  ] as const) {
+    expect(
+      toGameEvent({
+        type: "COMMAND_REJECTED",
+        commandId: "internal",
+        recipientPlayerId: 0,
+        tick: 1,
+        reason,
+      }),
+    ).toBeNull();
+  }
+  expect(
+    toGameEvent({
+      type: "ACTION_FAILED",
+      commandId: "late",
+      recipientPlayerId: 0,
+      entityId: unit.entityId,
+      tick: 2,
+      action: "GARRISON",
+      reason: "no_garrison_slot",
+    }),
+  ).toBeNull();
 });

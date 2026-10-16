@@ -1,3 +1,4 @@
+import type { MatchEntitySnapshot } from "@web-rts/simulation";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { boot, type ColyseusTestServer } from "@colyseus/testing";
 import { FOUNDATION_MAP, mapWorldBounds } from "@web-rts/game-data";
@@ -55,18 +56,25 @@ function runtimeOf(room: FoundationRoom) {
   return room.matchRuntime!;
 }
 
+/** Test projection: foundation tests assert WORLD coordinates as flat x/y. */
+function worldEntities(runtime: { readSnapshot(): { entities: readonly MatchEntitySnapshot[] } }) {
+  return runtime.readSnapshot().entities.map((entity) => ({
+    ...entity,
+    x: entity.location.type === "WORLD" ? entity.location.x : Number.NaN,
+    y: entity.location.type === "WORLD" ? entity.location.y : Number.NaN,
+  }));
+}
+
 function unitOf(room: FoundationRoom, playerId: number) {
-  const unit = runtimeOf(room)
-    .readSnapshot()
-    .entities.find((entity) => entity.kind === "UNIT" && entity.ownerPlayerId === playerId);
+  const unit = worldEntities(runtimeOf(room)).find(
+    (entity) => entity.kind === "UNIT" && entity.ownerPlayerId === playerId,
+  );
   expect(unit).toBeDefined();
   return unit!;
 }
 
 function objectiveOf(room: FoundationRoom) {
-  const objective = runtimeOf(room)
-    .readSnapshot()
-    .entities.find((entity) => entity.kind === "OBJECTIVE");
+  const objective = worldEntities(runtimeOf(room)).find((entity) => entity.kind === "OBJECTIVE");
   expect(objective).toBeDefined();
   return objective!;
 }

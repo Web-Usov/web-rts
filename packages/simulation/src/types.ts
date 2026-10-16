@@ -146,3 +146,15 @@ export interface Combat {
   targetEntityId: EntityId | null;
   nextAttackTick: number;
 }
+
+/** Sole authoritative slot occupancy, stored on the occupant. */
+export interface ContainedIn {
+  readonly containerEntityId: EntityId;
+  readonly slotIndex: number;
+}
+export type GarrisonHost = import("@web-rts/game-data").GarrisonHostDefinition;
+export interface GarrisonTask {
+  readonly commandId: string;
+  readonly playerId: PlayerId;
+  readonly containerEntityId: EntityId;
+}
