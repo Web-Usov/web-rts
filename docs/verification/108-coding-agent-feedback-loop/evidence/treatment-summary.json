@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "issue": 108,
+  "baseCommit": "61ea130ee390b7474580baa80fcb52514a718a70",
+  "mode": "treatment",
+  "environment": {
+    "model": "claude-sonnet-5-5"
+  },
+  "contextSources": [
+    "AGENTS.md",
+    ".agents/skills/web-rts-router/SKILL.md",
+    ".agents/skills/web-rts-feedback-loop/SKILL.md",
+    "docs/knowledge/notes/permanent-leave-queue.md",
+    "docs/adr/009-shared-match-runtime-and-adapter-boundary.md",
+    "packages/simulation/src/match-runtime.ts"
+  ],
+  "kbNotes": [
+    "permanent-leave-queue"
+  ],
+  "commands": [
+    {
+      "cmd": "pnpm kb search \"pending MOVE\" --component runtime --limit 3",
+      "status": "ERROR"
+    },
+    {
+      "cmd": "pnpm verify:gameplay permanent-leave",
+      "status": "FAIL"
+    },
+    {
+      "cmd": "pnpm verify:gameplay permanent-leave",
+      "status": "PASS"
+    }
+  ],
+  "failure": {
+    "scenario": "permanent-leave",
+    "checkpoints": [
+      "pending-after-removal",
+      "no-stale-events",
+      "removed-player-rejected",
+      "grace-pending-retained",
+      "no-events"
+    ],
+    "firstMismatchTick": 0
+  },
+  "diagnosis": {
+    "rootCause": "MatchRuntime.removePlayer called this.queues.has(playerId) (no-op) instead of this.queues.delete(playerId), so the removed player's pending commands stayed in the ingress queue and were processed, producing stale COMMAND_REJECTED events."
+  },
+  "fix": {
+    "diffSha256": "42f24f222e554716a7c6eecdad9aeca03be144a8ec323f33834a5826879cba2c"
+  },
+  "retest": [
+    {
+      "cmd": "pnpm verify:gameplay permanent-leave",
+      "status": "PASS"
+    },
+    {
+      "cmd": "pnpm verify:gameplay move",
+      "status": "PASS"
+    },
+    {
+      "cmd": "pnpm verify:gameplay combat",
+      "status": "PASS"
+    },
+    {
+      "cmd": "pnpm --filter @web-rts/simulation exec vitest run",
+      "status": "PASS"
+    }
+  ],
+  "iterations": 1,
+  "elapsedSeconds": 394,
+  "tokens": {
+    "status": "measured",
+    "source": "Claude Code harness subagent usage (task-notification), total only; no input/output/cache split",
+    "total": 78314
+  },
+  "artifacts": [
+    ".artifacts/verification/at8/expB.diff",
+    ".artifacts/verification/at8/expB-permanent-leave-pre.json",
+    ".artifacts/verification/at8/expB-permanent-leave-post.json"
+  ],
+  "limitations": [
+    "pnpm kb search/show failed: single-commit repo, commit provenance unavailable; note read directly",
+    "pnpm test:server failed before and after fix with EADDRINUSE :2568 (environmental)",
+    "orchestrator corrected elapsedSeconds/tokens/cleanup after the run (agent left 0/not_measured/false)",
+    "tool_uses=18 per harness; n=1; parallel run with baseline"
+  ],
+  "cleanup": {
+    "clean": true,
+    "proof": "expB removed; task worktree clean"
+  },
+  "readyForReview": true
+}

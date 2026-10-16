@@ -145,3 +145,7 @@ User manual merge
 ## Selective engineering retrieval (AT2)
 
 После обязательного bootstrap Coding Agent при релевантном симптоме/компоненте использует [Knowledge Base](knowledge/README.md): `pnpm kb search "<symptom>" --component <component> --limit 3` → `pnpm kb show <id>` для нескольких top notes → первичные Issues/PR/commits и текущий код → implementation plan. Не загружать всю KB по умолчанию. No-result ведёт к обычному code/docs/GitHub search; stale note исключается из поиска и требует reverification через `kb check`; фатальные ошибки schema/secrets/security/provenance блокируют retrieval. Notes — вспомогательная память и не меняют source-of-truth hierarchy.
+
+## Optional feedback loop (AT8)
+
+Для defect/regression-задач с воспроизводимым headless-детектором Coding Agent может по запросу открыть `.agents/skills/web-rts-feedback-loop/SKILL.md`: hypothesis → FAIL → diagnosis → targeted fix → retest → compact handoff (`scripts/agent-loop-summary.mjs`). Skill не входит в обязательный bootstrap, не расширяет scope и не отменяет review/CI/manual merge. Измеренное сравнение и решение — [verification/108](verification/108-coding-agent-feedback-loop/README.md).

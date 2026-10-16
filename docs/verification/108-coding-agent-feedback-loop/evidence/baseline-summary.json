@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "issue": 108,
+  "baseCommit": "61ea130ee390b7474580baa80fcb52514a718a70",
+  "environment": {
+    "model": "claude-sonnet-5-5",
+    "tooling": "Claude Code Agent tool, independent general-purpose subagents, parallel run"
+  },
+  "mode": "baseline",
+  "contextSources": [
+    "packages/simulation/src/match-runtime.ts (grep+partial)"
+  ],
+  "kbNotes": [],
+  "commands": [
+    {
+      "cmd": "cd packages/simulation && npx vitest run",
+      "status": "FAIL"
+    },
+    {
+      "cmd": "npx vitest run && npx tsc --noEmit -p .",
+      "status": "PASS"
+    }
+  ],
+  "failure": {
+    "scenario": "unit:match-runtime.test.ts,scheduling.test.ts (not AT3 scenario)",
+    "checkpoints": [
+      "match-runtime.test.ts:280 pendingCommandCount",
+      "scheduling.test.ts:84"
+    ],
+    "firstMismatchTick": null
+  },
+  "diagnosis": {
+    "rootCause": "removePlayer has no-op this.queues.has(playerId) instead of delete",
+    "sources": [
+      "packages/simulation/src/match-runtime.ts"
+    ]
+  },
+  "fix": {
+    "diffSha256": "42f24f222e554716a7c6eecdad9aeca03be144a8ec323f33834a5826879cba2c"
+  },
+  "retest": [
+    {
+      "cmd": "vitest run (simulation) 245/245",
+      "status": "PASS"
+    },
+    {
+      "cmd": "tsc --noEmit",
+      "status": "PASS"
+    }
+  ],
+  "iterations": 1,
+  "elapsedSeconds": 52.4,
+  "tokens": {
+    "status": "measured",
+    "source": "Claude Code harness subagent usage (task-notification), total only",
+    "total": 62764
+  },
+  "artifacts": [
+    ".artifacts/verification/at8/expA.diff",
+    ".artifacts/verification/at8/expA-permanent-leave-pre.json",
+    ".artifacts/verification/at8/expA-permanent-leave-post.json"
+  ],
+  "limitations": [
+    "agent did not read AGENTS.md (only wc) contrary to instruction",
+    "did not run verify:gameplay; orchestrator ran move/combat/permanent-leave afterwards: all PASS",
+    "self-reported; tool_uses=8 per harness; n=1"
+  ],
+  "cleanup": {
+    "clean": true,
+    "proof": "expA removed"
+  },
+  "readyForReview": true
+}

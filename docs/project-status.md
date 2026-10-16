@@ -28,6 +28,8 @@ Coding Agent, получивший handoff, следует `AGENTS.md` и пра
 - PR branch naming контролируется GitHub Actions `branch-name` через required `ci-gate`; создание/push ветки само по себе не блокируется. Ранее созданные ветки не переименовываются.
 - Каждый Coding Agent перед handoff и Task Chat / architect reviewer в конце финального review делают `Project Status Check: Required / Not required`. При `Required` checkpoint обновляется в том же PR **до** manual merge; мелкие PR не требуют формальных правок файла.
 
+- AT8 / #108 — опциональный `web-rts-feedback-loop` route для defect/regression с headless-детектором (`.agents/skills/web-rts-feedback-loop/`, `scripts/agent-loop-summary.mjs`); не входит в обязательный bootstrap. Pilot A/B (n=1) не показал экономии токенов/времени — решение Iterate: [verification/108](verification/108-coding-agent-feedback-loop/README.md).
+
 ## Foundation checkpoint
 
 Завершены:
@@ -171,7 +173,7 @@ Audit #53 остаётся review/verification record. Его исходный �
 - AT4 / [#104](https://github.com/Web-Usov/web-rts/issues/104) завершён: opt-in `pnpm verify:mutation` в disposable commit-pinned worktrees, явный каталог из трёх gameplay mutations, baseline/rebuild/detector/cleanup evidence. Строгий режим отвергает survivors и setup errors; deliberate targetability survivor фиксирует пробел узкого AT3 Combat oracle. Инструмент — `tools/scenario-runner/src/mutation-cli.ts`; результаты, стоимость и ограничения — в [AT4 verification report](verification/104-mutation-verification/README.md). Mutation matrix не включена в required CI.
 - AT5 / [#105](https://github.com/Web-Usov/web-rts/issues/105) — 2D/reference/texture provenance и QA; AT6 / [#106](https://github.com/Web-Usov/web-rts/issues/106) — GLB validation/Mesh Studio handoff после AT5 и готовности нужного API.
 - AT7 / [#107](https://github.com/Web-Usov/web-rts/issues/107) завершён: `pnpm verify:browser` поверх существующего Playwright/UI проверяет MOVE в Local WebWorker и двух Remote contexts, UI запрет чужого управления и bounded JSON/screenshots/trace/video evidence. Поддерживается semantic parity с AT3; exact seed/tick/world-target replay через текущий UI недоступен. Повторы, controlled FAIL, camera regressions и ограничения — в [AT7 verification report](verification/107-browser-gameplay-replay/README.md). Production trust boundary не расширена; BUILD/combat UI зависит от G11/G12.
-- AT8 / [#108](https://github.com/Web-Usov/web-rts/issues/108) — measured Coding Agent feedback loop после AT2/3/4/7.
+- AT8 / [#108](https://github.com/Web-Usov/web-rts/issues/108) — pilot выполнен: optional route `web-rts-feedback-loop` (вне обязательного bootstrap), verdict **Iterate**; экономия токенов/времени не доказана (n=1); follow-up: ≥3 дефекта в history-preserving окружении. [Отчёт](verification/108-coding-agent-feedback-loop/README.md).
 - AT9 / [#109](https://github.com/Web-Usov/web-rts/issues/109) — conditional public-protocol bot/soak после AT7, только при доказанном gap existing tests.
 
-Stage gates и stop/go описаны в Spec #003; текущие scope/acceptance criteria и готовность зависимостей проверяются по Issues/main. AT5/AT6/AT8/AT9 не считаются реализованными по наличию этого checkpoint.
+Stage gates и stop/go описаны в Spec #003; текущие scope/acceptance criteria и готовность зависимостей проверяются по Issues/main. AT5/AT6/AT9 не считаются реализованными по наличию этого checkpoint.
