@@ -47,7 +47,10 @@ for (const mode of ["local", "remote"])
     test.setTimeout(180_000);
     const errors = attachPageErrorCapture(page);
     // Opt-in stress mode for flake diagnosis: E2E_CPU_THROTTLE=6 slows the renderer 6x.
-    const throttle = Number(process.env.E2E_CPU_THROTTLE ?? 1);
+    const throttleRaw = process.env.E2E_CPU_THROTTLE;
+    const throttle = throttleRaw === undefined || throttleRaw === "" ? 1 : Number(throttleRaw);
+    if (!Number.isFinite(throttle) || throttle < 1)
+      throw new Error(`E2E_CPU_THROTTLE must be a number >= 1, got "${throttleRaw}"`);
     if (throttle > 1) {
       const cdp = await context.newCDPSession(page);
       await cdp.send("Emulation.setCPUThrottlingRate", { rate: throttle });
