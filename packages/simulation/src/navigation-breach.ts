@@ -36,7 +36,8 @@ interface SearchState {
 /**
  * Pure multi-goal breach query (Spec #002 §8.7, ADR-008).
  * Caller supplies a stable, pure hostility/capability predicate for this query.
- * Start and goals must be normally walkable; only intermediate movement-blocking
+ * Start must be normally walkable. Goals are normally walkable unless the caller
+ * explicitly opts into hostile breachable goals (an enclosed objective ring); only intermediate movement-blocking
  * footprints may be virtually crossed. Static terrain is never traversable.
  *
  * A* states are (cellId, canonical breached set), not just cells or breach counts.
@@ -54,6 +55,7 @@ export function findBreachPath(
   start: CellCoord,
   goals: readonly CellCoord[],
   isHostileBreachable: (entityId: EntityId) => boolean,
+  options: { readonly allowBreachableGoals?: boolean } = {},
 ): BreachPathResult {
   if (!grid.isCellInBounds(start) || !grid.isWalkable(start)) {
     return { status: "no_route" };
@@ -61,7 +63,17 @@ export function findBreachPath(
   const goalIds = new Set<number>();
   const validGoals: CellCoord[] = [];
   for (const goal of goals) {
-    if (!grid.isCellInBounds(goal) || !grid.isWalkable(goal)) continue;
+    if (!grid.isCellInBounds(goal) || !grid.isStaticWalkable(goal)) continue;
+    if (!grid.isWalkable(goal)) {
+      const occupant = grid.occupantAt(goal);
+      if (
+        !options.allowBreachableGoals ||
+        occupant === null ||
+        grid.footprintOf(occupant)?.blocksMovement !== true ||
+        !isHostileBreachable(occupant)
+      )
+        continue;
+    }
     const id = grid.cellId(goal);
     if (goalIds.has(id)) continue;
     goalIds.add(id);

@@ -93,3 +93,5 @@ export { spawnSoldier, spawnStartingEconomy } from "./foundation-match.js";
 export type { Construction, BuildTask } from "./types.js";
 
 export type { ContainedIn, GarrisonHost, GarrisonTask } from "./types.js";
+export { spawnEnemy, invalidateEnemy } from "./systems/pve-ai.js";
+export type { EnemyAI } from "./types.js";

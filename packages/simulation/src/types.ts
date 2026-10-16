@@ -158,3 +158,22 @@ export interface GarrisonTask {
   readonly playerId: PlayerId;
   readonly containerEntityId: EntityId;
 }
+
+/** Strategic state is independent from the Soldier command FSM. */
+export interface EnemyAI {
+  phase:
+    | "NORMAL_OBJECTIVE"
+    | "BREACH_SEARCH"
+    | "APPROACH_BLOCKER"
+    | "ADVANCING"
+    | "ATTACKING"
+    | "STALLED";
+  objectiveId: ObjectiveId | null;
+  blockerId: EntityId | null;
+  plannedRevision: number;
+  localTargetId: EntityId | null;
+  anchor: Position | null;
+  plannedTargetCell: number | null;
+  excludedUntilExit: Set<EntityId>;
+  unreachable: Map<EntityId, { cellId: number; revision: number }>;
+}
