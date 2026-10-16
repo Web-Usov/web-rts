@@ -291,17 +291,79 @@ class NegativeTests(Workspace):
         self.assertEqual(len(assets), count)
         self.assertEqual([a["path"] for a in assets].count("out/a-96.png"), 1)
 
+    def _fail_manifest_write_without_rewriting_bytes(self):
+        """Overwrite derivative while the manifest commit fails and Path.write_bytes is forbidden."""
+        orig_write, orig_bytes = pr.write_json_atomic, Path.write_bytes
+
+        def boom(*args, **kwargs):
+            raise OSError("disk full")
+
+        def forbidden(*args, **kwargs):
+            raise AssertionError("rollback must not rewrite bytes")
+
+        pr.write_json_atomic, Path.write_bytes = boom, forbidden
+        try:
+            with self.assertRaises(OSError):
+                self.run_cli("derive", "--manifest", MANIFEST, "--source", "refs/a.png", "--out", "out/a-96.png",
+                             "--id", "deriv-a", "--role", "r", "--max-size", "50x50", "--overwrite")
+        finally:
+            pr.write_json_atomic, Path.write_bytes = orig_write, orig_bytes
+
+    def assert_only_output(self, before_manifest, before_bytes):
+        self.assertEqual((self.root / "out/a-96.png").read_bytes(), before_bytes)
+        self.assertEqual(self.manifest(), before_manifest)
+        self.assertEqual(sorted(p.name for p in (self.root / "out").iterdir()), ["a-96.png"])
+        self.assertEqual(sorted(p.name for p in (self.root / "refs").iterdir()), ["a.png", "asset-manifest.json"])
+
     def test_failed_manifest_write_restores_previous_derivative(self):
         self.assertEqual(self.derive()[0], 0)
         before, before_bytes = self.manifest(), (self.root / "out/a-96.png").read_bytes()
-        original = pr.write_json_atomic
-        pr.write_json_atomic = lambda *a, **k: (_ for _ in ()).throw(OSError("disk full"))
-        self.addCleanup(setattr, pr, "write_json_atomic", original)
-        with self.assertRaises(OSError):
-            self.run_cli("derive", "--manifest", MANIFEST, "--source", "refs/a.png", "--out", "out/a-96.png",
-                         "--id", "deriv-a", "--role", "r", "--max-size", "50x50", "--overwrite")
-        self.assertEqual((self.root / "out/a-96.png").read_bytes(), before_bytes)
-        self.assertEqual(self.manifest(), before)
+        self._fail_manifest_write_without_rewriting_bytes()
+        self.assert_only_output(before, before_bytes)
+
+    def test_failed_backup_preparation_leaves_derivative_untouched(self):
+        self.assertEqual(self.derive()[0], 0)
+        before, before_bytes = self.manifest(), (self.root / "out/a-96.png").read_bytes()
+        real_replace = os.replace
+
+        def failing_replace(src, dst, *a, **k):
+            if str(src).endswith("a-96.png"):  # the rename of the existing derivative to a backup
+                raise OSError("I/O error")
+            return real_replace(src, dst, *a, **k)
+
+        os.replace = failing_replace
+        try:
+            with self.assertRaises(OSError):
+                self.run_cli("derive", "--manifest", MANIFEST, "--source", "refs/a.png", "--out", "out/a-96.png",
+                             "--id", "deriv-a", "--role", "r", "--max-size", "50x50", "--overwrite")
+        finally:
+            os.replace = real_replace
+        self.assert_only_output(before, before_bytes)
+
+    def test_unreadable_existing_output_leaves_no_temp_files(self):
+        self.assertEqual(self.derive()[0], 0)
+        before, before_bytes = self.manifest(), (self.root / "out/a-96.png").read_bytes()
+        real_exists = Path.exists
+
+        def failing_exists(path):
+            if path.name == "a-96.png" and getattr(failing_exists, "armed", False):
+                raise OSError("I/O error")
+            return real_exists(path)
+
+        failing_exists.armed = False
+        Path.exists = failing_exists
+        try:
+            orig_sha = pr.sha256_hex
+            def arm(data):
+                failing_exists.armed = True
+                return orig_sha(data)
+            pr.sha256_hex = arm
+            with self.assertRaises(OSError):
+                self.run_cli("derive", "--manifest", MANIFEST, "--source", "refs/a.png", "--out", "out/a-96.png",
+                             "--id", "deriv-a", "--role", "r", "--max-size", "50x50", "--overwrite")
+        finally:
+            Path.exists, pr.sha256_hex = real_exists, orig_sha
+        self.assert_only_output(before, before_bytes)
 
     def test_failed_manifest_write_removes_new_output(self):
         original = pr.write_json_atomic

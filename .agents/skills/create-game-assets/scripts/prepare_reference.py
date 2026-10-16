@@ -386,30 +386,38 @@ def derive(args: argparse.Namespace) -> dict[str, Any]:
     )
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp_name = tempfile.mkstemp(dir=out_path.parent, prefix=".derive-", suffix=".tmp")
-    backup = out_path.read_bytes() if out_path.exists() else None
+    tmp_name: str | None = None
+    backup_name: Path | None = None
+    placed = False
     try:
+        fd, tmp_name = tempfile.mkstemp(dir=out_path.parent, prefix=".derive-", suffix=".tmp")
         with os.fdopen(fd, "wb") as handle:
             handle.write(data)
         if sha256_hex(Path(tmp_name).read_bytes()) != tech["sha256"]:
             raise PipelineFail("written output hash differs from computed hash")
         os.chmod(tmp_name, 0o644)
+        if out_path.exists():
+            # Keep the previous derivative by atomic rename: rollback never rewrites its bytes.
+            backup_name = out_path.with_name(f".derive-backup-{os.getpid()}-{time.monotonic_ns()}.bak")
+            os.replace(out_path, backup_name)
         os.replace(tmp_name, out_path)
+        placed = True
         manifest["assets"] = (
             [entry if a.get("id") == args.id else a for a in manifest["assets"]]
             if replacing else manifest["assets"] + [entry]
         )
         write_json_atomic(manifest_path, manifest)
     except BaseException:
-        # Restore the exact previous state: original derivative bytes or no file at all.
-        if backup is None:
+        # Restore the exact previous state: renamed-back original derivative, or no file at all.
+        if backup_name is not None and backup_name.exists():
+            os.replace(backup_name, out_path)
+        elif placed:
             out_path.unlink(missing_ok=True)
-        else:
-            out_path.write_bytes(backup)
         raise
     finally:
-        if os.path.exists(tmp_name):
-            os.unlink(tmp_name)
+        for leftover in (tmp_name, backup_name):
+            if leftover is not None and os.path.exists(leftover):
+                os.unlink(leftover)
 
     return {"status": "PASS", "id": args.id, "output": rel_out, "source_sha256": actual_sha,
             "output_sha256": tech["sha256"], "dimensions": tech["dimensions"], "bytes": tech["bytes"],
