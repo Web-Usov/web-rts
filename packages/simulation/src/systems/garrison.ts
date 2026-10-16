@@ -178,18 +178,6 @@ export function ungarrison(
   return null;
 }
 
-/**
- * Last-resort deterministic recovery when the map has no walkable cell: an occupant
- * cannot be given a valid Position, so it is destroyed with its host. Destruction must
- * never throw mid-tick or leave a dangling relation.
- */
-function destroyUnplaceable(world: World, occupants: ReturnType<World["occupantsOf"]>): void {
-  for (const [unit] of occupants) {
-    world.containedIn.remove(unit);
-    world.destroyEntity(unit);
-  }
-}
-
 /** Destruction removes blocking topology before resolving any occupant's exit. */
 export function forceEjectOccupants(world: World, host: EntityId): void {
   const occupants = world.occupantsOf(host);
@@ -198,11 +186,11 @@ export function forceEjectOccupants(world: World, host: EntityId): void {
   const position = world.positions.get(host);
   world.removeSolidFootprint(host);
   if (occupants.length === 0) return;
-  if (grid === null || position === undefined) {
-    destroyUnplaceable(world, occupants);
-    return;
-  }
-  const anchor = footprint?.anchorCell ?? grid.worldToCell(position);
+  // Occupants never die with the host (#002 §15.7). Placement guarantees a statically
+  // walkable anchor; a lost host Position is recovered from its footprint.
+  if (grid === null || (footprint === undefined && position === undefined))
+    throw new Error("garrison host without spatial location violates the containment invariant");
+  const anchor = footprint?.anchorCell ?? grid.worldToCell(position!);
   let exit = grid.isWalkable(anchor) ? anchor : undefined;
   if (exit === undefined) {
     // Forced ejection may cross blocked topology, unlike normal UNGARRISON.
@@ -218,11 +206,8 @@ export function forceEjectOccupants(world: World, host: EntityId): void {
           Math.abs(a.y - anchor.y) -
           (Math.abs(b.x - anchor.x) + Math.abs(b.y - anchor.y)) || grid.cellId(a) - grid.cellId(b),
     );
-    exit = candidates[0];
-  }
-  if (exit === undefined) {
-    destroyUnplaceable(world, occupants);
-    return;
+    // A fully blocked map is still not allowed to kill or lose the occupant.
+    exit = candidates[0] ?? anchor;
   }
   for (const [unit] of occupants) {
     world.containedIn.remove(unit);

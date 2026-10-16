@@ -418,15 +418,16 @@ describe("exits and host destruction", () => {
     expect(world.positions.get(soldier)).toEqual({ x: 8.5, y: 4.5 });
     expect(world.containedIn.has(soldier)).toBe(false);
   });
-  it("forced ejection with no walkable cell destroys occupants deterministically without throwing or dangling relations", () => {
+  it("forced ejection on a fully blocked map keeps the occupant alive at the former anchor without throwing", () => {
     const { world, tower, soldier } = setup();
     enter(world, soldier, tower);
     world.removeSolidFootprint(tower);
     for (let y = 0; y < map.heightCells; y++)
       for (let x = 0; x < map.widthCells; x++) block(world, x, y);
     expect(() => world.destroyEntity(tower)).not.toThrow();
-    expect(world.hasEntity(tower)).toBe(false);
-    expect(world.hasEntity(soldier)).toBe(false);
+    expect(world.hasEntity(soldier)).toBe(true);
+    expect(world.health.get(soldier)?.current).toBe(100);
+    expect(world.positions.get(soldier)).toEqual({ x: 8.5, y: 5.5 });
     expect([...world.containedIn.entries()]).toEqual([]);
     invariants(world);
   });

@@ -170,6 +170,21 @@ describe("BUILD admission and atomicity", () => {
       Math.max(...before.ids) + 1,
     );
   });
+  it("rejects a garrison host on a buildable but statically non-walkable cell, while a Wall may use it", () => {
+    const terrain = [{ x: 8, y: 5, width: 1, height: 1, walkable: false, buildable: true }];
+    const tower = fixture(4, { ...map, staticTerrain: terrain });
+    build(tower.world, tower.id, 8, 5, "tower");
+    tower.world.step();
+    expect(tower.world.drainEvents()).toContainEqual(
+      expect.objectContaining({ type: "COMMAND_REJECTED", reason: "invalid_placement" }),
+    );
+    const wall = fixture(4, { ...map, staticTerrain: terrain });
+    build(wall.world, wall.id, 8, 5, "wall");
+    wall.world.step();
+    expect(wall.world.drainEvents()).not.toContainEqual(
+      expect.objectContaining({ reason: "invalid_placement" }),
+    );
+  });
   it("rejects static non-buildable terrain and unreachable approaches", () => {
     for (const terrain of [
       [{ x: 8, y: 5, width: 1, height: 1, walkable: true, buildable: false }],
