@@ -28,6 +28,8 @@ Coding Agent, получивший handoff, следует `AGENTS.md` и пра
 - PR branch naming контролируется GitHub Actions `branch-name` через required `ci-gate`; создание/push ветки само по себе не блокируется. Ранее созданные ветки не переименовываются.
 - Каждый Coding Agent перед handoff и Task Chat / architect reviewer в конце финального review делают `Project Status Check: Required / Not required`. При `Required` checkpoint обновляется в том же PR **до** manual merge; мелкие PR не требуют формальных правок файла.
 
+- AT8 / #108 — опциональный `web-rts-feedback-loop` route для defect/regression с headless-детектором (`.agents/skills/web-rts-feedback-loop/`, `scripts/agent-loop-summary.mjs`); не входит в обязательный bootstrap. Pilot A/B (n=1) не показал экономии токенов/времени — решение Iterate: [verification/108](verification/108-coding-agent-feedback-loop/README.md).
+
 ## Foundation checkpoint
 
 Завершены:
