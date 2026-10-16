@@ -9,11 +9,25 @@ export const EVIDENCE_LIMITS = {
   artifactBytes: 128 * 1024 * 1024,
   files: 16,
 } as const;
-export function artifactBudgetExceeded(sizes: number[]): boolean {
+/** Green runs keep only JSON and screenshots; trace/video are retained on failure or opt-in. */
+export const GREEN_LIMITS = { artifactBytes: 8 * 1024 * 1024, files: 16 } as const;
+export function artifactLimits(retainReplay: boolean): { artifactBytes: number; files: number } {
+  return retainReplay ? EVIDENCE_LIMITS : GREEN_LIMITS;
+}
+export function retainReplay(nonPass: boolean, fullReplay: boolean): boolean {
+  return nonPass || fullReplay;
+}
+export function hasReplayArtifacts(names: string[]): boolean {
+  return names.some((name) => /\.(zip|webm)$/.test(name));
+}
+export function artifactBudgetExceeded(
+  sizes: number[],
+  limits: { artifactBytes: number; files: number } = EVIDENCE_LIMITS,
+): boolean {
   return (
-    sizes.length > EVIDENCE_LIMITS.files ||
+    sizes.length > limits.files ||
     sizes.some((size) => !Number.isSafeInteger(size) || size < 0) ||
-    sizes.reduce((sum, size) => sum + size, 0) > EVIDENCE_LIMITS.artifactBytes
+    sizes.reduce((sum, size) => sum + size, 0) > limits.artifactBytes
   );
 }
 export function boundedJson(report: unknown, mode: Mode): { output: string; exceeded: boolean } {
@@ -102,6 +116,24 @@ export function reportStatus(
   return checks.some((c) => c.status === "FAIL") ? "FAIL" : "PASS";
 }
 
+/** Conservative pre-finish verdict: anything that could end non-PASS keeps the replay. */
+export function needsReplay(
+  mode: Mode,
+  checks: BrowserCheck[],
+  errors: string[],
+  hasActions: boolean,
+  failure?: unknown,
+): boolean {
+  const pending = new Set(["errors", "complete"]);
+  return (
+    Boolean(failure) ||
+    errors.length > 0 ||
+    !hasActions ||
+    checks.some((c) => c.status === "FAIL") ||
+    REQUIRED_CHECKS[mode].some((id) => !pending.has(id) && !checks.some((c) => c.id === id))
+  );
+}
+
 /** Node-side harness only; browser observations use HUD and screenshot pixels. */
 export class BrowserEvidence {
   readonly checks: BrowserCheck[] = [];
@@ -112,15 +144,24 @@ export class BrowserEvidence {
   readonly started = Date.now();
   readonly samples: Value[] = [];
   private overflow = false;
+  /** Set by the session helper; defaults to the large budget (fail-safe). */
+  retainReplay = true;
   private readonly directory: string;
   constructor(
     readonly mode: Mode,
     private readonly info: TestInfo,
+    directory?: string,
   ) {
     this.directory = path.resolve(
-      process.env.AT7_EVIDENCE_DIR ?? ".artifacts/verification/at7",
-      info.testId + "-repeat-" + info.repeatEachIndex + "-retry-" + info.retry,
+      directory ??
+        path.join(
+          process.env.AT7_EVIDENCE_DIR ?? ".artifacts/verification/at7",
+          info.testId + "-repeat-" + info.repeatEachIndex + "-retry-" + info.retry,
+        ),
     );
+  }
+  needsReplay(failure?: unknown) {
+    return needsReplay(this.mode, this.checks, this.errors, this.actions.length > 0, failure);
   }
   captureErrors(page: Page, actor: string) {
     const capture = (kind: string, message: string) => {
@@ -168,8 +209,19 @@ export class BrowserEvidence {
     if (failure) this.errors.push(String(failure).slice(0, 2048));
     if (this.overflow) this.errors.push("error cap exceeded; messages omitted");
     const fixturePath = "tools/scenario-runner/scenarios/move.json";
-    const text = await readFile(fixturePath, "utf8");
-    const fixture = JSON.parse(text);
+    let text = "";
+    let fixture: {
+      seed: Value;
+      ticks: Value;
+      setup: Value;
+      operations: { type: string }[];
+    } | null = null;
+    try {
+      text = await readFile(fixturePath, "utf8");
+      fixture = JSON.parse(text);
+    } catch (error) {
+      this.errors.push("reference fixture unreadable: " + String(error).slice(0, 512));
+    }
     const artifactSizes: number[] = [];
     for (const file of this.artifacts) {
       try {
@@ -178,8 +230,13 @@ export class BrowserEvidence {
         this.errors.push("missing artifact: " + file);
       }
     }
-    if (artifactBudgetExceeded(artifactSizes))
-      this.errors.push("artifact budget exceeded (16 files / 128 MiB)");
+    const limits = artifactLimits(this.retainReplay);
+    if (artifactBudgetExceeded(artifactSizes, limits))
+      this.errors.push(
+        `artifact budget exceeded (${limits.files} files / ${limits.artifactBytes / 1024 / 1024} MiB)`,
+      );
+    if (!this.retainReplay && hasReplayArtifacts(this.artifacts))
+      this.errors.push("trace/video present in green run without opt-in");
     this.check("errors", [], this.errors, "strict console/page/runtime capture");
     this.check("complete", true, !failure && !this.overflow, "all public actions completed");
     let status = reportStatus(this.mode, this.checks, this.errors);
@@ -188,14 +245,14 @@ export class BrowserEvidence {
       schemaVersion: 1,
       scenarioId: "move",
       mode: this.mode,
-      reference: {
+      reference: fixture && {
         path: fixturePath,
         sha256: createHash("sha256").update(text).digest("hex"),
         seed: fixture.seed,
         ticks: fixture.ticks,
         setup: fixture.setup,
-        commands: fixture.operations.filter((op: { type: string }) => op.type === "move"),
-        expectations: fixture.operations.filter((op: { type: string }) => op.type === "check"),
+        commands: fixture.operations.filter((op) => op.type === "move"),
+        expectations: fixture.operations.filter((op) => op.type === "check"),
       },
       setup: {
         entry: this.mode === "local" ? "/?transport=local" : "/",

@@ -17,6 +17,8 @@ pnpm verify:browser --grep 'MOVE remote' --retries=0
 AT7_EVIDENCE_DIR=.artifacts/verification/at7/repeat1 pnpm verify:browser --retries=0
 AT7_EVIDENCE_DIR=.artifacts/verification/at7/repeat2 pnpm verify:browser --retries=0
 AT7_EVIDENCE_DIR=.artifacts/verification/at7/repeat3 pnpm verify:browser --retries=0
+# Полный trace/video и для PASS (opt-in), иначе они сохраняются только при non-PASS.
+AT7_FULL_REPLAY=1 AT7_EVIDENCE_DIR=.artifacts/verification/at7/full pnpm verify:browser --retries=0
 # Ожидается Playwright exit 1 и report FAIL, не ERROR.
 AT7_WRONG_EXPECTATION=1 AT7_EVIDENCE_DIR=.artifacts/verification/at7/wrong-expectation pnpm verify:browser --grep 'MOVE local' --retries=0
 pnpm exec playwright test tests/e2e/camera-controls.spec.ts --retries=0
@@ -34,7 +36,7 @@ Local: UI Create room → настоящий WebWorker → Start; RUNNING/player
 ![Local до MOVE](./local-before.png)
 ![Local после MOVE](./local-after.png)
 
-Каждый test имеет собственный каталог `<testId>-repeat-N-retry-N` внутри `.artifacts/verification/at7/`; его `evidence.json` и recordings сохраняются между запусками. Для разных независимых команд использовать разные AT7_EVIDENCE_DIR: одинаковый testId/repeat/retry иначе перезаписывает собственный предыдущий report.
+Каждый test имеет собственный каталог `<testId>-repeat-N-retry-N` внутри `.artifacts/verification/at7/`; его `evidence.json` и сохранённые recordings остаются между запусками. Для разных независимых команд использовать разные AT7_EVIDENCE_DIR: одинаковый testId/repeat/retry иначе перезаписывает собственный предыдущий report.
 
 `schemaVersion:1`:
 - `scenarioId/mode`: move, local/remote;
@@ -45,13 +47,13 @@ Local: UI Create room → настоящий WebWorker → Start; RUNNING/player
 - `checks`: id, expected/actual, PASS/FAIL/reason; обязательный набор зависит от режима;
 - `parity`: явные supported semantic, unsupported exact и дополнительные browser regressions;
 - `errors`: console errors/pageerror/crash и ошибки harness;
-- `artifacts`: относительные пути к PNG, двум отдельным Remote traces и videos;
+- `artifacts`: относительные пути к PNG и, если replay сохранён, к trace/video каждого context (в Remote их два);
 - `run`: wall-clock duration/start, browser/project environment, retry/repeat и observed ticks отдельно от comparison checks;
 - `status`: PASS, FAIL или ERROR. Playwright exit 0 только при PASS; несовпадение/error → exit 1.
 
-Пустые/неполные/duplicate checks, missing/null/non-finite observations, поддельный check.status, runtime errors и незавершённый сценарий не дают PASS. ASSERT mismatch даёт FAIL; недоступное наблюдение, missing artifact и budget error — ERROR. Limits: JSON 64 KiB UTF-8, checks 64, UI actions 32, observations 64, run samples 32, console/page errors 32×1024 chars (overflow явный ERROR), artifacts ≤16 и ≤128 MiB на режим. Бюджет artifacts выбран после pilot: Local около 24 MiB, Remote около 90 MiB, основная стоимость — trace resources/screenshots. Превышение не превращается в PASS. Большой JSON заменяется компактным ERROR report. Harness errors ограничены 2048 chars; screenshots имеют 5 s diagnostic timeout, основной oracle использует bounded polling, без arbitrary sleeps.
+Пустые/неполные/duplicate checks, missing/null/non-finite observations, поддельный check.status, runtime errors и незавершённый сценарий не дают PASS. ASSERT mismatch даёт FAIL; недоступное наблюдение, missing artifact и budget error — ERROR. Limits: JSON 64 KiB UTF-8, checks 64, UI actions 32, observations 64, run samples 32, console/page errors 32×1024 chars (overflow явный ERROR), artifacts ≤16 и ≤128 MiB на режим. Бюджет зависит от режима. Green без opt-in хранит только JSON и PNG: ≤16 файлов и ≤8 MiB, любые `.zip`/`.webm` в этом режиме — ERROR. Режим сохранённого replay (non-PASS или `AT7_FULL_REPLAY=1`) — ≤16 файлов и ≤128 MiB; после pilot Local около 24 MiB, Remote около 90 MiB, основная стоимость — trace resources/screenshots. Превышение не превращается в PASS. Большой JSON заменяется компактным ERROR report. Harness errors ограничены 2048 chars; screenshots имеют 5 s diagnostic timeout, основной oracle использует bounded polling, без arbitrary sleeps.
 
-Contract tests упражняют empty/missing/duplicate/non-finite checks, fake status, console failure и лимиты JSON/files/bytes. Диагностические screenshots/trace/video сохраняются и для успешных runs; GitHub Actions загружает AT7 в **существующий** playwright-e2e-artifacts на 14 дней. Новых CI jobs/gates нет. Root lint/typecheck дополнительно проверяют новые browser harness files.
+Contract tests упражняют empty/missing/duplicate/non-finite checks, fake status, console failure и лимиты JSON/files/bytes. Политика retain-on-failure: screenshots и JSON пишутся всегда, а trace/video — только если run не PASS (failure, FAIL-check, console/page error или неполные checks) либо задан `AT7_FULL_REPLAY=1`. Решение принимается до остановки tracing по консервативному предварительному статусу; при сомнении replay сохраняется. При PASS трасса отбрасывается без записи, video пишется сразу в каталог evidence и удаляется. Каждый большой файл лежит в одном месте — каталоге evidence и указан в `evidence.json`; в Playwright report он не дублируется (attach только для PNG и JSON). Это снижает `playwright-e2e-artifacts` с ~367 MB до нескольких MB на green. GitHub Actions загружает AT7 в **существующий** playwright-e2e-artifacts на 14 дней. Новых CI jobs/gates нет. Root lint/typecheck дополнительно проверяют новые browser harness files.
 
 ## AT3: поддерживаемое сравнение
 
@@ -74,6 +76,8 @@ AT3 MOVE: seed=98, один participant 0, Foundation unit, command MOVE (4,-3) 
 | repeat3 | local | PASS | 11 | 9.920 | 7218 | 24.57 |
 | repeat3 | remote | PASS | 18 | 40.965 | 10718 | 89.53 |
 
+Колонка «Artifacts MiB» снята до введения retain-on-failure, в режиме полной записи (эквивалент `AT7_FULL_REPLAY=1`). Контрольные замеры после изменения: `AT7_FULL_REPLAY=1` — Local 24,4 MiB, Remote 89,9 MiB (10 файлов); green без opt-in — только PNG и JSON (около 1,2 MB на оба режима, ни одного `.zip`/`.webm`). Весь набор каталогов green `pnpm test:e2e` (evidence + test-results + playwright-report) занимает около 4,3 MB вместо ~367 MB в CI.
+
 Повторы запускались отдельными pnpm commands, без retries. Caps tests добавлены перед третьим run, browser actions/oracle/hit-proof одинаковые во всех трёх. Ни одного console/pageerror. Negative drift на обеих страницах во всех трёх samples каждого Remote run равен 0. Objective сохранён.
 
 Local observed MOVE displacement: 100,48 / 111,96 / 108,56 CSS px; Remote A: 241,21 / 200,89 / 195,28, B: 260,46 во всех трёх. Разница — screenshot/interpolation/wall-clock timing: останавливаемся при доказанном displacement, а не на одном fixed tick/final arrival. Browser reports **не** byte-identical и не обещают exact replay; одинаковы statuses и семантические checks. Timestamp/ticks/duration находятся в run metadata. Polling завершается по наблюдаемым условиям, test timeout остаётся существующим 120 s; retries/timeouts/pixel thresholds конфигурации не увеличивались.
@@ -82,7 +86,7 @@ Controlled browser expectation `FINISHED` вместо реально видим
 
 Диагностика относительно existing smoke: те же public UI/pixel observations, но теперь reviewer получает действия, строгие checks, ограничения parity и отдельный JSON даже для неверного expectation, recordings обоих contexts и негативное доказательство. Existing smoke сам по себе не предоставляет этот общий report. Browser workload существенно дороже warm AT3 CLI; это разные уровни проверки, не benchmark simulation и не доказанная экономия Coding Agent time/tokens.
 
-Подготовительные runs: первый harness вызвал повторный tracing.start поверх automatic Playwright trace и упал (ошибка setup, не gameplay). После исправления один запуск на фоне repository checks получил Vite reconnect/повторный Babylon init во время screenshot и затем test timeout; root cause изменения Vite runtime **не установлен окончательно**. Запуск был остановлен, Remote не выполнялся; он не засчитан как PASS. Исходные log и before screenshot сохранены locally, полный transient trace был перезаписан следующим Playwright run — это ограничение диагностики pilot. Финальный harness хранит recordings вместе с JSON, ограничивает diagnostic screenshot timeout и обрабатывает context-close errors; последовательные runs без фоновых checks проходят. CI asset validator обнаружил, что IAB screenshot bytes имеют JPEG format при ошибочном расширении PNG. Файлы переименованы в .jpg и ссылки исправлены; SHA-256 до/после совпадает, исходные байты не преобразовывались. Existing validator regression/self-test дополнительно выполнен локально.
+Подготовительные runs: первый harness вызвал повторный tracing.start поверх automatic Playwright trace и упал (ошибка setup, не gameplay). После исправления один запуск на фоне repository checks получил Vite reconnect/повторный Babylon init во время screenshot и затем test timeout; root cause изменения Vite runtime **не установлен окончательно**. Запуск был остановлен, Remote не выполнялся; он не засчитан как PASS. Исходные log и before screenshot сохранены locally, полный transient trace был перезаписан следующим Playwright run — это ограничение диагностики pilot. Финальный harness хранит сохранённые recordings вместе с JSON и ведёт lifecycle в `runBrowserSession`: ресурсы регистрируются сразу после создания, каждый context очищается независимо, `evidence.finish()` вызывается всегда, а ошибка раннего setup (newContext/tracing.start) даёт `evidence.json` со status ERROR; это покрыто regression/fault-injection тестами в `browser-evidence.spec.ts` без запуска игры. Он ограничивает diagnostic screenshot timeout и обрабатывает context-close errors; последовательные runs без фоновых checks проходят. CI asset validator обнаружил, что IAB screenshot bytes имеют JPEG format при ошибочном расширении PNG. Файлы переименованы в .jpg и ссылки исправлены; SHA-256 до/после совпадает, исходные байты не преобразовывались. Existing validator regression/self-test дополнительно выполнен локально.
 Camera centroid failure в AT7 не наблюдался. Нельзя скрывать этот setup failure или считать его доказанным camera defect.
 
 ## Camera regression и внутренний browser playtest
