@@ -69,7 +69,8 @@ Implementation checkpoint:
 - G5 / #58 — completed: finite Wood, Worker carry и повторяющийся internal GATHER, owned Town Hall drop-off, PlayerEconomy и transport-neutral snapshots/events;
 - G7 / #60 — completed: internal BUILD NEW/EXISTING, same-owner resumable Construction, canonical Worker reservation, Wall topology и completed Tower shell; BUILD wire/UI остаётся G11/G12.
 - G8 / #61 — completed (internal): автоматическая дальняя атака completed Tower, generic one-slot GarrisonHost с `ContainedIn`, внутренние `GARRISON`/`UNGARRISON`, forced ejection при уничтожении хоста и discriminated `WORLD | CONTAINED` location в internal snapshot; публичные команды/wire/UI остаются G11/G12.
-- **next gameplay stage: G9 / #62 (PvE AI)**; G8 prerequisites реализованы. Public economy/GATHER/Construction projection остаётся G11, interaction/HUD — G12.
+- G9 / #62 — completed: data-driven `basic_melee_enemy` (без Owner/Controller, PvE Team), objective-driven `PROTECT` AI (`systems/pve-ai.ts`), breach-aware planning через `findBreachPath()` (включая полностью окружённый objective), bounded local combat, отдельный `aiBudget` lane; wave scheduling/defeat остаются G10.
+- **next gameplay stage: G10 / #63 (Wave / Defeat)**; G8 и G9 завершены. Public economy/GATHER/Construction projection остаётся G11, interaction/HUD — G12.
 - G6 / #59 — completed: match-level Team/relationships, tick-based Health/Attack/death, стартовый melee Soldier с bounded auto-aggro/chase и explicit MOVE override;
 - G5 и G6 интегрированы в shared MatchRuntime: economy hooks и combat используют один ascending-entityId pass, общие movement/navigation и active-task lane.
 
@@ -90,7 +91,7 @@ GitHub epic #50 является актуальным tracker implementation dec
             ↓
           #60 G7 Construction ✅
           ├─ #61 G8 Garrison ✅
-          └─ #62 G9 PvE AI (также требует #69)
+          └─ #62 G9 PvE AI ✅ (также требует #69)
                ↓
              #63 G10 Wave / Defeat
                ↓
@@ -107,7 +108,7 @@ GitHub epic #50 является актуальным tracker implementation dec
              #67 G14 Full Local/Remote E2E
 ```
 
-G1–G8 завершены. Следующий gameplay stage — G9 (#62), PvE AI. Для G9 дополнительно требуется уже завершённый G4c (#69). Практический максимум остаётся **2 Coding Agents одновременно**.
+G1–G9 завершены. Следующий gameplay stage — G10 (#63), Wave / Defeat, зависящий от G8 и G9. Практический максимум остаётся **2 Coding Agents одновременно**.
 
 Follow-up #87 завершён в PR #92: blocked-target resolution переиспользует topology-revision component labels и command-scoped target resolution. #82 — UX обратной связи для скорректированной MOVE destination — остаётся вне критического пути; он не отменяет завершённый контракт G4.
 

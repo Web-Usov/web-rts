@@ -31,8 +31,10 @@ import {
   garrisonHooks,
   forceEjectOccupants,
 } from "./systems/garrison.js";
+import { prepareEnemy, replanEnemyNavigation, failedEnemyNavigation } from "./systems/pve-ai.js";
 import { runMovementSystem } from "./systems/movement.js";
 import type {
+  EnemyAI,
   ContainedIn,
   GarrisonHost,
   GarrisonTask,
@@ -98,6 +100,7 @@ export class World {
   readonly health = new ComponentStore<Health>();
   readonly attacks = new ComponentStore<AttackProfile>();
   readonly combats = new ComponentStore<Combat>();
+  readonly enemies = new ComponentStore<EnemyAI>();
   readonly soldiers = new ComponentStore<SoldierTask>();
   readonly soldierProfiles = new ComponentStore<SoldierProfile>();
   readonly playerTeams = new Map<PlayerId, TeamId>();
@@ -176,6 +179,32 @@ export class World {
     this.health.remove(entityId);
     this.attacks.remove(entityId);
     this.combats.remove(entityId);
+    this.enemies.remove(entityId);
+    for (const [id, ai] of this.enemies.entries()) {
+      ai.unreachable.delete(entityId);
+      ai.excludedUntilExit.delete(entityId);
+      if (ai.blockerId === entityId) {
+        ai.blockerId = null;
+        if (ai.localTargetId === null) {
+          this.stopNavigation(id);
+          ai.phase = "NORMAL_OBJECTIVE";
+        }
+      }
+      if (ai.localTargetId === entityId) {
+        ai.localTargetId = null;
+        ai.anchor = null;
+        this.stopNavigation(id);
+        ai.phase = ai.blockerId === null ? "NORMAL_OBJECTIVE" : "APPROACH_BLOCKER";
+      }
+      if (
+        ai.objectiveId !== null &&
+        this.getObjective(ai.objectiveId)?.targetEntityId === entityId &&
+        ai.localTargetId === null
+      ) {
+        this.stopNavigation(id);
+        ai.phase = "NORMAL_OBJECTIVE";
+      }
+    }
     this.soldiers.remove(entityId);
     this.soldierProfiles.remove(entityId);
     for (const [, soldier] of this.soldiers.entries()) {
@@ -402,8 +431,7 @@ export class World {
   /** Advance one fixed tick: apply commands, run systems, increment tick. */
   step(): void {
     const activeTaskLane = new EntityPathQueryLane(this.config.pathQueriesPerTick.activeTaskBudget);
-    // G9 will construct its own EntityPathQueryLane(aiBudget) and report usage here.
-    this.aiQueries = 0;
+    const aiLane = new EntityPathQueryLane(this.config.pathQueriesPerTick.aiBudget);
     this.applyCommands();
     const economy = economyHooks(this, this.navigations, activeTaskLane, this.events);
     const construction = constructionHooks(this, activeTaskLane);
@@ -420,12 +448,14 @@ export class World {
         garrison.afterMovement(id);
       },
       failedNavigation: (id: EntityId) => {
+        failedEnemyNavigation(this, id);
         economy.failedNavigation(id);
         construction.failedNavigation(id);
         garrison.failedNavigation(id);
       },
       replanNavigation: (id: EntityId) =>
         garrison.replanNavigation(id) ??
+        replanEnemyNavigation(this, id) ??
         construction.replanNavigation(id) ??
         economy.replanNavigation(id),
     };
@@ -439,19 +469,25 @@ export class World {
         continue;
       }
       prepareSoldier(this, entityId, activeTaskLane);
+      prepareEnemy(this, entityId, aiLane);
       runMovementSystem(
         this.positions,
         this.movements,
         this.config.tickDurationSeconds,
         this.grid === null
           ? undefined
-          : { tasks: this.navigations, grid: this.grid, lane: activeTaskLane },
+          : {
+              tasks: this.navigations,
+              grid: this.grid,
+              lane: this.enemies.has(entityId) ? aiLane : activeTaskLane,
+            },
         hooks,
         [entityId],
       );
       resolveEntityCombat(this, entityId);
     }
     this.activeTaskQueries = activeTaskLane.used;
+    this.aiQueries = aiLane.used;
     this.tickCount += 1;
   }
 

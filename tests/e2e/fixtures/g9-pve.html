@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="ru">
+  <meta charset="utf-8" />
+  <title>G9 — изолированный PvE fixture</title>
+  <style>
+    body {
+      background: #101820;
+      color: #eef3f5;
+      font: 16px system-ui;
+      margin: 24px;
+    }
+    button {
+      padding: 9px 14px;
+      margin: 0 5px 8px 0;
+    }
+    canvas {
+      display: block;
+      background: #192833;
+      margin-top: 16px;
+    }
+    p {
+      max-width: 1000px;
+    }
+    output {
+      display: block;
+      margin-top: 8px;
+    }
+  </style>
+  <h1>G9 — PvE AI / breach</h1>
+  <p>
+    Изолированный test fixture поверх production World, не production UI. Красный — enemy, синий —
+    defender, золотой — PROTECT objective, серый — Wall, бирюзовый — non-breachable resource.
+    Пунктир — production navigation, красная линия — CombatTarget.
+  </p>
+  <button id="normal">Normal advance</button
+  ><button id="local">Local combat</button
+  ><button id="breach">Wall barrier</button
+  ><button id="stall">STALLED</button
+  ><button id="open">Open passage</button
+  ><button id="step">+1 tick</button
+  ><button id="ten">+10 ticks</button>
+  <output id="status"></output
+  ><canvas width="980" height="630"></canvas>
+  <script type="module">
+    import {
+      createWorld,
+      spawnEnemy,
+      spawnSoldier,
+      PLAYER_TEAM,
+    } from "../../../apps/web/node_modules/@web-rts/simulation/dist/index.js";
+    import { ENTITY_DEFINITIONS } from "../../../apps/web/node_modules/@web-rts/game-data/dist/index.js";
+    let world,
+      enemy,
+      objective,
+      barrier = [];
+    const ctx = document.querySelector("canvas").getContext("2d");
+    function solid(definitionId, x, y) {
+      const def = ENTITY_DEFINITIONS[definitionId];
+      const id = world.createEntity({ kind: def.kind, definitionId });
+      world.positions.set(id, { x: x + def.footprint.width / 2, y: y + def.footprint.height / 2 });
+      world.grid.addFootprint(id, { ...def.footprint, anchorCell: { x, y } });
+      world.teams.set(id, { teamId: PLAYER_TEAM });
+      world.health.set(id, { current: def.maxHealth ?? 100, max: def.maxHealth ?? 100 });
+      return id;
+    }
+    function reset(mode) {
+      world = createWorld({
+        seed: 62,
+        map: {
+          id: "g9-fixture",
+          originX: 0,
+          originY: 0,
+          widthCells: 14,
+          heightCells: 9,
+          staticTerrain: [],
+          playerSpawns: [],
+          startingPlacements: [],
+          resourcePlacements: [],
+        },
+        pathQueriesPerTick: { aiBudget: 1 },
+      });
+      objective = solid("sacred_site", 11, 3);
+      enemy = spawnEnemy(world, { x: 1.5, y: 3.5 });
+      world.addObjective({
+        type: "PROTECT",
+        state: "ACTIVE",
+        targetEntityId: objective,
+        teamId: PLAYER_TEAM,
+        required: true,
+      });
+      barrier = [];
+      if (mode === "breach" || mode === "stall")
+        for (let y = 0; y < 9; y++)
+          barrier.push(solid(mode === "breach" ? "wall" : "wood_node", 7, y));
+      if (mode === "local") {
+        const defender = spawnSoldier(world, { x: 3.5, y: 3.5 }, PLAYER_TEAM);
+        world.soldiers.remove(defender);
+        world.attacks.remove(defender);
+        world.health.get(defender).current = 20;
+      }
+      render();
+    }
+    function render() {
+      ctx.clearRect(0, 0, 980, 630);
+      ctx.strokeStyle = "#35505f";
+      ctx.font = "14px system-ui";
+      for (let x = 0; x <= 14; x++) {
+        ctx.beginPath();
+        ctx.moveTo(x * 70, 0);
+        ctx.lineTo(x * 70, 630);
+        ctx.stroke();
+      }
+      for (let y = 0; y <= 9; y++) {
+        ctx.beginPath();
+        ctx.moveTo(0, y * 70);
+        ctx.lineTo(980, y * 70);
+        ctx.stroke();
+      }
+      for (const id of world.entityIds()) {
+        const p = world.positions.get(id),
+          fp = world.grid.footprintOf(id),
+          nav = world.readNavigation(id),
+          health = world.health.get(id);
+        if (nav) {
+          ctx.strokeStyle = "#f78e86";
+          ctx.setLineDash([6, 6]);
+          ctx.beginPath();
+          ctx.moveTo(p.x * 70, p.y * 70);
+          for (const wp of nav.waypoints.slice(nav.waypointIndex)) ctx.lineTo(wp.x * 70, wp.y * 70);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+        ctx.fillStyle =
+          id === enemy
+            ? "#ec605b"
+            : id === objective
+              ? "#dfb754"
+              : fp
+                ? world.identities.get(id).kind === "RESOURCE"
+                  ? "#459c97"
+                  : "#a4aeba"
+                : "#68aaf2";
+        if (fp)
+          ctx.fillRect(
+            fp.anchorCell.x * 70 + 4,
+            fp.anchorCell.y * 70 + 4,
+            fp.width * 70 - 8,
+            fp.height * 70 - 8,
+          );
+        else {
+          ctx.beginPath();
+          ctx.arc(p.x * 70, p.y * 70, 13, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.fillStyle = "#fff";
+        ctx.fillText(`${id} · HP ${health?.current ?? "—"}`, p.x * 70 - 30, p.y * 70 + 28);
+      }
+      const ai = world.enemies.get(enemy),
+        combat = world.combats.get(enemy),
+        p = world.positions.get(enemy),
+        target = world.positions.get(combat?.targetEntityId);
+      if (target) {
+        ctx.strokeStyle = "#ec605b";
+        ctx.beginPath();
+        ctx.moveTo(p.x * 70, p.y * 70);
+        ctx.lineTo(target.x * 70, target.y * 70);
+        ctx.stroke();
+      }
+      document.querySelector("output").textContent =
+        `tick ${world.tick} · ${ai?.phase} · blocker ${ai?.blockerId ?? "—"} · local ${ai?.localTargetId ?? "—"} · combat ${combat?.targetEntityId ?? "—"} · objective HP ${world.health.get(objective)?.current ?? 0} · topology ${world.topologyRevision} · aiQueries ${world.readPathQueryMetrics().aiQueries}`;
+    }
+    for (const mode of ["normal", "local", "breach", "stall"])
+      document.querySelector("#" + mode).onclick = () => reset(mode);
+    document.querySelector("#open").onclick = () => {
+      if (barrier[3]) world.destroyEntity(barrier[3]);
+      render();
+    };
+    document.querySelector("#step").onclick = () => {
+      world.step();
+      render();
+    };
+    document.querySelector("#ten").onclick = () => {
+      world.stepN(10);
+      render();
+    };
+    reset("normal");
+  </script>
+</html>

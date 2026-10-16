@@ -78,6 +78,9 @@ export type EntityDefinition = {
   readonly maxHealth?: number;
   readonly attack?: AttackProfile;
   readonly soldier?: SoldierProfile;
+  readonly enemy?: SoldierProfile;
+  /** Explicit capability; Health and hostile solid occupancy are also required. */
+  readonly breachable?: boolean;
 };
 
 export const ENTITY_DEFINITIONS = {
@@ -92,6 +95,7 @@ export const ENTITY_DEFINITIONS = {
   },
   wall: {
     id: "wall",
+    breachable: true,
     kind: "BUILDING",
     maxHealth: 200,
     footprint: { width: 1, height: 1, blocksMovement: true, blocksBuilding: true },
@@ -99,6 +103,7 @@ export const ENTITY_DEFINITIONS = {
   },
   tower: {
     id: "tower",
+    breachable: true,
     kind: "BUILDING",
     maxHealth: 300,
     attack: TOWER_ATTACK_PROFILES.empty,
@@ -113,6 +118,7 @@ export const ENTITY_DEFINITIONS = {
   },
   town_hall: {
     id: "town_hall",
+    breachable: true,
     maxHealth: 500,
     kind: "BUILDING",
     footprint: { width: 2, height: 2, blocksMovement: true, blocksBuilding: true },
@@ -137,6 +143,19 @@ export const ENTITY_DEFINITIONS = {
       allowedTargets: ["UNIT", "BUILDING", "OBJECTIVE"],
     },
     soldier: { aggroRadius: 5, chaseRadius: 8, moveSpeed: 5 },
+  },
+  basic_melee_enemy: {
+    id: "basic_melee_enemy",
+    kind: "UNIT",
+    footprint: null,
+    maxHealth: 80,
+    attack: {
+      damage: 10,
+      range: 0.75,
+      cooldownTicks: 10,
+      allowedTargets: ["UNIT", "BUILDING", "OBJECTIVE"],
+    },
+    enemy: { aggroRadius: 3, chaseRadius: 5, moveSpeed: 3 },
   },
   sacred_site: {
     id: "sacred_site",
