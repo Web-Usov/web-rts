@@ -80,6 +80,15 @@ function resetStrategy(world: World, id: EntityId, ai: EnemyAI): void {
   ai.plannedTargetCell = null;
 }
 
+/** An unreachable sticky blocker only invalidates that one target: mark it for
+ * this topology revision and fall back to normal/breach planning for the rest. */
+function abandonBlocker(world: World, id: EntityId, ai: EnemyAI): void {
+  if (ai.blockerId !== null)
+    ai.unreachable.set(ai.blockerId, { cellId: -1, revision: world.topologyRevision });
+  ai.blockerId = null;
+  resetStrategy(world, id, ai);
+}
+
 function stall(world: World, id: EntityId, ai: EnemyAI): void {
   world.stopNavigation(id);
   world.combats.get(id)!.targetEntityId = null;
@@ -234,7 +243,13 @@ export function prepareEnemy(world: World, id: EntityId, lane: EntityPathQueryLa
       grid,
       grid.worldToCell(from),
       attackGoals(world, id, objectiveEntry[1].targetEntityId, true),
-      (candidate) => isBreachable(world, id, candidate),
+      (candidate) => {
+        const failed = ai.unreachable.get(candidate);
+        return (
+          isBreachable(world, id, candidate) &&
+          (failed === undefined || failed.revision !== world.topologyRevision)
+        );
+      },
       { allowBreachableGoals: true },
     );
     if (result.status === "found" && result.firstBlockerEntityId !== null) {
@@ -247,8 +262,7 @@ export function prepareEnemy(world: World, id: EntityId, lane: EntityPathQueryLa
   if (route === null) {
     if (ai.blockerId === null) ai.phase = "BREACH_SEARCH";
     else {
-      ai.blockerId = null; // Unreachable blocker invalidates stickiness.
-      stall(world, id, ai);
+      abandonBlocker(world, id, ai);
     }
     return;
   }
@@ -301,8 +315,7 @@ export function failedEnemyNavigation(world: World, id: EntityId): void {
       });
     releaseLocal(world, id, ai);
   } else if (ai.blockerId !== null) {
-    ai.blockerId = null;
-    stall(world, id, ai);
+    abandonBlocker(world, id, ai);
   } else {
     world.combats.get(id)!.targetEntityId = null;
     ai.phase = "BREACH_SEARCH";

@@ -214,6 +214,30 @@ describe("deterministic breach and lifecycle", () => {
   });
 });
 
+describe("sticky blocker becomes unreachable", () => {
+  it("falls back to another breach section instead of STALLED", () => {
+    const { world, enemy, objective } = setup();
+    barrier(world);
+    until(world, () => world.enemies.get(enemy)!.blockerId !== null);
+    const first = world.enemies.get(enemy)!.blockerId!;
+    const cell = world.grid!.worldToCell(world.positions.get(first)!);
+    // Non-breachable structure closes the only approach cell of this wall section.
+    // Diagonal cells are also within melee reach, so close all three.
+    for (const dy of [-1, 0, 1]) solid(world, "wood_node", cell.x - 1, cell.y + dy);
+    const phases = new Set<string>();
+    until(
+      world,
+      () => {
+        phases.add(world.enemies.get(enemy)!.phase);
+        return (world.health.get(objective)?.current ?? 0) < 40;
+      },
+      800,
+    );
+    expect(phases.has("STALLED")).toBe(false);
+    expect(world.health.has(first)).toBe(true);
+  });
+});
+
 describe("stall, capabilities and AI budget", () => {
   it.each(["friendly", "neutral", "resource", "capability", "health"])(
     "never breaches %s blockers; STALLED waits for topology",

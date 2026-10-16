@@ -108,7 +108,7 @@ GitHub epic #50 является актуальным tracker implementation dec
              #67 G14 Full Local/Remote E2E
 ```
 
-G1–G8 завершены. Следующий gameplay stage — G9 (#62), PvE AI. Для G9 дополнительно требуется уже завершённый G4c (#69). Практический максимум остаётся **2 Coding Agents одновременно**.
+G1–G9 завершены. Следующий gameplay stage — G10 (#63), Wave / Defeat, зависящий от G8 и G9. Практический максимум остаётся **2 Coding Agents одновременно**.
 
 Follow-up #87 завершён в PR #92: blocked-target resolution переиспользует topology-revision component labels и command-scoped target resolution. #82 — UX обратной связи для скорректированной MOVE destination — остаётся вне критического пути; он не отменяет завершённый контракт G4.
 
