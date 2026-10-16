@@ -1,0 +1,832 @@
+{
+  "note": "Slimmed AT3 reports (checks only) from disposable expA/expB; raw reports not committed",
+  "sourceFingerprints": {
+    "originalAndFixed": "be5356f1ce0cfc461d2ab0693380c51ae07c726f243ec2b06d21f6e12c180f71",
+    "mutated": "e9664ea2e4289151ce3f5331ae53a2aafeb87163e432b45e2cbb3f4dce95721c"
+  },
+  "patchIdentity": {
+    "expASha256": "42f24f222e554716a7c6eecdad9aeca03be144a8ec323f33834a5826879cba2c",
+    "expBSha256": "42f24f222e554716a7c6eecdad9aeca03be144a8ec323f33834a5826879cba2c",
+    "identical": true
+  },
+  "permanentLeave": {
+    "baselinePre": {
+      "scenarioId": "permanent-leave",
+      "status": "FAIL",
+      "firstMismatchTick": 0,
+      "checks": [
+        {
+          "id": "valid-admitted",
+          "tick": 0,
+          "status": "PASS",
+          "expected": {
+            "accepted": true
+          },
+          "actual": {
+            "accepted": true
+          }
+        },
+        {
+          "id": "invalid-admitted-before-validation",
+          "tick": 0,
+          "status": "PASS",
+          "expected": {
+            "accepted": true
+          },
+          "actual": {
+            "accepted": true
+          }
+        },
+        {
+          "id": "pending-before-removal",
+          "tick": 0,
+          "status": "PASS",
+          "expected": 2,
+          "actual": 2
+        },
+        {
+          "id": "pending-after-removal",
+          "tick": 0,
+          "status": "FAIL",
+          "expected": 0,
+          "actual": 2
+        },
+        {
+          "id": "control-released",
+          "tick": 0,
+          "status": "PASS",
+          "expected": {
+            "controllerPlayerId": null
+          },
+          "actual": {
+            "controllerPlayerId": null
+          }
+        },
+        {
+          "id": "no-movement-after-leave",
+          "tick": 1,
+          "status": "PASS",
+          "expected": {
+            "x": -6,
+            "y": -3
+          },
+          "actual": {
+            "x": -6,
+            "y": -3
+          }
+        },
+        {
+          "id": "owner-preserved",
+          "tick": 1,
+          "status": "PASS",
+          "expected": {
+            "ownerPlayerId": 0
+          },
+          "actual": {
+            "ownerPlayerId": 0
+          }
+        },
+        {
+          "id": "other-control-preserved",
+          "tick": 1,
+          "status": "PASS",
+          "expected": {
+            "controllerPlayerId": 1
+          },
+          "actual": {
+            "controllerPlayerId": 1
+          }
+        },
+        {
+          "id": "no-stale-events",
+          "tick": 1,
+          "status": "FAIL",
+          "expected": [],
+          "actual": [
+            {
+              "type": "COMMAND_REJECTED",
+              "recipientPlayerId": 0,
+              "commandId": "pending-valid",
+              "reason": "not_your_unit",
+              "tick": 0
+            },
+            {
+              "type": "COMMAND_REJECTED",
+              "recipientPlayerId": 0,
+              "commandId": "pending-invalid",
+              "reason": "not_your_unit",
+              "tick": 0
+            }
+          ]
+        },
+        {
+          "id": "removed-player-rejected",
+          "tick": 1,
+          "status": "FAIL",
+          "expected": {
+            "accepted": false,
+            "reason": "not_participant"
+          },
+          "actual": {
+            "accepted": true
+          }
+        },
+        {
+          "id": "grace-pending-retained",
+          "tick": 1,
+          "status": "FAIL",
+          "expected": 1,
+          "actual": 2
+        },
+        {
+          "id": "grace-pending-processed",
+          "tick": 2,
+          "status": "PASS",
+          "expected": 0,
+          "actual": 0
+        },
+        {
+          "id": "grace-move-executed",
+          "tick": 120,
+          "status": "PASS",
+          "expected": {
+            "x": 4,
+            "y": -3
+          },
+          "actual": {
+            "x": 4,
+            "y": -3
+          }
+        },
+        {
+          "id": "grace-control-retained",
+          "tick": 120,
+          "status": "PASS",
+          "expected": {
+            "ownerPlayerId": 1,
+            "controllerPlayerId": 1
+          },
+          "actual": {
+            "ownerPlayerId": 1,
+            "controllerPlayerId": 1
+          }
+        },
+        {
+          "id": "no-events",
+          "tick": 120,
+          "status": "FAIL",
+          "expected": [],
+          "actual": [
+            {
+              "type": "COMMAND_REJECTED",
+              "recipientPlayerId": 0,
+              "commandId": "pending-valid",
+              "reason": "not_your_unit",
+              "tick": 0
+            },
+            {
+              "type": "COMMAND_REJECTED",
+              "recipientPlayerId": 0,
+              "commandId": "pending-invalid",
+              "reason": "not_your_unit",
+              "tick": 0
+            },
+            {
+              "type": "COMMAND_REJECTED",
+              "recipientPlayerId": 0,
+              "commandId": "after-leave",
+              "reason": "not_your_unit",
+              "tick": 1
+            }
+          ]
+        }
+      ]
+    },
+    "baselinePost": {
+      "scenarioId": "permanent-leave",
+      "status": "PASS",
+      "firstMismatchTick": null,
+      "checks": [
+        {
+          "id": "valid-admitted",
+          "tick": 0,
+          "status": "PASS",
+          "expected": {
+            "accepted": true
+          },
+          "actual": {
+            "accepted": true
+          }
+        },
+        {
+          "id": "invalid-admitted-before-validation",
+          "tick": 0,
+          "status": "PASS",
+          "expected": {
+            "accepted": true
+          },
+          "actual": {
+            "accepted": true
+          }
+        },
+        {
+          "id": "pending-before-removal",
+          "tick": 0,
+          "status": "PASS",
+          "expected": 2,
+          "actual": 2
+        },
+        {
+          "id": "pending-after-removal",
+          "tick": 0,
+          "status": "PASS",
+          "expected": 0,
+          "actual": 0
+        },
+        {
+          "id": "control-released",
+          "tick": 0,
+          "status": "PASS",
+          "expected": {
+            "controllerPlayerId": null
+          },
+          "actual": {
+            "controllerPlayerId": null
+          }
+        },
+        {
+          "id": "no-movement-after-leave",
+          "tick": 1,
+          "status": "PASS",
+          "expected": {
+            "x": -6,
+            "y": -3
+          },
+          "actual": {
+            "x": -6,
+            "y": -3
+          }
+        },
+        {
+          "id": "owner-preserved",
+          "tick": 1,
+          "status": "PASS",
+          "expected": {
+            "ownerPlayerId": 0
+          },
+          "actual": {
+            "ownerPlayerId": 0
+          }
+        },
+        {
+          "id": "other-control-preserved",
+          "tick": 1,
+          "status": "PASS",
+          "expected": {
+            "controllerPlayerId": 1
+          },
+          "actual": {
+            "controllerPlayerId": 1
+          }
+        },
+        {
+          "id": "no-stale-events",
+          "tick": 1,
+          "status": "PASS",
+          "expected": [],
+          "actual": []
+        },
+        {
+          "id": "removed-player-rejected",
+          "tick": 1,
+          "status": "PASS",
+          "expected": {
+            "accepted": false,
+            "reason": "not_participant"
+          },
+          "actual": {
+            "accepted": false,
+            "reason": "not_participant"
+          }
+        },
+        {
+          "id": "grace-pending-retained",
+          "tick": 1,
+          "status": "PASS",
+          "expected": 1,
+          "actual": 1
+        },
+        {
+          "id": "grace-pending-processed",
+          "tick": 2,
+          "status": "PASS",
+          "expected": 0,
+          "actual": 0
+        },
+        {
+          "id": "grace-move-executed",
+          "tick": 120,
+          "status": "PASS",
+          "expected": {
+            "x": 4,
+            "y": -3
+          },
+          "actual": {
+            "x": 4,
+            "y": -3
+          }
+        },
+        {
+          "id": "grace-control-retained",
+          "tick": 120,
+          "status": "PASS",
+          "expected": {
+            "ownerPlayerId": 1,
+            "controllerPlayerId": 1
+          },
+          "actual": {
+            "ownerPlayerId": 1,
+            "controllerPlayerId": 1
+          }
+        },
+        {
+          "id": "no-events",
+          "tick": 120,
+          "status": "PASS",
+          "expected": [],
+          "actual": []
+        }
+      ]
+    },
+    "treatmentPre": {
+      "scenarioId": "permanent-leave",
+      "status": "FAIL",
+      "firstMismatchTick": 0,
+      "checks": [
+        {
+          "id": "valid-admitted",
+          "tick": 0,
+          "status": "PASS",
+          "expected": {
+            "accepted": true
+          },
+          "actual": {
+            "accepted": true
+          }
+        },
+        {
+          "id": "invalid-admitted-before-validation",
+          "tick": 0,
+          "status": "PASS",
+          "expected": {
+            "accepted": true
+          },
+          "actual": {
+            "accepted": true
+          }
+        },
+        {
+          "id": "pending-before-removal",
+          "tick": 0,
+          "status": "PASS",
+          "expected": 2,
+          "actual": 2
+        },
+        {
+          "id": "pending-after-removal",
+          "tick": 0,
+          "status": "FAIL",
+          "expected": 0,
+          "actual": 2
+        },
+        {
+          "id": "control-released",
+          "tick": 0,
+          "status": "PASS",
+          "expected": {
+            "controllerPlayerId": null
+          },
+          "actual": {
+            "controllerPlayerId": null
+          }
+        },
+        {
+          "id": "no-movement-after-leave",
+          "tick": 1,
+          "status": "PASS",
+          "expected": {
+            "x": -6,
+            "y": -3
+          },
+          "actual": {
+            "x": -6,
+            "y": -3
+          }
+        },
+        {
+          "id": "owner-preserved",
+          "tick": 1,
+          "status": "PASS",
+          "expected": {
+            "ownerPlayerId": 0
+          },
+          "actual": {
+            "ownerPlayerId": 0
+          }
+        },
+        {
+          "id": "other-control-preserved",
+          "tick": 1,
+          "status": "PASS",
+          "expected": {
+            "controllerPlayerId": 1
+          },
+          "actual": {
+            "controllerPlayerId": 1
+          }
+        },
+        {
+          "id": "no-stale-events",
+          "tick": 1,
+          "status": "FAIL",
+          "expected": [],
+          "actual": [
+            {
+              "type": "COMMAND_REJECTED",
+              "recipientPlayerId": 0,
+              "commandId": "pending-valid",
+              "reason": "not_your_unit",
+              "tick": 0
+            },
+            {
+              "type": "COMMAND_REJECTED",
+              "recipientPlayerId": 0,
+              "commandId": "pending-invalid",
+              "reason": "not_your_unit",
+              "tick": 0
+            }
+          ]
+        },
+        {
+          "id": "removed-player-rejected",
+          "tick": 1,
+          "status": "FAIL",
+          "expected": {
+            "accepted": false,
+            "reason": "not_participant"
+          },
+          "actual": {
+            "accepted": true
+          }
+        },
+        {
+          "id": "grace-pending-retained",
+          "tick": 1,
+          "status": "FAIL",
+          "expected": 1,
+          "actual": 2
+        },
+        {
+          "id": "grace-pending-processed",
+          "tick": 2,
+          "status": "PASS",
+          "expected": 0,
+          "actual": 0
+        },
+        {
+          "id": "grace-move-executed",
+          "tick": 120,
+          "status": "PASS",
+          "expected": {
+            "x": 4,
+            "y": -3
+          },
+          "actual": {
+            "x": 4,
+            "y": -3
+          }
+        },
+        {
+          "id": "grace-control-retained",
+          "tick": 120,
+          "status": "PASS",
+          "expected": {
+            "ownerPlayerId": 1,
+            "controllerPlayerId": 1
+          },
+          "actual": {
+            "ownerPlayerId": 1,
+            "controllerPlayerId": 1
+          }
+        },
+        {
+          "id": "no-events",
+          "tick": 120,
+          "status": "FAIL",
+          "expected": [],
+          "actual": [
+            {
+              "type": "COMMAND_REJECTED",
+              "recipientPlayerId": 0,
+              "commandId": "pending-valid",
+              "reason": "not_your_unit",
+              "tick": 0
+            },
+            {
+              "type": "COMMAND_REJECTED",
+              "recipientPlayerId": 0,
+              "commandId": "pending-invalid",
+              "reason": "not_your_unit",
+              "tick": 0
+            },
+            {
+              "type": "COMMAND_REJECTED",
+              "recipientPlayerId": 0,
+              "commandId": "after-leave",
+              "reason": "not_your_unit",
+              "tick": 1
+            }
+          ]
+        }
+      ]
+    },
+    "treatmentPost": {
+      "scenarioId": "permanent-leave",
+      "status": "PASS",
+      "firstMismatchTick": null,
+      "checks": [
+        {
+          "id": "valid-admitted",
+          "tick": 0,
+          "status": "PASS",
+          "expected": {
+            "accepted": true
+          },
+          "actual": {
+            "accepted": true
+          }
+        },
+        {
+          "id": "invalid-admitted-before-validation",
+          "tick": 0,
+          "status": "PASS",
+          "expected": {
+            "accepted": true
+          },
+          "actual": {
+            "accepted": true
+          }
+        },
+        {
+          "id": "pending-before-removal",
+          "tick": 0,
+          "status": "PASS",
+          "expected": 2,
+          "actual": 2
+        },
+        {
+          "id": "pending-after-removal",
+          "tick": 0,
+          "status": "PASS",
+          "expected": 0,
+          "actual": 0
+        },
+        {
+          "id": "control-released",
+          "tick": 0,
+          "status": "PASS",
+          "expected": {
+            "controllerPlayerId": null
+          },
+          "actual": {
+            "controllerPlayerId": null
+          }
+        },
+        {
+          "id": "no-movement-after-leave",
+          "tick": 1,
+          "status": "PASS",
+          "expected": {
+            "x": -6,
+            "y": -3
+          },
+          "actual": {
+            "x": -6,
+            "y": -3
+          }
+        },
+        {
+          "id": "owner-preserved",
+          "tick": 1,
+          "status": "PASS",
+          "expected": {
+            "ownerPlayerId": 0
+          },
+          "actual": {
+            "ownerPlayerId": 0
+          }
+        },
+        {
+          "id": "other-control-preserved",
+          "tick": 1,
+          "status": "PASS",
+          "expected": {
+            "controllerPlayerId": 1
+          },
+          "actual": {
+            "controllerPlayerId": 1
+          }
+        },
+        {
+          "id": "no-stale-events",
+          "tick": 1,
+          "status": "PASS",
+          "expected": [],
+          "actual": []
+        },
+        {
+          "id": "removed-player-rejected",
+          "tick": 1,
+          "status": "PASS",
+          "expected": {
+            "accepted": false,
+            "reason": "not_participant"
+          },
+          "actual": {
+            "accepted": false,
+            "reason": "not_participant"
+          }
+        },
+        {
+          "id": "grace-pending-retained",
+          "tick": 1,
+          "status": "PASS",
+          "expected": 1,
+          "actual": 1
+        },
+        {
+          "id": "grace-pending-processed",
+          "tick": 2,
+          "status": "PASS",
+          "expected": 0,
+          "actual": 0
+        },
+        {
+          "id": "grace-move-executed",
+          "tick": 120,
+          "status": "PASS",
+          "expected": {
+            "x": 4,
+            "y": -3
+          },
+          "actual": {
+            "x": 4,
+            "y": -3
+          }
+        },
+        {
+          "id": "grace-control-retained",
+          "tick": 120,
+          "status": "PASS",
+          "expected": {
+            "ownerPlayerId": 1,
+            "controllerPlayerId": 1
+          },
+          "actual": {
+            "ownerPlayerId": 1,
+            "controllerPlayerId": 1
+          }
+        },
+        {
+          "id": "no-events",
+          "tick": 120,
+          "status": "PASS",
+          "expected": [],
+          "actual": []
+        }
+      ]
+    }
+  },
+  "adjacent": {
+    "move": "PASS 7/7 in both",
+    "combat": "PASS 8/8 in both"
+  },
+  "telemetry": {
+    "origin": "Claude Code harness usage in task-notification of each Agent call (not provider billing records)",
+    "baseline": {
+      "subagent_tokens": 62764,
+      "tool_uses": 8,
+      "duration_ms": 52401
+    },
+    "treatment": {
+      "subagent_tokens": 78314,
+      "tool_uses": 18,
+      "duration_ms": 393970
+    },
+    "measured": "totals only; no input/output/cache split",
+    "selfReported": "files read, command lists, hypotheses (from agent final reports); baseline summary transcribed by orchestrator"
+  },
+  "at4": {
+    "mutation": "leave-queue",
+    "status": "KILLED",
+    "expected": "KILLED",
+    "firstMismatchTick": 0,
+    "failingChecks": [
+      {
+        "id": "pending-after-removal",
+        "tick": 0,
+        "expected": 0,
+        "actual": 2,
+        "status": "FAIL",
+        "reason": "Expected 0, observed 2"
+      },
+      {
+        "id": "no-stale-events",
+        "tick": 1,
+        "expected": [],
+        "actual": [
+          {
+            "type": "COMMAND_REJECTED",
+            "recipientPlayerId": 0,
+            "commandId": "pending-valid",
+            "reason": "not_your_unit",
+            "tick": 0
+          },
+          {
+            "type": "COMMAND_REJECTED",
+            "recipientPlayerId": 0,
+            "commandId": "pending-invalid",
+            "reason": "not_your_unit",
+            "tick": 0
+          }
+        ],
+        "status": "FAIL",
+        "reason": "Expected [], observed [{\"commandId\":\"pending-valid\",\"reason\":\"not_your_unit\",\"recipientPlayerId\":0,\"tick\":0,\"type\":\"COMMAND_REJECTED\"},{\"commandId\":\"pending-invalid\",\"reason\":\"not_your_unit\",\"recipientPlayerId\":0,\"tick\":0,\"type\":\"COMMAND_REJECTED\"}]"
+      },
+      {
+        "id": "removed-player-rejected",
+        "tick": 1,
+        "expected": {
+          "accepted": false,
+          "reason": "not_participant"
+        },
+        "actual": {
+          "accepted": true
+        },
+        "status": "FAIL",
+        "reason": "Expected {\"accepted\":false,\"reason\":\"not_participant\"}, observed {\"accepted\":true}"
+      },
+      {
+        "id": "grace-pending-retained",
+        "tick": 1,
+        "expected": 1,
+        "actual": 2,
+        "status": "FAIL",
+        "reason": "Expected 1, observed 2"
+      },
+      {
+        "id": "no-events",
+        "tick": 120,
+        "expected": [],
+        "actual": [
+          {
+            "type": "COMMAND_REJECTED",
+            "recipientPlayerId": 0,
+            "commandId": "pending-valid",
+            "reason": "not_your_unit",
+            "tick": 0
+          },
+          {
+            "type": "COMMAND_REJECTED",
+            "recipientPlayerId": 0,
+            "commandId": "pending-invalid",
+            "reason": "not_your_unit",
+            "tick": 0
+          },
+          {
+            "type": "COMMAND_REJECTED",
+            "recipientPlayerId": 0,
+            "commandId": "after-leave",
+            "reason": "not_your_unit",
+            "tick": 1
+          }
+        ],
+        "status": "FAIL",
+        "reason": "Expected [], observed [{\"commandId\":\"pending-valid\",\"reason\":\"not_your_unit\",\"recipientPlayerId\":0,\"tick\":0,\"type\":\"COMMAND_REJECTED\"},{\"commandId\":\"pending-invalid\",\"reason\":\"not_your_unit\",\"recipientPlayerId\":0,\"tick\":0,\"type\":\"COMMAND_REJECTED\"},{\"commandId\":\"after-leave\",\"reason\":\"not_your_unit\",\"recipientPlayerId\":0,\"tick\":1,\"type\":\"COMMAND_REJECTED\"}]"
+      }
+    ],
+    "cleanup": {
+      "passed": true,
+      "worktreeRemoved": true,
+      "directoryRemoved": true,
+      "sourceUnchanged": true
+    },
+    "elapsedMs": 40426,
+    "commit": "884865ea9cd008d7942516cbcae6f3680282264d"
+  },
+  "at7": {
+    "command": "pnpm verify:browser --retries=0",
+    "result": "7/7 PASS (MOVE local, MOVE remote)",
+    "note": "regression smoke, not a queue oracle"
+  }
+}

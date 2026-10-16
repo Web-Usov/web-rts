@@ -47,18 +47,34 @@ export function validateSummary(s) {
   );
   need(Array.isArray(s.retest) && s.retest.length > 0, "retest must be a non-empty array");
   need(Number.isInteger(s.iterations) && s.iterations >= 0, "iterations must be integer >= 0");
-  need(typeof s.elapsedSeconds === "number", "elapsedSeconds must be a number");
+  need(
+    Number.isFinite(s.elapsedSeconds) && s.elapsedSeconds >= 0,
+    "elapsedSeconds must be a finite number >= 0",
+  );
   const t = s.tokens;
   need(
     obj(t) &&
       (t.status === "not_measured" ||
-        (t.status === "measured" && typeof t.source === "string" && Number.isInteger(t.total))),
+        (t.status === "measured" &&
+          typeof t.source === "string" &&
+          t.source.trim() !== "" &&
+          Number.isInteger(t.total) &&
+          t.total >= 0)),
     "tokens must be {status:'not_measured'} or measured with source and integer total",
   );
   need(Array.isArray(s.artifacts), "artifacts must be an array");
   need(Array.isArray(s.limitations), "limitations must be an array");
   need(obj(s.cleanup) && typeof s.cleanup.clean === "boolean", "cleanup.clean required");
   need(typeof s.readyForReview === "boolean", "readyForReview must be boolean");
+  // Readiness (beyond structure): a review-ready handoff needs a clean cleanup and a fully passing retest.
+  if (s.readyForReview === true) {
+    need(s.cleanup?.clean === true, "readyForReview requires cleanup.clean === true");
+    const retest = Array.isArray(s.retest) ? s.retest : [];
+    need(
+      retest.length > 0 && retest.every((r) => r?.status === "PASS"),
+      "readyForReview requires every retest status to be PASS",
+    );
+  }
   return errors;
 }
 

@@ -70,11 +70,11 @@ Production source ветки идентичен `61ea130` (fixed). Провер�
 
 ## Cleanup proof
 
-Disposable `expA`/`expB` (одно-commit repos вне Git репозитория) удалены; task worktree clean, `git diff 61ea130 -- packages` пуст. Evidence в ignored `.artifacts/verification/at8/` (diffs, pre/post JSON, AT4 JSON, AT7 log, summaries); AT4 удалил свой worktree/temp сам (`worktreeRemoved`, `directoryRemoved`, `sourceUnchanged`).
+Disposable `expA`/`expB` (одно-commit repos вне Git репозитория) удалены; task worktree clean, `git diff 61ea130 -- packages` пуст. Reviewable evidence в Git: [`evidence/`](evidence/) — два summaries, identical diff (`expA.diff`/`expB.diff`), slimmed pre/post AT3 checks, fingerprints, происхождение telemetry (`ab-evidence.json`; harness records vs self-reported). Raw в ignored `.artifacts/verification/at8/` (diffs, pre/post JSON, AT4 JSON, AT7 log, summaries); AT4 удалил свой worktree/temp сам (`worktreeRemoved`, `directoryRemoved`, `sourceUnchanged`).
 
 ## Формат summary
 
-`schemaVersion:1`: `issue`, `baseCommit`, `mode` (baseline|treatment), `environment`, `contextSources`, `kbNotes`, `commands[{cmd,status}]`, `failure{scenario,checkpoints,firstMismatchTick}`, `diagnosis{rootCause}`, `fix{diffSha256}`, `retest[]`, `iterations`, `elapsedSeconds`, `tokens` (`not_measured` либо `measured`+`source`+`total`), `artifacts`, `limitations`, `cleanup{clean}`, `readyForReview`. Проверка: `node scripts/agent-loop-summary.mjs validate`; PR-блок: `render`.
+`schemaVersion:1`: `issue`, `baseCommit`, `mode` (baseline|treatment), `environment`, `contextSources`, `kbNotes`, `commands[{cmd,status}]`, `failure{scenario,checkpoints,firstMismatchTick}`, `diagnosis{rootCause}`, `fix{diffSha256}`, `retest[]`, `iterations`, `elapsedSeconds`, `tokens` (`not_measured` либо `measured`+`source`+`total`), `artifacts`, `limitations`, `cleanup{clean}`, `readyForReview`. Проверка: `node scripts/agent-loop-summary.mjs validate`. Структурная валидность допускает незавершённые/failed эксперименты (`readyForReview:false`); `readyForReview:true` дополнительно требует `cleanup.clean:true` и все `retest` = PASS; PR-блок: `render`.
 
 ## Шаблон PR handoff
 

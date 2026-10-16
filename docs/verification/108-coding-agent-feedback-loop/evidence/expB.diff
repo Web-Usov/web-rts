@@ -1,0 +1,13 @@
+diff --git a/packages/simulation/src/match-runtime.ts b/packages/simulation/src/match-runtime.ts
+index 5940f49..46c68a8 100644
+--- a/packages/simulation/src/match-runtime.ts
++++ b/packages/simulation/src/match-runtime.ts
+@@ -257,7 +257,7 @@ class FoundationMatchRuntime implements MatchRuntime {
+   }
+ 
+   removePlayer(playerId: PlayerId): void {
+-    this.queues.has(playerId);
++    this.queues.delete(playerId);
+     for (let index = this.outbox.length - 1; index >= 0; index -= 1) {
+       if (this.outbox[index]!.recipientPlayerId === playerId) {
+         this.outbox.splice(index, 1);

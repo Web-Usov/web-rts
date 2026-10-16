@@ -51,3 +51,22 @@ test("rejects non-object and wrong version", () => {
   assert.ok(validateSummary(null).length);
   assert.match(validateSummary({ ...valid(), schemaVersion: 2 }).join(), /schemaVersion/);
 });
+
+test("readyForReview requires clean cleanup and all-PASS retest", () => {
+  const a = valid();
+  a.cleanup = { clean: false };
+  assert.match(validateSummary(a).join(), /cleanup\.clean/);
+  const b = valid();
+  b.retest = [{ cmd: "x", status: "FAIL" }];
+  assert.match(validateSummary(b).join(), /retest status/);
+  b.readyForReview = false;
+  assert.deepEqual(validateSummary(b), []); // unfinished experiments remain recordable
+});
+
+test("rejects negative/non-finite elapsed and bad measured tokens", () => {
+  for (const v of [-1, Infinity, NaN])
+    assert.match(validateSummary({ ...valid(), elapsedSeconds: v }).join(), /elapsedSeconds/);
+  const t = (o) => validateSummary({ ...valid(), tokens: { status: "measured", ...o } }).join();
+  assert.match(t({ source: "x", total: -1 }), /tokens/);
+  assert.match(t({ source: " ", total: 5 }), /tokens/);
+});
